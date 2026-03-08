@@ -1,0 +1,138 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1800" height="1220" viewBox="0 0 1800 1220" fill="none">
+  <defs>
+    <style>
+      .title { font: 700 42px Georgia, serif; fill: #111827; }
+      .subtitle { font: 400 20px Georgia, serif; fill: #4b5563; }
+      .label { font: 700 24px Georgia, serif; fill: #111827; }
+      .note { font: 400 16px Georgia, serif; fill: #6b7280; }
+    </style>
+    <filter id="softShadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="10" stdDeviation="18" flood-color="#0f172a" flood-opacity="0.12"/>
+    </filter>
+    <pattern id="dotsSmall" width="12" height="12" patternUnits="userSpaceOnUse">
+      <circle cx="1.8" cy="1.8" r="0.9" fill="#655b50" fill-opacity="0.18"/>
+    </pattern>
+    <pattern id="dotsDense" width="8" height="8" patternUnits="userSpaceOnUse">
+      <circle cx="1.5" cy="1.5" r="0.75" fill="#4b4137" fill-opacity="0.14"/>
+    </pattern>
+    <pattern id="editorialGrid" width="84" height="84" patternUnits="userSpaceOnUse">
+      <path d="M 84 0 L 0 0 0 84" stroke="#615545" stroke-opacity="0.08" stroke-width="1"/>
+    </pattern>
+    <pattern id="fiber" width="140" height="140" patternUnits="userSpaceOnUse">
+      <circle cx="22" cy="32" r="1.2" fill="#5b5147" fill-opacity="0.07"/>
+      <circle cx="78" cy="26" r="1.1" fill="#ffffff" fill-opacity="0.18"/>
+      <circle cx="112" cy="92" r="1.3" fill="#51473d" fill-opacity="0.06"/>
+      <circle cx="48" cy="114" r="1.1" fill="#ffffff" fill-opacity="0.14"/>
+      <circle cx="132" cy="58" r="0.9" fill="#54493d" fill-opacity="0.06"/>
+    </pattern>
+    <linearGradient id="paperBase" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#faf8f1"/>
+      <stop offset="100%" stop-color="#f1ede3"/>
+    </linearGradient>
+    <linearGradient id="paperFlat" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#f7f4ee"/>
+      <stop offset="100%" stop-color="#f3efe7"/>
+    </linearGradient>
+    <linearGradient id="warmPaper" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#f7f2e8"/>
+      <stop offset="100%" stop-color="#e9deca"/>
+    </linearGradient>
+    <linearGradient id="coolPaper" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#f4f5f6"/>
+      <stop offset="100%" stop-color="#dfe4ea"/>
+    </linearGradient>
+    <radialGradient id="vignettePlum" cx="50%" cy="45%" r="80%">
+      <stop offset="0%" stop-color="#3a3147"/>
+      <stop offset="55%" stop-color="#231c2b"/>
+      <stop offset="100%" stop-color="#0d0d12"/>
+    </radialGradient>
+    <radialGradient id="spotA" cx="20%" cy="18%" r="34%">
+      <stop offset="0%" stop-color="#ffffff" stop-opacity="0.34"/>
+      <stop offset="100%" stop-color="#ffffff" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="spotB" cx="80%" cy="74%" r="28%">
+      <stop offset="0%" stop-color="#8f7555" stop-opacity="0.18"/>
+      <stop offset="100%" stop-color="#8f7555" stop-opacity="0"/>
+    </radialGradient>
+    <filter id="grain">
+      <feTurbulence type="fractalNoise" baseFrequency="0.85" numOctaves="2" seed="7" result="noise"/>
+      <feColorMatrix in="noise" type="saturate" values="0"/>
+      <feComponentTransfer>
+        <feFuncA type="table" tableValues="0 0.08"/>
+      </feComponentTransfer>
+    </filter>
+    <mask id="tearMaskLeft">
+      <rect width="100%" height="100%" fill="black"/>
+      <path d="M0,0 H220 C212,28 238,68 214,110 C197,138 230,190 210,230 C190,270 242,324 214,368 C198,392 232,448 212,496 C195,538 224,584 208,620 H0 Z" fill="white"/>
+    </mask>
+    <mask id="tearMaskRight">
+      <rect width="100%" height="100%" fill="black"/>
+      <path d="M340,0 H560 V620 H340 C356,586 320,532 346,492 C364,462 328,404 350,366 C372,328 332,270 346,234 C364,188 336,128 354,98 C370,70 340,28 340,0 Z" fill="white"/>
+    </mask>
+  </defs>
+
+  <rect width="1800" height="1220" fill="#f5f3ee"/>
+  <text x="80" y="90" class="title">Texture Directions</text>
+  <text x="80" y="125" class="subtitle">Current repo assets and directions I can generate without adding new external assets.</text>
+
+  <!-- Card 1 -->
+  <g transform="translate(80 180)" filter="url(#softShadow)">
+    <rect width="500" height="390" rx="28" fill="white"/>
+    <rect x="34" y="34" width="432" height="255" rx="18" fill="#f6f4ee"/>
+    <text x="34" y="332" class="label">Plain Paper</text>
+    <text x="34" y="360" class="note">Solid fill only. Cleanest option.</text>
+  </g>
+
+  <!-- Card 2 -->
+  <g transform="translate(650 180)" filter="url(#softShadow)">
+    <rect width="500" height="390" rx="28" fill="white"/>
+    <rect x="34" y="34" width="432" height="255" rx="18" fill="url(#paperFlat)"/>
+    <rect x="34" y="34" width="432" height="255" rx="18" fill="url(#dotsSmall)"/>
+    <text x="34" y="332" class="label">Dot Field</text>
+    <text x="34" y="360" class="note">Editorial dots only. Stable and low-eye-strain.</text>
+  </g>
+
+  <!-- Card 3 -->
+  <g transform="translate(1220 180)" filter="url(#softShadow)">
+    <rect width="500" height="390" rx="28" fill="white"/>
+    <rect x="34" y="34" width="432" height="255" rx="18" fill="url(#paperBase)"/>
+    <rect x="34" y="34" width="432" height="255" rx="18" fill="url(#editorialGrid)"/>
+    <rect x="34" y="34" width="432" height="255" rx="18" fill="url(#dotsDense)"/>
+    <text x="34" y="332" class="label">Grid + Dots</text>
+    <text x="34" y="360" class="note">Closest to chart/editorial explainer language.</text>
+  </g>
+
+  <!-- Card 4 -->
+  <g transform="translate(80 640)" filter="url(#softShadow)">
+    <rect width="500" height="390" rx="28" fill="white"/>
+    <rect x="34" y="34" width="432" height="255" rx="18" fill="url(#paperBase)"/>
+    <rect x="34" y="34" width="432" height="255" rx="18" filter="url(#grain)" opacity="0.85"/>
+    <rect x="34" y="34" width="432" height="255" rx="18" fill="url(#fiber)"/>
+    <rect x="34" y="34" width="432" height="255" rx="18" fill="url(#spotA)"/>
+    <rect x="34" y="34" width="432" height="255" rx="18" fill="url(#spotB)"/>
+    <text x="34" y="332" class="label">Newsprint / Grain</text>
+    <text x="34" y="360" class="note">Organic paper grain. Best used static or very subtly.</text>
+  </g>
+
+  <!-- Card 5 -->
+  <g transform="translate(650 640)" filter="url(#softShadow)">
+    <rect width="500" height="390" rx="28" fill="white"/>
+    <rect x="34" y="34" width="432" height="255" rx="18" fill="url(#warmPaper)"/>
+    <rect x="34" y="34" width="432" height="255" rx="18" fill="url(#dotsSmall)" opacity="0.72"/>
+    <rect x="34" y="34" width="432" height="255" rx="18" fill="url(#spotA)"/>
+    <rect x="34" y="34" width="432" height="255" rx="18" fill="url(#spotB)"/>
+    <text x="34" y="332" class="label">Warm Editorial Paper</text>
+    <text x="34" y="360" class="note">Magazine-like. Good for explainers and callout cards.</text>
+  </g>
+
+  <!-- Card 6 -->
+  <g transform="translate(1220 640)" filter="url(#softShadow)">
+    <rect width="500" height="390" rx="28" fill="white"/>
+    <rect x="34" y="34" width="432" height="255" rx="18" fill="url(#vignettePlum)"/>
+    <rect x="34" y="34" width="432" height="255" rx="18" fill="#f7f4ee"/>
+    <rect x="34" y="34" width="220" height="255" mask="url(#tearMaskLeft)" fill="#f7f4ee"/>
+    <rect x="246" y="34" width="220" height="255" mask="url(#tearMaskRight)" fill="#f7f4ee"/>
+    <text x="34" y="332" class="label">Torn-Paper Reveal</text>
+    <text x="34" y="360" class="note">Not a texture by itself. Good as a reveal treatment.</text>
+  </g>
+</svg>

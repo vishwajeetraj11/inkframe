@@ -1,26 +1,74 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --background: #020617;
+  --foreground: #f8fafc;
+  --muted: #94a3b8;
+  --panel: rgba(15, 23, 42, 0.74);
+  --panel-border: rgba(148, 163, 184, 0.35);
+  --accent: #67e8f9;
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --font-sans: var(--font-plus-jakarta-sans), "Plus Jakarta Sans", "Segoe UI", sans-serif;
+  --font-mono: var(--font-ibm-plex-mono), "IBM Plex Mono", "SFMono-Regular", monospace;
+  --font-serif: var(--font-source-serif-4), "Source Serif 4", Georgia, serif;
+  --font-display: var(--font-sora), "Sora", var(--font-sans);
+  --font-modern: var(--font-sora), "Sora", var(--font-sans);
+  --font-condensed: var(--font-barlow-condensed), "Barlow Condensed", var(--font-sans);
+  --font-impact: var(--font-barlow-condensed), "Barlow Condensed", var(--font-sans);
+  --font-slab: var(--font-source-serif-4), "Source Serif 4", var(--font-serif);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+html {
+  font-size: 15px;
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  min-height: 100vh;
+  font-family: var(--font-sans);
+  line-height: 1.45;
+  letter-spacing: -0.012em;
+  text-rendering: optimizeLegibility;
+  font-feature-settings: "cv11" 1, "ss01" 1;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+:where(button, input, textarea, select) {
+  font: inherit;
+  letter-spacing: inherit;
+}
+
+:where(code, pre, kbd) {
+  font-family: var(--font-mono);
+  font-feature-settings: "zero" 1;
+}
+
+.app-title {
+  font-family: var(--font-display);
+  letter-spacing: -0.05em;
+}
+
+.app-eyebrow,
+.app-panel-label {
+  font-family: var(--font-condensed);
+  letter-spacing: 0.16em;
+}
+
+.app-data {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.03em;
+}
+
+::selection {
+  background: rgba(103, 232, 249, 0.3);
+  color: #f8fafc;
 }

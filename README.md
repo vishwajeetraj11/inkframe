@@ -1,36 +1,72 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Ephemeral Video Editor
 
-## Getting Started
+A Next.js + Remotion app for building short-form video timelines, AI-assisted caption scenes, and text-motion compositions without persisting user media after export.
 
-First, run the development server:
+## What the app includes
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
+- `Editor`: upload image, video, and audio assets; build clip timelines; add structured text presets; export MP4.
+- `Templates`: browse preset-driven caption and explainer layouts and deep-link into `/editor?template=<id>`.
+- `Text Motion`: generate kinetic typography storyboards with OpenAI, preview them in Remotion, and export MP4.
+- `API routes`: chat, editor export, text-motion generation, and text-motion export.
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## Main entrypoints
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+- `/templates`: preset gallery for the editor workflow.
+- `/editor`: timeline editor with asset library, preview, inspector, and AI chat drawer.
+- `/text-motion`: AI text-motion editor and Remotion preview.
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## Architecture
 
-## Learn More
+- `src/lib/editor`
+  - Editor domain logic, reducers, schema validation, template catalog, and structured preset parsers.
+  - `timeline.ts` is now a public facade over `domain/` modules.
+  - `templates/` is the typed editor preset catalog.
+  - `parsers/` contains structured overlay parsers such as chart-card, stat-ring, and createdaley-opener.
+- `src/lib/text-motion`
+  - Text-motion project types, defaults, template catalog, validation, and sanitization.
+- `src/components/editor`
+  - Editor UI panels plus `hooks/use-editor-session.ts` for reducer state, asset lifecycle, template hydration, export, and AI-apply actions.
+- `src/components/text-motion`
+  - Text-motion UI panels plus `hooks/use-text-motion-project.ts` for project state, image assets, template loading, generation, and export.
+- `src/server/services`
+  - Route-free orchestration for export, generation, temp-dir lifecycle, and chat context handling.
+- `src/remotion`
+  - Remotion compositions for the editor and text-motion experiences.
+  - `editor-presets/types.ts` defines preset renderer contracts for ongoing renderer decomposition.
 
-To learn more about Next.js, take a look at the following resources:
+Additional notes are in [docs/architecture.md](/Users/vishwajeetraj/Documents/react/editor/docs/architecture.md).
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## Commands
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+- `npm run dev`: start the Next.js app locally.
+- `npm run build`: production build.
+- `npm run lint`: ESLint checks.
+- `npm run typecheck`: TypeScript checks.
+- `npm run test:run`: run Vitest once.
+- `npm run test`: watch mode for Vitest.
 
-## Deploy on Vercel
+## Test coverage
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+The current safety net covers:
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+- editor template catalog lookup
+- editor timeline sanitization and render-track behavior
+- AI editor action parsing
+- text-motion project sanitization
+- chat-service context parsing
+- route validation for export endpoints
+- inspector routing for split sub-inspectors
+
+## Runtime and data handling
+
+- Editor assets live in browser memory until export.
+- Server exports use per-request temp directories under the system temp root and clean them up after the response.
+- No project persistence layer is configured.
+
+## Environment
+
+The AI routes require:
+
+- `OPENAI_API_KEY`
+
+Optional local artifacts and generated media are kept under the workspace `artifacts/` directory when present.
