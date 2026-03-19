@@ -1,11 +1,15 @@
 import { buildRenderTrack } from "@/lib/editor/timeline";
-import type { VersionTimeline } from "@/lib/editor/types";
+import {
+  isChartCardStylePreset,
+  isVoxTimelineStylePreset,
+  type VersionTimeline,
+} from "@/lib/editor/types";
 import { AbsoluteFill, Audio, Sequence, useCurrentFrame } from "remotion";
 import {
   ClipLayer,
   MissingAsset,
   MotionTypographyLayer,
-  NEWS_CRUMPLE_TEXTURE_SRC,
+  NewsCrumpleTexture,
 } from "./editor-presets/layers";
 import type { RenderMode } from "./editor-presets/types";
 
@@ -27,6 +31,7 @@ interface BackdropFlags {
   showEditorialStatRingBackdrop: boolean;
   showGridKineticBackdrop: boolean;
   showVoxExplainerBackdrop: boolean;
+  showVoxTimelineBackdrop: boolean;
   showVoxTypographyBackdrop: boolean;
   showWorldMapFocusBackdrop: boolean;
 }
@@ -88,6 +93,9 @@ const getBackdropFlags = (
   const hasVoxTypographyOverlay = version.textOverlays.some(
     (overlay) => overlay.stylePreset === "vox-typography",
   );
+  const hasVoxTimelineOverlay = version.textOverlays.some(
+    (overlay) => isVoxTimelineStylePreset(overlay.stylePreset),
+  );
   const hasGridKineticOverlay = version.textOverlays.some(
     (overlay) => overlay.stylePreset === "grid-kinetic",
   );
@@ -104,7 +112,7 @@ const getBackdropFlags = (
     (overlay) => overlay.stylePreset === "createdaley-opener",
   );
   const hasChartCardOverlay = version.textOverlays.some(
-    (overlay) => overlay.stylePreset === "chart-card",
+    (overlay) => isChartCardStylePreset(overlay.stylePreset),
   );
   const noMediaClips = trackEntryCount === 0;
   const hasMediaClips = trackEntryCount > 0;
@@ -121,6 +129,7 @@ const getBackdropFlags = (
     showEditorialStatRingBackdrop: noMediaClips && hasEditorialStatRingOverlay,
     showGridKineticBackdrop: noMediaClips && hasGridKineticOverlay,
     showVoxExplainerBackdrop: noMediaClips && hasVoxExplainerOverlay,
+    showVoxTimelineBackdrop: noMediaClips && hasVoxTimelineOverlay,
     showVoxTypographyBackdrop: noMediaClips && hasVoxTypographyOverlay,
     showWorldMapFocusBackdrop: noMediaClips && hasWorldMapFocusOverlay,
   };
@@ -147,6 +156,9 @@ const getCompositionBackground = (flags: BackdropFlags): string => {
   }
   if (flags.showChartCardBackdrop) {
     return CHART_BACKGROUND;
+  }
+  if (flags.showVoxTimelineBackdrop) {
+    return VOX_BACKGROUND;
   }
   if (flags.showVoxTypographyBackdrop) {
     return VOX_TYPOGRAPHY_BACKGROUND;
@@ -190,6 +202,7 @@ const BackdropOverlays = ({
     !flags.showEditorialStatRingBackdrop &&
     !flags.showCreatedaleyBackdrop &&
     !flags.showChartCardBackdrop &&
+    !flags.showVoxTimelineBackdrop &&
     !flags.showVoxTypographyBackdrop &&
     !flags.showVoxExplainerBackdrop;
 
@@ -197,26 +210,16 @@ const BackdropOverlays = ({
     <>
       {flags.showNewsBackdrop ? (
         <AbsoluteFill style={{ background: "transparent" }}>
-          <div
+          <NewsCrumpleTexture
             style={{
-              position: "absolute",
-              inset: 0,
-              backgroundImage: `url(${NEWS_CRUMPLE_TEXTURE_SRC})`,
-              backgroundSize: "100% 100%",
-              backgroundPosition: "center",
               opacity: multiplyOpacity,
               mixBlendMode: "multiply",
               pointerEvents: "none",
               transform: `translate(${paperDriftX}px, ${paperDriftY}px) scale(1.028)`,
             }}
           />
-          <div
+          <NewsCrumpleTexture
             style={{
-              position: "absolute",
-              inset: 0,
-              backgroundImage: `url(${NEWS_CRUMPLE_TEXTURE_SRC})`,
-              backgroundSize: "100% 100%",
-              backgroundPosition: "center",
               opacity: softLightOpacity,
               mixBlendMode: "soft-light",
               pointerEvents: "none",
@@ -275,13 +278,8 @@ const BackdropOverlays = ({
               pointerEvents: "none",
             }}
           />
-          <div
+          <NewsCrumpleTexture
             style={{
-              position: "absolute",
-              inset: 0,
-              backgroundImage: `url(${NEWS_CRUMPLE_TEXTURE_SRC})`,
-              backgroundSize: "100% 100%",
-              backgroundPosition: "center",
               opacity: 0.08,
               mixBlendMode: "soft-light",
               pointerEvents: "none",

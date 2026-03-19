@@ -1,6 +1,11 @@
 import { LabeledControl } from "@/components/editor/controls/LabeledControl";
 import { CHART_CARD_FALLBACK_PALETTE } from "@/lib/editor/chart-card";
-import type { TextOverlay } from "@/lib/editor/types";
+import {
+  CREATEDALEY_OPENER_TEXTURE_LABELS,
+  CREATEDALEY_OPENER_TEXTURES,
+  TEXT_OVERLAY_STYLE_PRESET_LABELS,
+  type TextOverlay,
+} from "@/lib/editor/types";
 import type { getEditableChartCardData } from "../utils";
 import { parseNumber } from "../utils";
 
@@ -8,6 +13,7 @@ interface ChartCardInspectorProps {
   data: ReturnType<typeof getEditableChartCardData>;
   disabled?: boolean;
   overlay: TextOverlay;
+  onUpdateOverlay: (patch: Partial<Omit<TextOverlay, "id">>) => void;
   onUpdateText: (
     updater: (
       current: ReturnType<typeof getEditableChartCardData>,
@@ -19,16 +25,20 @@ export const ChartCardInspector = ({
   data,
   disabled,
   overlay,
+  onUpdateOverlay,
   onUpdateText,
 }: ChartCardInspectorProps) => {
+  const presetLabel = TEXT_OVERLAY_STYLE_PRESET_LABELS[overlay.stylePreset];
+  const showTextureControl = overlay.stylePreset === "editorial-seat-arc";
+
   return (
     <div className="space-y-3 rounded-lg border border-neutral-700/70 bg-neutral-900/45 p-3">
       <div>
         <p className="text-xs font-semibold uppercase tracking-wide text-neutral-300">
-          Pie Chart Card
+          {presetLabel}
         </p>
         <p className="mt-1 text-[11px] text-neutral-500">
-          Headline, subtitle, slices, values, and colors stay synced with the chart data.
+          Headline, subtitle, rows, values, and colors stay synced with the chart data.
         </p>
       </div>
 
@@ -76,9 +86,30 @@ export const ChartCardInspector = ({
         />
       </LabeledControl>
 
+      {showTextureControl ? (
+        <LabeledControl className="block space-y-1 text-xs text-neutral-200" label="Paper Texture">
+          <select
+            disabled={disabled}
+            value={overlay.createdaleyTexture}
+            onChange={(event) => {
+              onUpdateOverlay({
+                createdaleyTexture: event.currentTarget.value as TextOverlay["createdaleyTexture"],
+              });
+            }}
+            className="w-full rounded border border-neutral-600 bg-neutral-900 px-2 py-1"
+          >
+            {CREATEDALEY_OPENER_TEXTURES.map((texture) => (
+              <option key={texture} value={texture}>
+                {CREATEDALEY_OPENER_TEXTURE_LABELS[texture]}
+              </option>
+            ))}
+          </select>
+        </LabeledControl>
+      ) : null}
+
       <div className="space-y-2">
         <div className="flex items-center justify-between">
-          <span className="text-xs text-neutral-400">Pie Slices</span>
+          <span className="text-xs text-neutral-400">Chart Rows</span>
           <button
             type="button"
             disabled={disabled}
@@ -88,7 +119,7 @@ export const ChartCardInspector = ({
                 rows: [
                   ...current.rows,
                   {
-                    label: `Slice ${current.rows.length + 1}`,
+                    label: `Row ${current.rows.length + 1}`,
                     value: 10,
                     color:
                       CHART_CARD_FALLBACK_PALETTE[
@@ -100,7 +131,7 @@ export const ChartCardInspector = ({
             }}
             className="rounded border border-neutral-600 px-2 py-1 text-[11px] font-medium text-neutral-200"
           >
-            Add Slice
+            Add Row
           </button>
         </div>
 

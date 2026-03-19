@@ -159,7 +159,7 @@ export const renderNewsClippingPreset = ({
               borderRadius: "0",
               backgroundColor: "#c94d4f",
               color: "#ffffff",
-              fontFamily: "Roboto Mono, Inter, sans-serif",
+              fontFamily: FONT_STACK_BY_FAMILY.mono,
               fontWeight: 700,
               fontSize: `${overlay.fontSize * 0.18}px`,
               letterSpacing: "0.04em",

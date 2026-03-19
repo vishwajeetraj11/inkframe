@@ -2,6 +2,8 @@ import { InspectorCard } from "@/components/editor/controls/InspectorCard";
 import { LabeledControl } from "@/components/editor/controls/LabeledControl";
 import type { TextOverlay } from "@/lib/editor/types";
 import {
+  isChartCardStylePreset,
+  isVoxTimelineStylePreset,
   TEXT_OVERLAY_FONT_FAMILIES,
   TEXT_OVERLAY_FONT_STYLES,
   TEXT_OVERLAY_STYLE_PRESET_LABELS,
@@ -10,15 +12,18 @@ import {
 import { ChartCardInspector } from "./preset-inspectors/ChartCardInspector";
 import { CreatedaleyOpenerInspector } from "./preset-inspectors/CreatedaleyOpenerInspector";
 import { EditorialStatRingInspector } from "./preset-inspectors/EditorialStatRingInspector";
+import { VoxTimelineInspector } from "./preset-inspectors/VoxTimelineInspector";
 import { WorldMapFocusInspector } from "./preset-inspectors/WorldMapFocusInspector";
 import {
   buildChartCardText,
   buildCreatedaleyOpenerText,
   buildEditorialStatRingText,
+  buildVoxTimelineText,
   buildWorldMapFocusText,
   getEditableChartCardData,
   getEditableCreatedaleyOpenerData,
   getEditableEditorialStatRingData,
+  getEditableVoxTimelineData,
   getEditableWorldMapFocusData,
   getSelectedWorldMapCountryName,
   getWorldMapCountryOptions,
@@ -36,7 +41,9 @@ export const TextOverlayInspector = ({
   onUpdateText,
   overlay,
 }: TextOverlayInspectorProps) => {
-  const chartCardData = overlay.stylePreset === "chart-card" ? getEditableChartCardData(overlay.text) : null;
+  const chartCardData = isChartCardStylePreset(overlay.stylePreset)
+    ? getEditableChartCardData(overlay.text)
+    : null;
   const editorialStatRingData =
     overlay.stylePreset === "editorial-stat-ring"
       ? getEditableEditorialStatRingData(overlay.text)
@@ -48,6 +55,10 @@ export const TextOverlayInspector = ({
   const createdaleyOpenerData =
     overlay.stylePreset === "createdaley-opener"
       ? getEditableCreatedaleyOpenerData(overlay.text)
+      : null;
+  const voxTimelineData =
+    isVoxTimelineStylePreset(overlay.stylePreset)
+      ? getEditableVoxTimelineData(overlay.text)
       : null;
 
   const updateChartCard = (
@@ -106,6 +117,20 @@ export const TextOverlayInspector = ({
     });
   };
 
+  const updateVoxTimeline = (
+    updater: (
+      current: ReturnType<typeof getEditableVoxTimelineData>,
+    ) => ReturnType<typeof getEditableVoxTimelineData>,
+  ) => {
+    if (!voxTimelineData) {
+      return;
+    }
+
+    onUpdateText(overlay.id, {
+      text: buildVoxTimelineText(updater(voxTimelineData)),
+    });
+  };
+
   const selectedCountryName = worldMapFocusData
     ? getSelectedWorldMapCountryName(worldMapFocusData.country)
     : undefined;
@@ -137,11 +162,19 @@ export const TextOverlayInspector = ({
           selectedCountryName={selectedCountryName}
           onUpdateText={updateWorldMapFocus}
         />
+      ) : voxTimelineData ? (
+        <VoxTimelineInspector
+          data={voxTimelineData}
+          disabled={disabled}
+          overlay={overlay}
+          onUpdateText={updateVoxTimeline}
+        />
       ) : chartCardData ? (
         <ChartCardInspector
           data={chartCardData}
           disabled={disabled}
           overlay={overlay}
+          onUpdateOverlay={(patch) => onUpdateText(overlay.id, patch)}
           onUpdateText={updateChartCard}
         />
       ) : (

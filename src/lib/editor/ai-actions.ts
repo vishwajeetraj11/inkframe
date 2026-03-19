@@ -177,11 +177,26 @@ const aiSceneSchema = z.object({
         if (
           normalized === "createdaley-opener" ||
           normalized === "createdaley opener" ||
+          normalized === "dictionary animation" ||
+          normalized === "dictionary-animation" ||
           normalized === "dictionary opener" ||
           normalized === "definition card" ||
           normalized === "paper definition card"
         ) {
           return "createdaley-opener";
+        }
+
+        if (
+          normalized === "editorial-seat-arc" ||
+          normalized === "editorial seat arc" ||
+          normalized === "seat arc" ||
+          normalized === "parliament arc" ||
+          normalized === "parliament chart" ||
+          normalized === "seat chart" ||
+          normalized === "semicircle chart" ||
+          normalized === "balance of power chart"
+        ) {
+          return "editorial-seat-arc";
         }
 
         if (

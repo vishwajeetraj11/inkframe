@@ -3,4 +3,5 @@ export {
   ClipLayer,
   MissingAsset,
   NEWS_CRUMPLE_TEXTURE_SRC,
+  NewsCrumpleTexture,
 } from "./shared";

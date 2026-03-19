@@ -21,15 +21,42 @@ export const TEXT_OVERLAY_STYLE_PRESETS = [
   "sticker-cutout",
   "editorial-mono",
   "vox-explainer",
+  "vox-timeline",
+  "vox-timeline-ribbon",
+  "vox-timeline-ledger",
   "vox-typography",
   "world-map-focus",
   "editorial-bar-chart",
   "editorial-stat-ring",
+  "editorial-seat-arc",
   "createdaley-opener",
   "chart-card",
   "news-clipping",
 ] as const;
 export type TextOverlayStylePreset = (typeof TEXT_OVERLAY_STYLE_PRESETS)[number];
+
+export const VOX_TIMELINE_STYLE_PRESETS = [
+  "vox-timeline",
+  "vox-timeline-ribbon",
+  "vox-timeline-ledger",
+] as const satisfies readonly TextOverlayStylePreset[];
+export type VoxTimelineStylePreset = (typeof VOX_TIMELINE_STYLE_PRESETS)[number];
+
+export const isVoxTimelineStylePreset = (
+  value: string,
+): value is VoxTimelineStylePreset =>
+  VOX_TIMELINE_STYLE_PRESETS.includes(value as VoxTimelineStylePreset);
+
+export const CHART_CARD_STYLE_PRESETS = [
+  "chart-card",
+  "editorial-seat-arc",
+] as const satisfies readonly TextOverlayStylePreset[];
+export type ChartCardStylePreset = (typeof CHART_CARD_STYLE_PRESETS)[number];
+
+export const isChartCardStylePreset = (
+  value: string,
+): value is ChartCardStylePreset =>
+  CHART_CARD_STYLE_PRESETS.includes(value as ChartCardStylePreset);
 
 export const CREATEDALEY_OPENER_TEXTURES = [
   "plain",
@@ -60,11 +87,15 @@ export const TEXT_OVERLAY_STYLE_PRESET_LABELS: Record<TextOverlayStylePreset, st
   "sticker-cutout": "Sticker Cutout",
   "editorial-mono": "Editorial Mono",
   "vox-explainer": "Vox Explainer",
+  "vox-timeline": "Vox Timeline",
+  "vox-timeline-ribbon": "Timeline Ribbon",
+  "vox-timeline-ledger": "Timeline Ledger",
   "vox-typography": "Vox Typography",
   "world-map-focus": "World Map Focus",
   "editorial-bar-chart": "Editorial Bar Chart",
   "editorial-stat-ring": "Stat Ring Card",
-  "createdaley-opener": "Createdaley Opener",
+  "editorial-seat-arc": "Editorial Seat Arc",
+  "createdaley-opener": "Dictionary Animation",
   "chart-card": "Pie Chart Card",
   "news-clipping": "News Clipping",
 };

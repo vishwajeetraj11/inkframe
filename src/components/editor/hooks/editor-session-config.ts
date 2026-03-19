@@ -12,10 +12,14 @@ export const STYLE_PRESET_SEQUENCE: VersionTimeline["textOverlays"][number]["sty
   "sticker-cutout",
   "editorial-mono",
   "vox-explainer",
+  "vox-timeline",
+  "vox-timeline-ribbon",
+  "vox-timeline-ledger",
   "vox-typography",
   "world-map-focus",
   "editorial-bar-chart",
   "editorial-stat-ring",
+  "editorial-seat-arc",
   "chart-card",
   "news-clipping",
   "createdaley-opener",
@@ -41,10 +45,14 @@ export const OVERLAY_DEFAULTS_BY_PRESET: Record<
   "sticker-cutout": { x: 50, y: 58, fontSize: 92, color: "#111827", fontFamily: "sans", fontWeight: 900, fontStyle: "normal" },
   "editorial-mono": { x: 50, y: 50, fontSize: 78, color: "#0f172a", fontFamily: "mono", fontWeight: 800, fontStyle: "normal" },
   "vox-explainer": { x: 46, y: 43, fontSize: 84, color: "#111827", fontFamily: "sans", fontWeight: 900, fontStyle: "normal" },
+  "vox-timeline": { x: 50, y: 46, fontSize: 88, color: "#111827", fontFamily: "serif", fontWeight: 700, fontStyle: "normal" },
+  "vox-timeline-ribbon": { x: 50, y: 46, fontSize: 86, color: "#111827", fontFamily: "serif", fontWeight: 700, fontStyle: "normal" },
+  "vox-timeline-ledger": { x: 50, y: 46, fontSize: 84, color: "#111827", fontFamily: "serif", fontWeight: 700, fontStyle: "normal" },
   "vox-typography": { x: 50, y: 46, fontSize: 92, color: "#f4ece6", fontFamily: "serif", fontWeight: 800, fontStyle: "italic" },
   "world-map-focus": { x: 50, y: 48, fontSize: 84, color: "#f4f7fb", fontFamily: "serif", fontWeight: 700, fontStyle: "normal" },
   "editorial-bar-chart": { x: 50, y: 42, fontSize: 78, color: "#111827", fontFamily: "serif", fontWeight: 700, fontStyle: "normal" },
   "editorial-stat-ring": { x: 50, y: 40, fontSize: 92, color: "#151515", fontFamily: "serif", fontWeight: 700, fontStyle: "normal" },
+  "editorial-seat-arc": { x: 50, y: 38, fontSize: 74, color: "#121212", fontFamily: "serif", fontWeight: 700, fontStyle: "normal" },
   "chart-card": { x: 50, y: 38, fontSize: 68, color: "#121212", fontFamily: "serif", fontWeight: 700, fontStyle: "normal" },
   "news-clipping": { x: 50, y: 34, fontSize: 96, color: "#121212", fontFamily: "serif", fontWeight: 800, fontStyle: "normal" },
   "createdaley-opener": { x: 50, y: 46, fontSize: 96, color: "#202124", fontFamily: "serif", fontWeight: 600, fontStyle: "normal" },
@@ -105,6 +113,14 @@ export const getPresetPositionFallback = (
     return { x: index % 2 === 0 ? 45 : 47, y: index % 2 === 0 ? 42 : 46 };
   }
 
+  if (
+    preset === "vox-timeline" ||
+    preset === "vox-timeline-ribbon" ||
+    preset === "vox-timeline-ledger"
+  ) {
+    return { x: 50, y: index % 2 === 0 ? 46 : 48 };
+  }
+
   if (preset === "vox-typography") {
     return { x: 50, y: index % 2 === 0 ? 46 : 48 };
   }
@@ -121,7 +137,7 @@ export const getPresetPositionFallback = (
     return { x: 50, y: index % 2 === 0 ? 40 : 42 };
   }
 
-  if (preset === "chart-card") {
+  if (preset === "chart-card" || preset === "editorial-seat-arc") {
     return { x: 50, y: index % 2 === 0 ? 38 : 40 };
   }
 

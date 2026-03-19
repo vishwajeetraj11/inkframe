@@ -21,17 +21,21 @@ Rules for EDITOR_ACTIONS:
   - "fontWeight": 100..900
   - "fontStyle": "normal" | "italic"
 - For kinetic references, set "stylePreset" per scene:
-  - "classic" | "impact-grid" | "grid-kinetic" | "hero-slam" | "sticker-cutout" | "editorial-mono" | "vox-explainer" | "vox-typography" | "world-map-focus" | "editorial-bar-chart" | "editorial-stat-ring" | "createdaley-opener" | "chart-card" | "news-clipping"
+  - "classic" | "impact-grid" | "grid-kinetic" | "hero-slam" | "sticker-cutout" | "editorial-mono" | "vox-explainer" | "vox-timeline" | "vox-timeline-ribbon" | "vox-timeline-ledger" | "vox-typography" | "world-map-focus" | "editorial-bar-chart" | "editorial-stat-ring" | "editorial-seat-arc" | "createdaley-opener" | "chart-card" | "news-clipping"
 - If the user asks for a Vox or editorial explainer look, prefer "vox-explainer".
+- If the user asks for an image-led historical chronology, documentary timeline, or archival-event sequence, prefer "vox-timeline".
+- If the user asks for a lower-third chronology strip or ribbon timeline, prefer "vox-timeline-ribbon".
+- If the user asks for a ledger timeline, dossier chronology, or stacked archival timeline, prefer "vox-timeline-ledger".
 - If the user asks for a typography opener, typewriter editorial look, or Vox typography look, prefer "vox-typography".
 - If the user asks for a world map, atlas map, or country highlight map, prefer "world-map-focus".
 - If the user asks for a clean editorial bar-chart look, prefer "editorial-bar-chart".
 - If the user asks for a percentage ring, consensus card, or stat ring card, prefer "editorial-stat-ring".
-- If the user asks for a dictionary-style opener, definition card, or paper-definition card, prefer "createdaley-opener".
+- If the user asks for a parliament chart, semicircle seat chart, or balance-of-power graphic, prefer "editorial-seat-arc".
+- If the user asks for a dictionary animation, dictionary-style opener, definition card, or paper-definition card, prefer "createdaley-opener".
 - If the user asks for a pie chart, chart explainer, infographic, or data-viz card, prefer "chart-card".
 - For dynamic reels, alternate stylePreset values across scenes instead of using one style everywhere, unless the user explicitly requests a specific preset.
 - For motion typography requests, every scene should include: stylePreset, x, y, fontSize, fontFamily, fontWeight.
-- For createdaley-opener scenes, "text" may be structured multiline content:
+- For dictionary animation scenes, "text" may be structured multiline content:
   - line 1: wordmark
   - line 2: pronunciation without brackets
   - line 3: part of speech
@@ -40,6 +44,7 @@ Rules for EDITOR_ACTIONS:
   - line 1: headline
   - line 2: subhead
   - line 3+: rows formatted as Label|Value|Color
+- "editorial-seat-arc" uses the same structured multiline chart format as "chart-card".
 - For editorial-stat-ring scenes, "text" may be structured multiline content:
   - line 1: headline (optionally with [[highlight phrase]])
   - line 2: subhead or source line
@@ -52,6 +57,10 @@ Rules for EDITOR_ACTIONS:
   - line 1: headline
   - line 2: subhead
   - line 3+: rows formatted as Label|Value|Color (values in 0..100)
+- For timeline scenes ("vox-timeline", "vox-timeline-ribbon", "vox-timeline-ledger"), "text" may be structured multiline content:
+  - line 1: kicker
+  - line 2: headline
+  - line 3+: rows formatted as Date|Title|Caption|focus
 - Never use cursive/script/handwritten font suggestions.
 - Use y in safe area (roughly 30..74) unless user explicitly asks for edge placement.
 - Default transitionSeconds to 0 unless the user explicitly asks for crossfades.

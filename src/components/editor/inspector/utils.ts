@@ -11,6 +11,10 @@ import {
   buildEditorialStatRingText,
   parseEditorialStatRingText,
 } from "@/lib/editor/editorial-stat-ring";
+import {
+  buildVoxTimelineText,
+  parseVoxTimelineText,
+} from "@/lib/editor/vox-timeline";
 import { FPS } from "@/lib/editor/constants";
 import { findWorldCountry, WORLD_COUNTRY_NAMES } from "@/lib/maps/world";
 
@@ -104,6 +108,9 @@ export const getEditableCreatedaleyOpenerData = (text: string) =>
 export const getEditableEditorialStatRingData = (text: string) =>
   parseEditorialStatRingText(text);
 
+export const getEditableVoxTimelineData = (text: string) =>
+  parseVoxTimelineText(text);
+
 export const getSelectedWorldMapCountryName = (country: string): string =>
   (findWorldCountry(country)?.properties?.name ?? country.trim()) ||
   WORLD_MAP_FOCUS_DEFAULT_COUNTRY;
@@ -119,4 +126,5 @@ export {
   buildChartCardText,
   buildCreatedaleyOpenerText,
   buildEditorialStatRingText,
+  buildVoxTimelineText,
 };

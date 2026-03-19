@@ -178,7 +178,8 @@ export const applyAIEditorActions = ({
       fontWeight: normalizeFontWeight(scene.fontWeight ?? styleDefaults.fontWeight),
       fontStyle: scene.fontStyle ?? styleDefaults.fontStyle,
       stylePreset: resolvedStylePreset,
-      createdaleyTexture: "plain",
+      createdaleyTexture:
+        resolvedStylePreset === "editorial-seat-arc" ? "warm-editorial" : "plain",
     } satisfies VersionTimeline["textOverlays"][number];
   });
 

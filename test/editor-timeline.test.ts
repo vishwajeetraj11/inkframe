@@ -101,4 +101,40 @@ describe("editor timeline domain", () => {
     expect(sanitized).not.toBeNull();
     expect(sanitized?.textOverlays[0]?.stylePreset).toBe("vox-typography");
   });
+
+  it("applies the vox timeline minimum duration during normalization", () => {
+    const sanitized = sanitizeVersion({
+      ...version,
+      textOverlays: [
+        {
+          ...version.textOverlays[0],
+          stylePreset: "vox-timeline",
+          endFrame: 40,
+        },
+      ],
+      transitions: [],
+    });
+
+    expect(sanitized).not.toBeNull();
+    expect(sanitized?.textOverlays[0]?.stylePreset).toBe("vox-timeline");
+    expect((sanitized?.textOverlays[0]?.endFrame ?? 0) - (sanitized?.textOverlays[0]?.startFrame ?? 0)).toBeGreaterThanOrEqual(210);
+  });
+
+  it("applies the timeline minimum duration to timeline variants during normalization", () => {
+    const sanitized = sanitizeVersion({
+      ...version,
+      textOverlays: [
+        {
+          ...version.textOverlays[0],
+          stylePreset: "vox-timeline-ledger",
+          endFrame: 30,
+        },
+      ],
+      transitions: [],
+    });
+
+    expect(sanitized).not.toBeNull();
+    expect(sanitized?.textOverlays[0]?.stylePreset).toBe("vox-timeline-ledger");
+    expect((sanitized?.textOverlays[0]?.endFrame ?? 0) - (sanitized?.textOverlays[0]?.startFrame ?? 0)).toBeGreaterThanOrEqual(210);
+  });
 });

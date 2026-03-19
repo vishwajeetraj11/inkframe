@@ -5,15 +5,16 @@ import type {
   TextMotionFontFamily,
   TextMotionProject,
 } from "@/lib/text-motion/types";
+import { REMOTION_FONT_STACKS } from "../fonts";
 
 export const FONT_STACK_BY_FAMILY: Record<TextMotionFontFamily, string> = {
-  sans: '"Plus Jakarta Sans", Inter, Arial, sans-serif',
-  serif: '"Source Serif 4", Merriweather, Georgia, serif',
-  mono: '"IBM Plex Mono", "Roboto Mono", "Courier New", monospace',
-  display: 'Sora, "Plus Jakarta Sans", Arial, sans-serif',
-  condensed: '"Barlow Condensed", Sora, Arial, sans-serif',
-  slab: '"Source Serif 4", Georgia, serif',
-  modern: 'Sora, "Plus Jakarta Sans", Arial, sans-serif',
+  sans: REMOTION_FONT_STACKS.sans,
+  serif: REMOTION_FONT_STACKS.serif,
+  mono: REMOTION_FONT_STACKS.mono,
+  display: REMOTION_FONT_STACKS.display,
+  condensed: REMOTION_FONT_STACKS.condensed,
+  slab: REMOTION_FONT_STACKS.serif,
+  modern: REMOTION_FONT_STACKS.display,
 };
 
 export const clamp = (value: number, min: number, max: number): number =>

@@ -13,6 +13,7 @@ export const NEWS_CLIPPING_MIN_DURATION_FRAMES =
   NEWS_CLIPPING_ANIMATION_FRAMES + NEWS_CLIPPING_READ_HOLD_FRAMES;
 export const CREATEDALEY_OPENER_MIN_DURATION_FRAMES = Math.round(FPS * 4.5);
 export const EDITORIAL_STAT_RING_MIN_DURATION_FRAMES = Math.round(FPS * 5.35);
+export const VOX_TIMELINE_MIN_DURATION_FRAMES = FPS * 7;
 
 export const clamp = (value: number, min: number, max: number): number =>
   Math.min(Math.max(Number.isFinite(value) ? value : min, min), max);
@@ -70,10 +71,14 @@ export const normalizeTextOverlayStylePreset = (
     value === "sticker-cutout" ||
     value === "editorial-mono" ||
     value === "vox-explainer" ||
+    value === "vox-timeline" ||
+    value === "vox-timeline-ribbon" ||
+    value === "vox-timeline-ledger" ||
     value === "vox-typography" ||
     value === "world-map-focus" ||
     value === "editorial-bar-chart" ||
     value === "editorial-stat-ring" ||
+    value === "editorial-seat-arc" ||
     value === "createdaley-opener" ||
     value === "chart-card" ||
     value === "news-clipping"

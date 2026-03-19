@@ -4,7 +4,7 @@ import type { PresetRendererProps } from "./types";
 import {
   CREATEDALEY_EDGE_SIDES,
   EDITORIAL_SERIF_STACK,
-  NEWS_CRUMPLE_TEXTURE_SRC,
+  NewsCrumpleTexture,
   clamp01,
   getCreatedaleyEdgeBandClipPath,
   getCreatedaleyPaperBounds,
@@ -258,13 +258,8 @@ export const renderCreatedaleyOpenerPreset = ({
         }}
       >
         {showNewsprintTexture ? (
-          <div
+          <NewsCrumpleTexture
             style={{
-              position: "absolute",
-              inset: 0,
-              backgroundImage: `url(${NEWS_CRUMPLE_TEXTURE_SRC})`,
-              backgroundSize: "100% 100%",
-              backgroundPosition: "center",
               opacity: 0.09,
               mixBlendMode: "multiply",
             }}
@@ -571,4 +566,3 @@ export const renderCreatedaleyOpenerPreset = ({
     </div>
   );
 };
-

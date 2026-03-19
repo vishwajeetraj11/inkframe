@@ -1,8 +1,12 @@
 export { renderChartCardPreset } from "./chart-card";
 export { renderCreatedaleyOpenerPreset } from "./createdaley-opener";
 export { renderEditorialBarChartPreset } from "./editorial-bar-chart";
+export { renderEditorialSeatArcPreset } from "./editorial-seat-arc";
 export { renderEditorialStatRingPreset } from "./editorial-stat-ring";
 export { renderNewsClippingPreset } from "./news-clipping";
 export { renderVoxExplainerPreset } from "./vox-explainer";
+export { renderVoxTimelinePreset } from "./vox-timeline";
+export { renderVoxTimelineRibbonPreset } from "./vox-timeline-ribbon";
+export { renderVoxTimelineLedgerPreset } from "./vox-timeline-ledger";
 export { renderVoxTypographyPreset } from "./vox-typography";
 export { renderWorldMapFocusPreset } from "./world-map-focus";

@@ -11,54 +11,6 @@ export interface TemplateDefinition {
 
 export const TEMPLATE_DEFINITIONS: TemplateDefinition[] = [
   {
-    id: "classic",
-    stylePreset: "classic",
-    name: "Classic",
-    description: "Clean cinematic captions with smooth word-by-word reveal.",
-    sampleText: "A clear story\nstarts with context",
-    accentClass: "text-cyan-300",
-  },
-  {
-    id: "impact-grid",
-    stylePreset: "impact-grid",
-    name: "Impact Grid",
-    description: "Punchy all-caps grid for high-energy short-form cuts.",
-    sampleText: "Move fast\nbreak the scroll",
-    accentClass: "text-fuchsia-300",
-  },
-  {
-    id: "grid-kinetic",
-    stylePreset: "grid-kinetic",
-    name: "Grid Kinetic",
-    description: "Dark grid field with stacked setup lines and one oversized neon payoff word.",
-    sampleText: "animating text\nlike this\ncan be\nchallenging",
-    accentClass: "text-emerald-300",
-  },
-  {
-    id: "hero-slam",
-    stylePreset: "hero-slam",
-    name: "Hero Slam",
-    description: "One dominant hero word with supporting lines around it.",
-    sampleText: "Your biggest idea\nowns the screen",
-    accentClass: "text-rose-300",
-  },
-  {
-    id: "sticker-cutout",
-    stylePreset: "sticker-cutout",
-    name: "Sticker Cutout",
-    description: "Layered sticker-like labels that pop in sequence.",
-    sampleText: "Cut through noise\nwith bold words",
-    accentClass: "text-amber-300",
-  },
-  {
-    id: "editorial-mono",
-    stylePreset: "editorial-mono",
-    name: "Editorial Mono",
-    description: "Structured editorial blocks for analysis-heavy scripts.",
-    sampleText: "Data-driven stories\nwin attention",
-    accentClass: "text-emerald-300",
-  },
-  {
     id: "vox-explainer",
     stylePreset: "vox-explainer",
     name: "Vox Explainer",
@@ -66,6 +18,33 @@ export const TEMPLATE_DEFINITIONS: TemplateDefinition[] = [
     sampleText:
       "EXPLAINED\nWhy cities keep getting hotter\nMaps, asphalt, and policy choices\n+7 degrees in dense neighborhoods",
     accentClass: "text-yellow-300",
+  },
+  {
+    id: "vox-timeline",
+    stylePreset: "vox-timeline",
+    name: "Vox Timeline",
+    description: "Image-led historical timeline with a persistent chronology strip and active event card.",
+    sampleText:
+      "HOW IT HAPPENED\nThe fall of the Berlin Wall\n1989|Protests spread|Demonstrations grow across East Germany.\nNov 9|Press conference|A botched announcement sets crowds in motion.\nNov 9|Checkpoint opens|Border guards begin letting Berliners through.\nNov 10|Wall breached|People climb the wall and start chipping it apart.\n1990|Germany reunifies|The Cold War map of Europe begins to change.",
+    accentClass: "text-yellow-300",
+  },
+  {
+    id: "vox-timeline-ribbon",
+    stylePreset: "vox-timeline-ribbon",
+    name: "Timeline Ribbon",
+    description: "Documentary ribbon timeline with a lower-third chronology strip and floating active event card.",
+    sampleText:
+      "HOW IT HAPPENED\nThe fall of the Berlin Wall\n1989|Protests spread|Demonstrations grow across East Germany.\nNov 9|Press conference|A botched announcement sets crowds in motion.\nNov 9|Checkpoint opens|Border guards begin letting Berliners through.\nNov 10|Wall breached|People climb the wall and start chipping it apart.\n1990|Germany reunifies|The Cold War map of Europe begins to change.",
+    accentClass: "text-amber-300",
+  },
+  {
+    id: "vox-timeline-ledger",
+    stylePreset: "vox-timeline-ledger",
+    name: "Timeline Ledger",
+    description: "Archival ledger layout that keeps the full chronology visible while spotlighting one active event.",
+    sampleText:
+      "HOW IT HAPPENED\nThe fall of the Berlin Wall\n1989|Protests spread|Demonstrations grow across East Germany.\nNov 9|Press conference|A botched announcement sets crowds in motion.\nNov 9|Checkpoint opens|Border guards begin letting Berliners through.\nNov 10|Wall breached|People climb the wall and start chipping it apart.\n1990|Germany reunifies|The Cold War map of Europe begins to change.",
+    accentClass: "text-orange-300",
   },
   {
     id: "vox-typography",
@@ -104,10 +83,19 @@ export const TEMPLATE_DEFINITIONS: TemplateDefinition[] = [
     accentClass: "text-orange-300",
   },
   {
+    id: "editorial-seat-arc",
+    stylePreset: "editorial-seat-arc",
+    name: "Editorial Seat Arc",
+    description: "Parliament-style semicircle with highlighted headline, dotted arc segments, and leader-line labels.",
+    sampleText:
+      "The current [[balance of power]] in the UK Parliament\nData from the 2024 general election: Labour holds about 63% of seats, Conservatives around 19%, with the remainder shared among smaller parties and independents. Source: UK Parliament & Commons Library.\nLabour|411|#dd6b66\nOthers|118|#e8e2d7\nConservative|121|#8ed7f0",
+    accentClass: "text-yellow-300",
+  },
+  {
     id: "createdaley-opener",
     stylePreset: "createdaley-opener",
-    name: "Createdaley Opener",
-    description: "Dictionary-style opener with torn-paper reveal, phonetic line, and editorial definition copy.",
+    name: "Dictionary Animation",
+    description: "Typing animation with dictionary-style wordmark, pronunciation line, and editorial definition copy.",
     sampleText:
       "createdaley\nkree-a-tuh-day-lee\nnoun\nto inspire others to make, design, or imagine something new while reminding them to support the movement",
     accentClass: "text-zinc-300",

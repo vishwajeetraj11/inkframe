@@ -15,6 +15,7 @@
     "@ai-sdk/openai": "^3.0.30",
     "@ai-sdk/react": "^3.0.99",
     "@remotion/bundler": "^4.0.427",
+    "@remotion/google-fonts": "^4.0.427",
     "@remotion/player": "^4.0.427",
     "@remotion/renderer": "^4.0.427",
     "ai": "^6.0.97",

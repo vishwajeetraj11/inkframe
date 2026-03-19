@@ -1,9 +1,11 @@
+import type { CSSProperties } from "react";
 import { projectWorldMap } from "@/lib/maps/world";
 import type {
   TextOverlayFontFamily,
   TextOverlayStylePreset,
   VersionTimeline,
 } from "@/lib/editor/types";
+import { REMOTION_FONT_STACKS } from "../fonts";
 import {
   AbsoluteFill,
   Img,
@@ -17,18 +19,15 @@ import {
 import type { MotionTypographyAnimation, RenderMode } from "./types";
 
 export const FONT_STACK_BY_FAMILY: Record<TextOverlayFontFamily, string> = {
-  sans: "Inter, Montserrat, Arial, sans-serif",
-  serif: "Merriweather, Georgia, 'Times New Roman', serif",
-  cursive: "Bebas Neue, Oswald, Inter, sans-serif",
-  mono: "Roboto Mono, 'Courier New', Courier, monospace",
+  sans: REMOTION_FONT_STACKS.sans,
+  serif: REMOTION_FONT_STACKS.serif,
+  cursive: REMOTION_FONT_STACKS.condensed,
+  mono: REMOTION_FONT_STACKS.mono,
 };
 
-export const EDITORIAL_SERIF_STACK =
-  "var(--font-cormorant-garamond), 'Cormorant Garamond', var(--font-source-serif-4), 'Source Serif 4', Georgia, serif";
-export const STAT_RING_HEADLINE_STACK =
-  "var(--font-source-serif-4), 'Source Serif 4', Georgia, serif";
-export const STAT_RING_NUMBER_STACK =
-  "var(--font-cormorant-garamond), 'Cormorant Garamond', var(--font-source-serif-4), 'Source Serif 4', Georgia, serif";
+export const EDITORIAL_SERIF_STACK = REMOTION_FONT_STACKS.editorialSerif;
+export const STAT_RING_HEADLINE_STACK = REMOTION_FONT_STACKS.statRingHeadline;
+export const STAT_RING_NUMBER_STACK = REMOTION_FONT_STACKS.statRingNumber;
 
 export const OVERLAY_STYLE_PRESET_LABEL: Record<TextOverlayStylePreset, string> = {
   classic: "classic",
@@ -38,11 +37,15 @@ export const OVERLAY_STYLE_PRESET_LABEL: Record<TextOverlayStylePreset, string> 
   "sticker-cutout": "sticker-cutout",
   "editorial-mono": "editorial-mono",
   "vox-explainer": "vox-explainer",
+  "vox-timeline": "vox-timeline",
+  "vox-timeline-ribbon": "vox-timeline-ribbon",
+  "vox-timeline-ledger": "vox-timeline-ledger",
   "vox-typography": "vox-typography",
   "world-map-focus": "world-map-focus",
   "editorial-bar-chart": "editorial-bar-chart",
   "editorial-stat-ring": "editorial-stat-ring",
-  "createdaley-opener": "createdaley-opener",
+  "editorial-seat-arc": "editorial-seat-arc",
+  "createdaley-opener": "Dictionary Animation",
   "chart-card": "chart-card",
   "news-clipping": "news-clipping",
 };
@@ -74,6 +77,30 @@ export const MissingAsset = ({ assetId }: { assetId: string }) => {
     >
       Missing asset: {assetId}
     </AbsoluteFill>
+  );
+};
+
+export const NewsCrumpleTexture = ({ style }: { style?: CSSProperties }) => {
+  return (
+    <div
+      style={{
+        position: "absolute",
+        inset: 0,
+        overflow: "hidden",
+        ...style,
+      }}
+    >
+      <Img
+        src={NEWS_CRUMPLE_TEXTURE_SRC}
+        style={{
+          position: "absolute",
+          inset: 0,
+          width: "100%",
+          height: "100%",
+          objectFit: "fill",
+        }}
+      />
+    </div>
   );
 };
 

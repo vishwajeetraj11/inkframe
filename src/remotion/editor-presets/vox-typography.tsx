@@ -1,4 +1,5 @@
 import { Easing, interpolate, spring } from "remotion";
+import { REMOTION_FONT_STACKS } from "../fonts";
 import type { PresetRendererProps } from "./types";
 import {
   EDITORIAL_SERIF_STACK,
@@ -15,27 +16,25 @@ type HeroFontTreatment = {
 
 const VOX_TYPOGRAPHY_HERO_SEQUENCE: HeroFontTreatment[] = [
   {
-    fontFamily: "var(--font-source-serif-4), 'Source Serif 4', Georgia, serif",
+    fontFamily: REMOTION_FONT_STACKS.statRingHeadline,
     fontStyle: "italic",
     fontWeight: 700,
     letterSpacing: "-0.06em",
   },
   {
-    fontFamily:
-      "var(--font-cormorant-garamond), 'Cormorant Garamond', var(--font-source-serif-4), 'Source Serif 4', Georgia, serif",
+    fontFamily: REMOTION_FONT_STACKS.editorialSerif,
     fontStyle: "italic",
     fontWeight: 700,
     letterSpacing: "-0.085em",
   },
   {
-    fontFamily: "var(--font-sora), 'Sora', var(--font-plus-jakarta-sans), sans-serif",
+    fontFamily: REMOTION_FONT_STACKS.display,
     fontStyle: "normal",
     fontWeight: 700,
     letterSpacing: "-0.05em",
   },
   {
-    fontFamily:
-      "var(--font-barlow-condensed), 'Barlow Condensed', var(--font-plus-jakarta-sans), sans-serif",
+    fontFamily: REMOTION_FONT_STACKS.condensed,
     fontStyle: "normal",
     fontWeight: 700,
     letterSpacing: "-0.03em",

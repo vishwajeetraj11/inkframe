@@ -99,6 +99,10 @@ export const useEditorSession = () => {
           fontWeight: styleDefaults.fontWeight,
           fontStyle: styleDefaults.fontStyle,
           stylePreset: initialTemplate.stylePreset,
+          createdaleyTexture:
+            initialTemplate.stylePreset === "editorial-seat-arc"
+              ? "warm-editorial"
+              : "plain",
         },
       });
 

@@ -6,7 +6,7 @@ import {
 import { Easing, interpolate } from "remotion";
 import type { PresetRendererProps } from "./types";
 import {
-  NEWS_CRUMPLE_TEXTURE_SRC,
+  NewsCrumpleTexture,
   STAT_RING_HEADLINE_STACK,
   STAT_RING_NUMBER_STACK,
   clamp01,
@@ -152,13 +152,8 @@ export const renderEditorialStatRingPreset = ({
           transformOrigin: "center center",
         }}
       >
-        <div
+        <NewsCrumpleTexture
           style={{
-            position: "absolute",
-            inset: 0,
-            backgroundImage: `url(${NEWS_CRUMPLE_TEXTURE_SRC})`,
-            backgroundSize: "100% 100%",
-            backgroundPosition: "center",
             opacity: 0.05,
             mixBlendMode: "multiply",
             pointerEvents: "none",
@@ -360,4 +355,3 @@ export const renderEditorialStatRingPreset = ({
     </div>
   );
 };
-
