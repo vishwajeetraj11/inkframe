@@ -1,6 +1,11 @@
 "use client";
 
 import { createDefaultTextMotionProject } from "@/lib/text-motion/defaults";
+import {
+  MAX_TEXT_MOTION_DURATION_FRAMES,
+  MAX_TEXT_MOTION_SCENE_COUNT,
+  TEXT_MOTION_FPS,
+} from "@/lib/text-motion/constants";
 import { getTextMotionDurationInFrames, sanitizeTextMotionProject } from "@/lib/text-motion/utils";
 import type { TextMotionProject, TextMotionScene, TextMotionTemplate } from "@/lib/text-motion/types";
 import {
@@ -229,6 +234,15 @@ export const useTextMotionProject = () => {
   };
 
   const addScene = () => {
+    if (safeProject.scenes.length >= MAX_TEXT_MOTION_SCENE_COUNT) {
+      setStatusMessage(
+        `Reached the maximum of ${MAX_TEXT_MOTION_SCENE_COUNT} scenes for the ${Math.round(
+          MAX_TEXT_MOTION_DURATION_FRAMES / TEXT_MOTION_FPS,
+        )}-second export limit.`,
+      );
+      return;
+    }
+
     setProject((previous) => ({
       ...previous,
       scenes: [...previous.scenes, createTextMotionScene()],

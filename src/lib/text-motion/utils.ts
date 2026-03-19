@@ -1,5 +1,6 @@
 import {
   MAX_SCENE_DURATION_FRAMES,
+  MAX_TEXT_MOTION_SCENE_COUNT,
   MAX_TEXT_MOTION_DURATION_FRAMES,
   MIN_SCENE_DURATION_FRAMES,
 } from "./constants";
@@ -72,6 +73,80 @@ const normalizeSceneImageAssetId = (
   }
 
   return validImageAssetIds.has(value) ? value : undefined;
+};
+
+const fitScenesWithinDuration = (
+  scenes: TextMotionProject["scenes"],
+): TextMotionProject["scenes"] => {
+  const limitedScenes = scenes.slice(0, MAX_TEXT_MOTION_SCENE_COUNT);
+  const totalFrames = limitedScenes.reduce(
+    (sum, scene) => sum + scene.durationInFrames,
+    0,
+  );
+
+  if (totalFrames <= MAX_TEXT_MOTION_DURATION_FRAMES) {
+    return limitedScenes;
+  }
+
+  const minimumTotalFrames = limitedScenes.length * MIN_SCENE_DURATION_FRAMES;
+  if (minimumTotalFrames >= MAX_TEXT_MOTION_DURATION_FRAMES) {
+    return limitedScenes.map((scene) => ({
+      ...scene,
+      durationInFrames: MIN_SCENE_DURATION_FRAMES,
+    }));
+  }
+
+  const availableExtraFrames =
+    MAX_TEXT_MOTION_DURATION_FRAMES - minimumTotalFrames;
+  const totalHeadroom = totalFrames - minimumTotalFrames;
+  const allocations = limitedScenes.map((scene, index) => {
+    const headroom = scene.durationInFrames - MIN_SCENE_DURATION_FRAMES;
+    const scaledHeadroom = (headroom * availableExtraFrames) / totalHeadroom;
+    const wholeFrames = Math.min(headroom, Math.floor(scaledHeadroom));
+
+    return {
+      fractionalHeadroom: scaledHeadroom - wholeFrames,
+      index,
+      maxDurationInFrames: scene.durationInFrames,
+      nextDurationInFrames: MIN_SCENE_DURATION_FRAMES + wholeFrames,
+    };
+  });
+
+  let remainingFrames =
+    MAX_TEXT_MOTION_DURATION_FRAMES -
+    allocations.reduce(
+      (sum, allocation) => sum + allocation.nextDurationInFrames,
+      0,
+    );
+
+  allocations
+    .slice()
+    .sort((left, right) => {
+      if (right.fractionalHeadroom !== left.fractionalHeadroom) {
+        return right.fractionalHeadroom - left.fractionalHeadroom;
+      }
+
+      if (right.maxDurationInFrames !== left.maxDurationInFrames) {
+        return right.maxDurationInFrames - left.maxDurationInFrames;
+      }
+
+      return left.index - right.index;
+    })
+    .forEach((allocation) => {
+      if (
+        remainingFrames > 0 &&
+        allocation.nextDurationInFrames < allocation.maxDurationInFrames
+      ) {
+        allocation.nextDurationInFrames += 1;
+        remainingFrames -= 1;
+      }
+    });
+
+  return limitedScenes.map((scene, index) => ({
+    ...scene,
+    durationInFrames:
+      allocations[index]?.nextDurationInFrames ?? scene.durationInFrames,
+  }));
 };
 
 export const sanitizeTextMotionProject = (
@@ -168,31 +243,13 @@ export const sanitizeTextMotionProject = (
     };
   }
 
-  const totalFrames = scenes.reduce(
-    (sum, scene) => sum + scene.durationInFrames,
-    0,
-  );
-
-  if (totalFrames <= MAX_TEXT_MOTION_DURATION_FRAMES) {
-    return {
-      ...project,
-      template,
-      imageAssets,
-      scenes,
-    };
-  }
-
-  const scale = MAX_TEXT_MOTION_DURATION_FRAMES / totalFrames;
-  const scaledScenes = scenes.map((scene) => ({
-    ...scene,
-    durationInFrames: clampDuration(scene.durationInFrames * scale),
-  }));
+  const fittedScenes = fitScenesWithinDuration(scenes);
 
   return {
     ...project,
     template,
     imageAssets,
-    scenes: scaledScenes,
+    scenes: fittedScenes,
   };
 };
 

@@ -1,6 +1,7 @@
 import type { AspectPreset } from "../editor/types";
 import {
   MAX_SCENE_DURATION_FRAMES,
+  MAX_TEXT_MOTION_SCENE_COUNT,
   MAX_TEXT_MOTION_DURATION_FRAMES,
   MIN_SCENE_DURATION_FRAMES,
   TEXT_MOTION_ANIMATIONS,
@@ -70,7 +71,7 @@ export const textMotionProjectSchema = z
         }),
       )
       .default([]),
-    scenes: z.array(textMotionSceneSchema).min(1),
+    scenes: z.array(textMotionSceneSchema).min(1).max(MAX_TEXT_MOTION_SCENE_COUNT),
   })
   .superRefine((project, context) => {
     const total = project.scenes.reduce(
