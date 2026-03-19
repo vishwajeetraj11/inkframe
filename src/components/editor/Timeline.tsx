@@ -1,8 +1,18 @@
 "use client";
 
 import { FPS } from "@/lib/editor/constants";
-import { getTransitionBetween } from "@/lib/editor/timeline";
-import type { AudioTrack, Clip, TextOverlay, VersionTimeline } from "@/lib/editor/types";
+import {
+  buildRenderTrack,
+  getTransitionBetween,
+  getVersionRenderDurationInFrames,
+} from "@/lib/editor/timeline";
+import {
+  TEXT_OVERLAY_STYLE_PRESET_LABELS,
+  type AudioTrack,
+  type Clip,
+  type TextOverlay,
+  type VersionTimeline,
+} from "@/lib/editor/types";
 
 interface TimelineProps {
   version: VersionTimeline;
@@ -26,6 +36,10 @@ interface TimelineProps {
   onRemoveAudio: (audioId: string) => void;
 }
 
+type ClipTrackEntry = ReturnType<typeof buildRenderTrack>["entries"][number];
+
+const MIN_BLOCK_WIDTH_PERCENT = 4;
+
 const framesToSeconds = (frames: number): number => {
   return Number((frames / FPS).toFixed(2));
 };
@@ -39,6 +53,103 @@ const parseNumber = (value: string, fallback: number): number => {
   return Number.isFinite(parsed) ? parsed : fallback;
 };
 
+const formatSeconds = (frames: number): string => {
+  const seconds = frames / FPS;
+  return Number.isInteger(seconds) ? `${seconds}s` : `${seconds.toFixed(1)}s`;
+};
+
+const truncateLabel = (value: string, limit = 42): string => {
+  if (value.length <= limit) {
+    return value;
+  }
+
+  return `${value.slice(0, limit - 1)}…`;
+};
+
+const getTimelineBlockStyle = (
+  startFrame: number,
+  endFrame: number,
+  totalFrames: number,
+): React.CSSProperties => {
+  const safeTotalFrames = Math.max(1, totalFrames);
+  const safeStartFrame = Math.max(0, startFrame);
+  const safeEndFrame = Math.max(safeStartFrame + 1, endFrame);
+  const leftPercent = (safeStartFrame / safeTotalFrames) * 100;
+  const naturalWidthPercent = ((safeEndFrame - safeStartFrame) / safeTotalFrames) * 100;
+  const widthPercent = Math.max(
+    Math.min(100 - leftPercent, naturalWidthPercent),
+    Math.min(MIN_BLOCK_WIDTH_PERCENT, 100 - leftPercent),
+  );
+
+  return {
+    left: `${leftPercent}%`,
+    width: `${widthPercent}%`,
+  };
+};
+
+const getTickStepInSeconds = (totalFrames: number): number => {
+  const totalSeconds = totalFrames / FPS;
+
+  if (totalSeconds <= 12) {
+    return 1;
+  }
+
+  if (totalSeconds <= 24) {
+    return 2;
+  }
+
+  if (totalSeconds <= 45) {
+    return 5;
+  }
+
+  return 10;
+};
+
+const buildTicks = (totalFrames: number): number[] => {
+  const stepFrames = getTickStepInSeconds(totalFrames) * FPS;
+  const ticks: number[] = [];
+
+  for (let frame = 0; frame <= totalFrames; frame += stepFrames) {
+    ticks.push(frame);
+  }
+
+  if (ticks[ticks.length - 1] !== totalFrames) {
+    ticks.push(totalFrames);
+  }
+
+  return ticks;
+};
+
+const packLaneRows = <T,>(
+  items: readonly T[],
+  getStartFrame: (item: T) => number,
+  getEndFrame: (item: T) => number,
+): T[][] => {
+  const rows: T[][] = [];
+  const rowEndFrames: number[] = [];
+  const sortedItems = [...items].sort((left, right) => {
+    return getStartFrame(left) - getStartFrame(right);
+  });
+
+  for (const item of sortedItems) {
+    const startFrame = Math.max(0, getStartFrame(item));
+    const endFrame = Math.max(startFrame + 1, getEndFrame(item));
+    let targetRow = rowEndFrames.findIndex((rowEndFrame) => startFrame >= rowEndFrame);
+
+    if (targetRow === -1) {
+      targetRow = rows.length;
+      rows.push([]);
+      rowEndFrames.push(endFrame);
+    } else {
+      rowEndFrames[targetRow] = endFrame;
+    }
+
+    rows[targetRow].push(item);
+  }
+
+  return rows;
+};
+
 const activateOnEnterOrSpace = (
   event: React.KeyboardEvent<HTMLElement>,
   callback: () => void,
@@ -47,6 +158,98 @@ const activateOnEnterOrSpace = (
     event.preventDefault();
     callback();
   }
+};
+
+const getClipBlockClassName = (kind: Clip["kind"], selected: boolean): string => {
+  const baseClassName =
+    kind === "video"
+      ? "border-sky-400/45 bg-sky-400/18 text-sky-50"
+      : "border-amber-400/45 bg-amber-400/18 text-amber-50";
+
+  return [
+    "group absolute top-1/2 h-14 -translate-y-1/2 overflow-hidden rounded-xl border px-3 text-left shadow-[0_10px_24px_rgba(0,0,0,0.22)] transition",
+    baseClassName,
+    selected ? "ring-2 ring-cyan-300/80" : "hover:border-neutral-400",
+  ].join(" ");
+};
+
+const getTextBlockClassName = (selected: boolean): string => {
+  return [
+    "group absolute top-1/2 h-11 -translate-y-1/2 overflow-hidden rounded-lg border border-fuchsia-300/35 bg-fuchsia-300/14 px-3 text-left text-fuchsia-50 shadow-[0_8px_20px_rgba(0,0,0,0.2)] transition",
+    selected ? "ring-2 ring-cyan-300/80" : "hover:border-fuchsia-200/55",
+  ].join(" ");
+};
+
+const getAudioBlockClassName = (selected: boolean): string => {
+  return [
+    "group absolute top-1/2 h-11 -translate-y-1/2 overflow-hidden rounded-lg border border-emerald-300/35 bg-emerald-300/14 px-3 text-left text-emerald-50 shadow-[0_8px_20px_rgba(0,0,0,0.2)] transition",
+    selected ? "ring-2 ring-cyan-300/80" : "hover:border-emerald-200/55",
+  ].join(" ");
+};
+
+const TimelineGuides = ({
+  ticks,
+  totalFrames,
+}: {
+  ticks: number[];
+  totalFrames: number;
+}) => {
+  return (
+    <>
+      {ticks.map((frame) => {
+        const leftPercent = (frame / Math.max(1, totalFrames)) * 100;
+
+        return (
+          <div
+            key={frame}
+            aria-hidden="true"
+            className="absolute inset-y-0 w-px bg-white/6"
+            style={{ left: `${leftPercent}%` }}
+          />
+        );
+      })}
+    </>
+  );
+};
+
+const TimelineLane = ({
+  title,
+  subtitle,
+  count,
+  totalFrames,
+  ticks,
+  rows,
+}: {
+  title: string;
+  subtitle: string;
+  count: string;
+  totalFrames: number;
+  ticks: number[];
+  rows: React.ReactNode[];
+}) => {
+  return (
+    <div className="grid gap-3 md:grid-cols-[8rem_minmax(0,1fr)] md:items-start">
+      <div className="space-y-1">
+        <p className="text-xs font-semibold uppercase tracking-[0.24em] text-neutral-300">
+          {title}
+        </p>
+        <p className="text-xs text-neutral-500">{subtitle}</p>
+        <p className="text-[11px] uppercase tracking-[0.18em] text-neutral-600">{count}</p>
+      </div>
+
+      <div className="space-y-2">
+        {rows.map((row, index) => (
+          <div
+            key={`${title}-${index}`}
+            className="relative h-16 overflow-hidden rounded-xl border border-neutral-800 bg-neutral-950/75"
+          >
+            <TimelineGuides ticks={ticks} totalFrames={totalFrames} />
+            {row}
+          </div>
+        ))}
+      </div>
+    </div>
+  );
 };
 
 export const Timeline = ({
@@ -70,11 +273,262 @@ export const Timeline = ({
   onUpdateAudio,
   onRemoveAudio,
 }: TimelineProps) => {
+  const clipTrack = buildRenderTrack(version);
+  const totalFrames = getVersionRenderDurationInFrames(version);
+  const totalSeconds = formatSeconds(totalFrames);
+  const timelineWidth = Math.max(720, Math.round((totalFrames / FPS) * 64));
+  const ticks = buildTicks(totalFrames);
+  const textRows = packLaneRows(
+    version.textOverlays,
+    (overlay) => overlay.startFrame,
+    (overlay) => overlay.endFrame,
+  );
+  const audioRows = packLaneRows(
+    version.audioTracks,
+    (track) => track.startFrame,
+    (track) => track.endFrame,
+  );
+  const hasTimelineItems =
+    clipTrack.entries.length > 0 ||
+    version.textOverlays.length > 0 ||
+    version.audioTracks.length > 0;
+
   return (
     <section className="space-y-4 rounded-2xl border border-neutral-700/60 bg-neutral-900/50 p-4">
-      <h2 className="app-panel-label text-sm font-semibold uppercase tracking-wide text-neutral-300">
-        Timeline
-      </h2>
+      <div className="flex items-start justify-between gap-3">
+        <div>
+          <h2 className="app-panel-label text-sm font-semibold uppercase tracking-wide text-neutral-300">
+            Timeline
+          </h2>
+          <p className="mt-1 text-xs text-neutral-500">
+            Visual lanes mirror the actual render order and overlaps.
+          </p>
+        </div>
+
+        <div className="rounded-full border border-neutral-700 bg-neutral-900/80 px-3 py-1 text-[11px] font-medium uppercase tracking-[0.18em] text-neutral-400">
+          {totalSeconds}
+        </div>
+      </div>
+
+      <div className="rounded-2xl border border-neutral-700/70 bg-neutral-950/55 p-3">
+        {!hasTimelineItems ? (
+          <div className="rounded-xl border border-dashed border-neutral-700 px-3 py-6 text-sm text-neutral-400">
+            Upload media or add overlays to build the timeline.
+          </div>
+        ) : (
+          <div className="space-y-3">
+            <div className="flex flex-wrap items-center gap-2 text-[11px] uppercase tracking-[0.18em] text-neutral-500">
+              <span>{clipTrack.entries.length} clips</span>
+              <span>{version.textOverlays.length} text layers</span>
+              <span>{version.audioTracks.length} audio layers</span>
+              <span>{version.transitions.length} transitions</span>
+              <span className="text-neutral-600">Scroll for long sequences</span>
+            </div>
+
+            <div className="overflow-x-auto pb-1">
+              <div className="space-y-3" style={{ width: `${timelineWidth}px` }}>
+                <div className="relative h-8 overflow-hidden rounded-xl border border-neutral-800 bg-neutral-950/75 px-3">
+                  <TimelineGuides ticks={ticks} totalFrames={totalFrames} />
+                  {ticks.map((frame) => {
+                    const leftPercent = (frame / Math.max(1, totalFrames)) * 100;
+
+                    return (
+                      <div
+                        key={`label-${frame}`}
+                        aria-hidden="true"
+                        className="absolute top-1.5 -translate-x-1/2 text-[10px] font-medium uppercase tracking-[0.18em] text-neutral-500"
+                        style={{ left: `${leftPercent}%` }}
+                      >
+                        {formatSeconds(frame)}
+                      </div>
+                    );
+                  })}
+                </div>
+
+                <TimelineLane
+                  title="Clips"
+                  subtitle="Render track"
+                  count={`${clipTrack.entries.length} blocks`}
+                  totalFrames={totalFrames}
+                  ticks={ticks}
+                  rows={[
+                    clipTrack.entries.map((entry: ClipTrackEntry) => {
+                      const endFrame = entry.startFrame + entry.durationInFrames;
+                      const blockStyle = getTimelineBlockStyle(
+                        entry.startFrame,
+                        endFrame,
+                        totalFrames,
+                      );
+                      const fadeInPercent =
+                        entry.fadeInFrames > 0
+                          ? Math.min(60, (entry.fadeInFrames / entry.durationInFrames) * 100)
+                          : 0;
+                      const fadeOutPercent =
+                        entry.fadeOutFrames > 0
+                          ? Math.min(60, (entry.fadeOutFrames / entry.durationInFrames) * 100)
+                          : 0;
+
+                      return (
+                        <button
+                          key={entry.clip.id}
+                          type="button"
+                          disabled={disabled}
+                          onClick={() => onSelectClip(entry.clip.id)}
+                          className={getClipBlockClassName(
+                            entry.clip.kind,
+                            selectedClipId === entry.clip.id,
+                          )}
+                          style={blockStyle}
+                          title={`${assetNames[entry.clip.assetId] ?? entry.clip.assetId} • ${formatSeconds(
+                            entry.durationInFrames,
+                          )}`}
+                        >
+                          {fadeInPercent > 0 ? (
+                            <div
+                              aria-hidden="true"
+                              className="absolute inset-y-0 left-0 bg-white/12"
+                              style={{ width: `${fadeInPercent}%` }}
+                            />
+                          ) : null}
+
+                          {fadeOutPercent > 0 ? (
+                            <div
+                              aria-hidden="true"
+                              className="absolute inset-y-0 right-0 bg-black/16"
+                              style={{ width: `${fadeOutPercent}%` }}
+                            />
+                          ) : null}
+
+                          <div className="relative flex h-full items-center justify-between gap-3">
+                            <div className="min-w-0">
+                              <p className="truncate text-xs font-semibold uppercase tracking-[0.18em]">
+                                {entry.clip.kind}
+                              </p>
+                              <p className="truncate text-sm font-medium text-white">
+                                {assetNames[entry.clip.assetId] ?? entry.clip.assetId}
+                              </p>
+                            </div>
+
+                            <span className="shrink-0 rounded-full border border-white/12 bg-black/20 px-2 py-1 text-[10px] font-semibold uppercase tracking-[0.16em] text-white/85">
+                              {formatSeconds(entry.durationInFrames)}
+                            </span>
+                          </div>
+                        </button>
+                      );
+                    }),
+                  ]}
+                />
+
+                <TimelineLane
+                  title="Text"
+                  subtitle="Overlay layers"
+                  count={`${version.textOverlays.length} overlays`}
+                  totalFrames={totalFrames}
+                  ticks={ticks}
+                  rows={
+                    textRows.length > 0
+                      ? textRows.map((row) =>
+                          row.map((overlay) => (
+                            <button
+                              key={overlay.id}
+                              type="button"
+                              disabled={disabled}
+                              onClick={() => onSelectText(overlay.id)}
+                              className={getTextBlockClassName(selectedTextId === overlay.id)}
+                              style={getTimelineBlockStyle(
+                                overlay.startFrame,
+                                overlay.endFrame,
+                                totalFrames,
+                              )}
+                              title={`${overlay.text} • ${TEXT_OVERLAY_STYLE_PRESET_LABELS[
+                                overlay.stylePreset
+                              ]}`}
+                            >
+                              <div className="flex h-full items-center justify-between gap-3">
+                                <div className="min-w-0">
+                                  <p className="truncate text-sm font-medium text-white">
+                                    {truncateLabel(overlay.text.replace(/\s+/g, " ").trim() || "Text overlay")}
+                                  </p>
+                                  <p className="truncate text-[10px] uppercase tracking-[0.16em] text-fuchsia-100/75">
+                                    {TEXT_OVERLAY_STYLE_PRESET_LABELS[overlay.stylePreset]}
+                                  </p>
+                                </div>
+
+                                <span className="shrink-0 rounded-full border border-white/12 bg-black/20 px-2 py-1 text-[10px] font-semibold uppercase tracking-[0.16em] text-white/85">
+                                  {formatSeconds(overlay.endFrame - overlay.startFrame)}
+                                </span>
+                              </div>
+                            </button>
+                          )),
+                        )
+                      : [
+                          <div
+                            key="text-empty"
+                            className="flex h-full items-center px-3 text-xs text-neutral-500"
+                          >
+                            No text overlays on the timeline.
+                          </div>,
+                        ]
+                  }
+                />
+
+                <TimelineLane
+                  title="Audio"
+                  subtitle="Playback layers"
+                  count={`${version.audioTracks.length} tracks`}
+                  totalFrames={totalFrames}
+                  ticks={ticks}
+                  rows={
+                    audioRows.length > 0
+                      ? audioRows.map((row) =>
+                          row.map((track) => (
+                            <button
+                              key={track.id}
+                              type="button"
+                              disabled={disabled}
+                              onClick={() => onSelectAudio(track.id)}
+                              className={getAudioBlockClassName(selectedAudioId === track.id)}
+                              style={getTimelineBlockStyle(
+                                track.startFrame,
+                                track.endFrame,
+                                totalFrames,
+                              )}
+                              title={`${assetNames[track.assetId] ?? track.assetId} • ${formatSeconds(
+                                track.endFrame - track.startFrame,
+                              )}`}
+                            >
+                              <div className="flex h-full items-center justify-between gap-3">
+                                <div className="min-w-0">
+                                  <p className="truncate text-sm font-medium text-white">
+                                    {assetNames[track.assetId] ?? track.assetId}
+                                  </p>
+                                  <p className="truncate text-[10px] uppercase tracking-[0.16em] text-emerald-100/75">
+                                    Volume {Math.round(track.volume * 100)}%
+                                  </p>
+                                </div>
+
+                                <span className="shrink-0 rounded-full border border-white/12 bg-black/20 px-2 py-1 text-[10px] font-semibold uppercase tracking-[0.16em] text-white/85">
+                                  {formatSeconds(track.endFrame - track.startFrame)}
+                                </span>
+                              </div>
+                            </button>
+                          )),
+                        )
+                      : [
+                          <div
+                            key="audio-empty"
+                            className="flex h-full items-center px-3 text-xs text-neutral-500"
+                          >
+                            No audio tracks on the timeline.
+                          </div>,
+                        ]
+                  }
+                />
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
 
       <div className="space-y-3">
         {version.clips.length === 0 ? (
