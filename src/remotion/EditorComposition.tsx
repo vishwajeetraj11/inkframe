@@ -139,41 +139,26 @@ const getBackdropFlags = (
   };
 };
 
-const getCompositionBackground = (flags: BackdropFlags): string => {
-  if (flags.hasNewsClippingOverlay) {
-    return PAPER_BACKGROUND;
-  }
-  if (flags.showGridKineticBackdrop) {
-    return GRID_KINETIC_BACKGROUND;
-  }
-  if (flags.showWorldMapFocusBackdrop) {
-    return WORLD_MAP_BACKGROUND;
-  }
-  if (flags.showRegionalMapFocusBackdrop) {
-    return REGIONAL_MAP_BACKGROUND;
-  }
-  if (flags.showEditorialBarBackdrop) {
-    return EDITORIAL_BAR_BACKGROUND;
-  }
-  if (flags.showEditorialStatRingBackdrop) {
-    return EDITORIAL_STAT_RING_BACKGROUND;
-  }
-  if (flags.showCreatedaleyBackdrop) {
-    return CREATEDALEY_BACKGROUND;
-  }
-  if (flags.showChartCardBackdrop) {
-    return CHART_BACKGROUND;
-  }
-  if (flags.showVoxTimelineBackdrop) {
-    return VOX_BACKGROUND;
-  }
-  if (flags.showVoxTypographyBackdrop) {
-    return VOX_TYPOGRAPHY_BACKGROUND;
-  }
-  if (flags.showVoxExplainerBackdrop) {
-    return VOX_BACKGROUND;
-  }
+const BACKDROP_MAP: Array<[keyof BackdropFlags, string]> = [
+  ["hasNewsClippingOverlay", PAPER_BACKGROUND],
+  ["showGridKineticBackdrop", GRID_KINETIC_BACKGROUND],
+  ["showWorldMapFocusBackdrop", WORLD_MAP_BACKGROUND],
+  ["showRegionalMapFocusBackdrop", REGIONAL_MAP_BACKGROUND],
+  ["showEditorialBarBackdrop", EDITORIAL_BAR_BACKGROUND],
+  ["showEditorialStatRingBackdrop", EDITORIAL_STAT_RING_BACKGROUND],
+  ["showCreatedaleyBackdrop", CREATEDALEY_BACKGROUND],
+  ["showChartCardBackdrop", CHART_BACKGROUND],
+  ["showVoxTimelineBackdrop", VOX_BACKGROUND],
+  ["showVoxTypographyBackdrop", VOX_TYPOGRAPHY_BACKGROUND],
+  ["showVoxExplainerBackdrop", VOX_BACKGROUND],
+];
 
+const getCompositionBackground = (flags: BackdropFlags): string => {
+  for (const [flagKey, background] of BACKDROP_MAP) {
+    if (flags[flagKey]) {
+      return background;
+    }
+  }
   return "black";
 };
 

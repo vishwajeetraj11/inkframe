@@ -29,6 +29,10 @@ import {
   secondsToFrames,
   truncateLabel,
 } from "./timeline/timeline-utils";
+import { TimelineClipTrack } from "./timeline/TimelineClipTrack";
+import { TimelineTextTrack } from "./timeline/TimelineTextTrack";
+import { TimelineAudioTrack } from "./timeline/TimelineAudioTrack";
+import { TimelineGuides } from "./timeline/TimelineGuides";
 
 interface TimelineProps {
   version: VersionTimeline;
@@ -53,72 +57,6 @@ interface TimelineProps {
 }
 
 type ClipTrackEntry = ReturnType<typeof buildRenderTrack>["entries"][number];
-
-
-const TimelineGuides = ({
-  ticks,
-  totalFrames,
-}: {
-  ticks: number[];
-  totalFrames: number;
-}) => {
-  return (
-    <>
-      {ticks.map((frame) => {
-        const leftPercent = (frame / Math.max(1, totalFrames)) * 100;
-
-        return (
-          <div
-            key={frame}
-            aria-hidden="true"
-            className="absolute inset-y-0 w-px bg-white/6"
-            style={{ left: `${leftPercent}%` }}
-          />
-        );
-      })}
-    </>
-  );
-};
-
-const TimelineLane = ({
-  title,
-  subtitle,
-  count,
-  totalFrames,
-  ticks,
-  rows,
-}: {
-  title: string;
-  subtitle: string;
-  count: string;
-  totalFrames: number;
-  ticks: number[];
-  rows: React.ReactNode[];
-}) => {
-  return (
-    <div className="grid gap-3 md:grid-cols-[8rem_minmax(0,1fr)] md:items-start">
-      <div className="space-y-1">
-        <p className="text-xs font-semibold uppercase tracking-[0.24em] text-neutral-300">
-          {title}
-        </p>
-        <p className="text-xs text-neutral-500">{subtitle}</p>
-        <p className="text-[11px] uppercase tracking-[0.18em] text-neutral-600">{count}</p>
-      </div>
-
-      <div className="space-y-2">
-        {rows.map((row, index) => (
-          <div
-            key={`${title}-${index}`}
-            className="relative h-16 overflow-hidden rounded-xl border border-neutral-800 bg-neutral-950/75"
-          >
-            <TimelineGuides ticks={ticks} totalFrames={totalFrames} />
-            {row}
-          </div>
-        ))}
-      </div>
-    </div>
-  );
-};
 
 export const Timeline = ({
   version,
@@ -216,184 +154,35 @@ export const Timeline = ({
                   })}
                 </div>
 
-                <TimelineLane
-                  title="Clips"
-                  subtitle="Render track"
-                  count={`${clipTrack.entries.length} blocks`}
+                <TimelineClipTrack
+                  entries={clipTrack.entries}
                   totalFrames={totalFrames}
                   ticks={ticks}
-                  rows={[
-                    clipTrack.entries.map((entry: ClipTrackEntry) => {
-                      const endFrame = entry.startFrame + entry.durationInFrames;
-                      const blockStyle = getTimelineBlockStyle(
-                        entry.startFrame,
-                        endFrame,
-                        totalFrames,
-                      );
-                      const fadeInPercent =
-                        entry.fadeInFrames > 0
-                          ? Math.min(60, (entry.fadeInFrames / entry.durationInFrames) * 100)
-                          : 0;
-                      const fadeOutPercent =
-                        entry.fadeOutFrames > 0
-                          ? Math.min(60, (entry.fadeOutFrames / entry.durationInFrames) * 100)
-                          : 0;
-
-                      return (
-                        <button
-                          key={entry.clip.id}
-                          type="button"
-                          disabled={disabled}
-                          onClick={() => onSelectClip(entry.clip.id)}
-                          className={getClipBlockClassName(
-                            entry.clip.kind,
-                            selectedClipId === entry.clip.id,
-                          )}
-                          style={blockStyle}
-                          title={`${assetNames[entry.clip.assetId] ?? entry.clip.assetId} • ${formatSeconds(
-                            entry.durationInFrames,
-                          )}`}
-                        >
-                          {fadeInPercent > 0 ? (
-                            <div
-                              aria-hidden="true"
-                              className="absolute inset-y-0 left-0 bg-white/12"
-                              style={{ width: `${fadeInPercent}%` }}
-                            />
-                          ) : null}
-
-                          {fadeOutPercent > 0 ? (
-                            <div
-                              aria-hidden="true"
-                              className="absolute inset-y-0 right-0 bg-black/16"
-                              style={{ width: `${fadeOutPercent}%` }}
-                            />
-                          ) : null}
-
-                          <div className="relative flex h-full items-center justify-between gap-3">
-                            <div className="min-w-0">
-                              <p className="truncate text-xs font-semibold uppercase tracking-[0.18em]">
-                                {entry.clip.kind}
-                              </p>
-                              <p className="truncate text-sm font-medium text-white">
-                                {assetNames[entry.clip.assetId] ?? entry.clip.assetId}
-                              </p>
-                            </div>
-
-                            <span className="shrink-0 rounded-full border border-white/12 bg-black/20 px-2 py-1 text-[10px] font-semibold uppercase tracking-[0.16em] text-white/85">
-                              {formatSeconds(entry.durationInFrames)}
-                            </span>
-                          </div>
-                        </button>
-                      );
-                    }),
-                  ]}
+                  selectedClipId={selectedClipId}
+                  disabled={disabled}
+                  assetNames={assetNames}
+                  onSelectClip={onSelectClip}
                 />
 
-                <TimelineLane
-                  title="Text"
-                  subtitle="Overlay layers"
-                  count={`${version.textOverlays.length} overlays`}
+                <TimelineTextTrack
+                  overlays={version.textOverlays}
+                  textRows={textRows}
                   totalFrames={totalFrames}
                   ticks={ticks}
-                  rows={
-                    textRows.length > 0
-                      ? textRows.map((row) =>
-                          row.map((overlay) => (
-                            <button
-                              key={overlay.id}
-                              type="button"
-                              disabled={disabled}
-                              onClick={() => onSelectText(overlay.id)}
-                              className={getTextBlockClassName(selectedTextId === overlay.id)}
-                              style={getTimelineBlockStyle(
-                                overlay.startFrame,
-                                overlay.endFrame,
-                                totalFrames,
-                              )}
-                              title={`${overlay.text} • ${TEXT_OVERLAY_STYLE_PRESET_LABELS[
-                                overlay.stylePreset
-                              ]}`}
-                            >
-                              <div className="flex h-full items-center justify-between gap-3">
-                                <div className="min-w-0">
-                                  <p className="truncate text-sm font-medium text-white">
-                                    {truncateLabel(overlay.text.replace(/\s+/g, " ").trim() || "Text overlay")}
-                                  </p>
-                                  <p className="truncate text-[10px] uppercase tracking-[0.16em] text-fuchsia-100/75">
-                                    {TEXT_OVERLAY_STYLE_PRESET_LABELS[overlay.stylePreset]}
-                                  </p>
-                                </div>
-
-                                <span className="shrink-0 rounded-full border border-white/12 bg-black/20 px-2 py-1 text-[10px] font-semibold uppercase tracking-[0.16em] text-white/85">
-                                  {formatSeconds(overlay.endFrame - overlay.startFrame)}
-                                </span>
-                              </div>
-                            </button>
-                          )),
-                        )
-                      : [
-                          <div
-                            key="text-empty"
-                            className="flex h-full items-center px-3 text-xs text-neutral-500"
-                          >
-                            No text overlays on the timeline.
-                          </div>,
-                        ]
-                  }
+                  selectedTextId={selectedTextId}
+                  disabled={disabled}
+                  onSelectText={onSelectText}
                 />
 
-                <TimelineLane
-                  title="Audio"
-                  subtitle="Playback layers"
-                  count={`${version.audioTracks.length} tracks`}
+                <TimelineAudioTrack
+                  tracks={version.audioTracks}
+                  audioRows={audioRows}
                   totalFrames={totalFrames}
                   ticks={ticks}
-                  rows={
-                    audioRows.length > 0
-                      ? audioRows.map((row) =>
-                          row.map((track) => (
-                            <button
-                              key={track.id}
-                              type="button"
-                              disabled={disabled}
-                              onClick={() => onSelectAudio(track.id)}
-                              className={getAudioBlockClassName(selectedAudioId === track.id)}
-                              style={getTimelineBlockStyle(
-                                track.startFrame,
-                                track.endFrame,
-                                totalFrames,
-                              )}
-                              title={`${assetNames[track.assetId] ?? track.assetId} • ${formatSeconds(
-                                track.endFrame - track.startFrame,
-                              )}`}
-                            >
-                              <div className="flex h-full items-center justify-between gap-3">
-                                <div className="min-w-0">
-                                  <p className="truncate text-sm font-medium text-white">
-                                    {assetNames[track.assetId] ?? track.assetId}
-                                  </p>
-                                  <p className="truncate text-[10px] uppercase tracking-[0.16em] text-emerald-100/75">
-                                    Volume {Math.round(track.volume * 100)}%
-                                  </p>
-                                </div>
-
-                                <span className="shrink-0 rounded-full border border-white/12 bg-black/20 px-2 py-1 text-[10px] font-semibold uppercase tracking-[0.16em] text-white/85">
-                                  {formatSeconds(track.endFrame - track.startFrame)}
-                                </span>
-                              </div>
-                            </button>
-                          )),
-                        )
-                      : [
-                          <div
-                            key="audio-empty"
-                            className="flex h-full items-center px-3 text-xs text-neutral-500"
-                          >
-                            No audio tracks on the timeline.
-                          </div>,
-                        ]
-                  }
+                  selectedAudioId={selectedAudioId}
+                  disabled={disabled}
+                  assetNames={assetNames}
+                  onSelectAudio={onSelectAudio}
                 />
               </div>
             </div>
