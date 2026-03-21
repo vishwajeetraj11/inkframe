@@ -161,3 +161,45 @@ export {
   buildRegionalMapFocusText,
   buildVoxTimelineText,
 };
+
+/**
+ * Maps preset type to its corresponding parser function
+ * Enables consolidated data extraction without repeated type checks
+ */
+export const PRESET_DATA_PARSERS = {
+  "chart-card": parseChartCardText,
+  "editorial-stat-ring": parseEditorialStatRingText,
+  "world-map-focus": (text: string) => {
+    const lines = splitStructuredLines(text);
+    const headlineLine =
+      lines.find((line) => line.toLowerCase().startsWith("headline:")) ??
+      lines.find(
+        (line) =>
+          !line.toLowerCase().startsWith("subhead:") &&
+          !line.toLowerCase().startsWith("country:"),
+      ) ??
+      WORLD_MAP_FOCUS_DEFAULT_HEADLINE;
+    const subheadLine =
+      lines.find((line) => line.toLowerCase().startsWith("subhead:")) ??
+      lines.find(
+        (line, index) =>
+          index > lines.indexOf(headlineLine) && !line.toLowerCase().startsWith("country:"),
+      ) ??
+      WORLD_MAP_FOCUS_DEFAULT_SUBHEAD;
+    const countryLine =
+      lines.find((line) => line.toLowerCase().startsWith("country:")) ??
+      `COUNTRY: ${WORLD_MAP_FOCUS_DEFAULT_COUNTRY}`;
+
+    return {
+      headline:
+        stripPrefixedValue(headlineLine, "HEADLINE:") || WORLD_MAP_FOCUS_DEFAULT_HEADLINE,
+      subhead:
+        stripPrefixedValue(subheadLine, "SUBHEAD:") || WORLD_MAP_FOCUS_DEFAULT_SUBHEAD,
+      country:
+        stripPrefixedValue(countryLine, "COUNTRY:") || WORLD_MAP_FOCUS_DEFAULT_COUNTRY,
+    };
+  },
+  "regional-map-focus": parseRegionalMapFocusText,
+  "createdaley-opener": parseCreatedaleyOpenerText,
+  "vox-timeline": parseVoxTimelineText,
+} as const;
