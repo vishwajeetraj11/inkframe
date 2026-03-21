@@ -24,14 +24,29 @@ export const Inspector = ({
   onUpdateText,
   onUpdateAudio,
 }: InspectorProps) => {
+  const activeKind = clip ? "Clip" : textOverlay ? "Text Overlay" : audioTrack ? "Audio Track" : null;
+
   return (
-    <section className="space-y-3 rounded-2xl border border-neutral-700/60 bg-neutral-900/50 p-4">
-      <h2 className="app-panel-label text-sm font-semibold uppercase tracking-wide text-neutral-300">
-        Inspector
-      </h2>
+    <section className="space-y-4 rounded-[28px] border border-white/8 bg-[linear-gradient(180deg,rgba(24,28,38,0.96),rgba(11,13,20,0.88))] p-5 shadow-[0_18px_48px_rgba(0,0,0,0.28)] backdrop-blur-md">
+      <div className="flex items-start justify-between gap-3">
+        <div>
+          <p className="app-eyebrow text-[10px] uppercase tracking-[0.22em] text-neutral-500">
+            Editor Sidebar
+          </p>
+          <h2 className="app-panel-label mt-2 text-sm font-semibold uppercase tracking-wide text-neutral-200">
+            Inspector
+          </h2>
+        </div>
+
+        {activeKind ? (
+          <span className="rounded-full border border-white/10 bg-white/[0.05] px-3 py-1 text-[10px] uppercase tracking-[0.18em] text-neutral-400">
+            {activeKind}
+          </span>
+        ) : null}
+      </div>
 
       {!clip && !textOverlay && !audioTrack ? (
-        <p className="rounded-lg border border-dashed border-neutral-700 px-3 py-4 text-sm text-neutral-400">
+        <p className="rounded-2xl border border-dashed border-white/10 bg-white/[0.02] px-4 py-5 text-sm text-neutral-400">
           Select a clip, text overlay, or audio track to edit details.
         </p>
       ) : null}

@@ -12,6 +12,13 @@ import {
   parseEditorialStatRingText,
 } from "@/lib/editor/editorial-stat-ring";
 import {
+  buildRegionalMapFocusText,
+  parseRegionalMapFocusText,
+  REGIONAL_MAP_FOCUS_DEFAULT_HEADLINE,
+  REGIONAL_MAP_FOCUS_DEFAULT_PRIMARY_COUNTRY,
+  REGIONAL_MAP_FOCUS_DEFAULT_SUBHEAD,
+} from "@/lib/editor/regional-map-focus";
+import {
   buildVoxTimelineText,
   parseVoxTimelineText,
 } from "@/lib/editor/vox-timeline";
@@ -27,6 +34,7 @@ export const WORLD_MAP_FOCUS_DEFAULT_COUNTRY = "India";
 export const WORLD_MAP_COUNTRY_OPTIONS = [...WORLD_COUNTRY_NAMES].sort((left, right) =>
   left.localeCompare(right),
 );
+export const REGIONAL_MAP_FOCUS_DEFAULT_YEAR = "";
 
 export const parseNumber = (value: string, fallback: number): number => {
   const parsed = Number.parseFloat(value);
@@ -90,6 +98,21 @@ export const buildWorldMapFocusText = (data: {
     `COUNTRY: ${data.country.trim() || WORLD_MAP_FOCUS_DEFAULT_COUNTRY}`,
   ].join("\n");
 
+export const getEditableRegionalMapFocusData = (text: string) => {
+  const parsed = parseRegionalMapFocusText(text);
+
+  return {
+    headline: parsed.headline || REGIONAL_MAP_FOCUS_DEFAULT_HEADLINE,
+    subhead: parsed.subhead || REGIONAL_MAP_FOCUS_DEFAULT_SUBHEAD,
+    primaryCountry:
+      parsed.primaryCountry || REGIONAL_MAP_FOCUS_DEFAULT_PRIMARY_COUNTRY,
+    secondaryCountry: parsed.secondaryCountry,
+    label: parsed.label,
+    year: parsed.year || REGIONAL_MAP_FOCUS_DEFAULT_YEAR,
+    focusMode: parsed.focusMode,
+  };
+};
+
 export const getEditableChartCardData = (text: string) => {
   const parsed = parseChartCardText(text, { useFallbackRows: false });
 
@@ -111,20 +134,30 @@ export const getEditableEditorialStatRingData = (text: string) =>
 export const getEditableVoxTimelineData = (text: string) =>
   parseVoxTimelineText(text);
 
+const resolveWorldMapCountryName = (country: string): string =>
+  findWorldCountry(country)?.properties?.name ?? country.trim();
+
 export const getSelectedWorldMapCountryName = (country: string): string =>
-  (findWorldCountry(country)?.properties?.name ?? country.trim()) ||
+  resolveWorldMapCountryName(country) ||
   WORLD_MAP_FOCUS_DEFAULT_COUNTRY;
 
-export const getWorldMapCountryOptions = (selectedCountryName: string): string[] =>
-  WORLD_MAP_COUNTRY_OPTIONS.includes(selectedCountryName)
-    ? WORLD_MAP_COUNTRY_OPTIONS
-    : [...WORLD_MAP_COUNTRY_OPTIONS, selectedCountryName].sort((left, right) =>
-        left.localeCompare(right),
-      );
+export const getOptionalWorldMapCountryName = (country: string): string =>
+  resolveWorldMapCountryName(country);
+
+export const getWorldMapCountryOptions = (...selectedCountryNames: string[]): string[] => {
+  const additionalCountryNames = selectedCountryNames
+    .map((countryName) => resolveWorldMapCountryName(countryName))
+    .filter((countryName) => countryName.length > 0 && !WORLD_MAP_COUNTRY_OPTIONS.includes(countryName));
+
+  return [...WORLD_MAP_COUNTRY_OPTIONS, ...additionalCountryNames].sort((left, right) =>
+    left.localeCompare(right),
+  );
+};
 
 export {
   buildChartCardText,
   buildCreatedaleyOpenerText,
   buildEditorialStatRingText,
+  buildRegionalMapFocusText,
   buildVoxTimelineText,
 };

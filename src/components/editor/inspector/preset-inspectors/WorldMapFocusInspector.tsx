@@ -1,6 +1,9 @@
 import { LabeledControl } from "@/components/editor/controls/LabeledControl";
 import type { getEditableWorldMapFocusData } from "../utils";
 
+const MAP_INPUT_CLASS =
+  "w-full rounded-xl border border-white/10 bg-neutral-950/70 px-3 py-2.5 text-sm text-neutral-100 shadow-[inset_0_1px_0_rgba(255,255,255,0.03)] outline-none transition focus:border-cyan-300/35 focus:ring-2 focus:ring-cyan-300/12";
+
 interface WorldMapFocusInspectorProps {
   countryOptions: string[];
   data: ReturnType<typeof getEditableWorldMapFocusData>;
@@ -21,12 +24,12 @@ export const WorldMapFocusInspector = ({
   onUpdateText,
 }: WorldMapFocusInspectorProps) => {
   return (
-    <div className="space-y-3 rounded-lg border border-neutral-700/70 bg-neutral-900/45 p-3">
+    <div className="space-y-4 rounded-[22px] border border-white/8 bg-[linear-gradient(180deg,rgba(23,26,34,0.92),rgba(16,18,26,0.82))] p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.03)]">
       <div>
-        <p className="text-xs font-semibold uppercase tracking-wide text-neutral-300">
+        <p className="app-eyebrow text-[11px] uppercase tracking-[0.22em] text-cyan-200/85">
           World Map Focus
         </p>
-        <p className="mt-1 text-[11px] text-neutral-500">
+        <p className="mt-2 text-[12px] leading-6 text-neutral-400">
           Headline, subhead, and highlighted country stay synced with the atlas scene.
         </p>
       </div>
@@ -42,7 +45,7 @@ export const WorldMapFocusInspector = ({
               headline: event.currentTarget.value,
             }));
           }}
-          className="w-full rounded border border-neutral-600 bg-neutral-900 px-2 py-1"
+          className={MAP_INPUT_CLASS}
         />
       </LabeledControl>
 
@@ -56,7 +59,7 @@ export const WorldMapFocusInspector = ({
               subhead: event.currentTarget.value,
             }));
           }}
-          className="min-h-16 w-full rounded border border-neutral-600 bg-neutral-900 px-2 py-1"
+          className={`${MAP_INPUT_CLASS} min-h-24 resize-y`}
         />
       </LabeledControl>
 
@@ -70,7 +73,7 @@ export const WorldMapFocusInspector = ({
               country: event.currentTarget.value,
             }));
           }}
-          className="w-full rounded border border-neutral-600 bg-neutral-900 px-2 py-1"
+          className={MAP_INPUT_CLASS}
         >
           {countryOptions.map((countryName) => (
             <option key={countryName} value={countryName}>

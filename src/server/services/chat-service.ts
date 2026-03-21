@@ -21,13 +21,14 @@ Rules for EDITOR_ACTIONS:
   - "fontWeight": 100..900
   - "fontStyle": "normal" | "italic"
 - For kinetic references, set "stylePreset" per scene:
-  - "classic" | "impact-grid" | "grid-kinetic" | "hero-slam" | "sticker-cutout" | "editorial-mono" | "vox-explainer" | "vox-timeline" | "vox-timeline-ribbon" | "vox-timeline-ledger" | "vox-typography" | "world-map-focus" | "editorial-bar-chart" | "editorial-stat-ring" | "editorial-seat-arc" | "createdaley-opener" | "chart-card" | "news-clipping"
+  - "classic" | "impact-grid" | "grid-kinetic" | "hero-slam" | "sticker-cutout" | "editorial-mono" | "vox-explainer" | "vox-timeline" | "vox-timeline-ribbon" | "vox-timeline-ledger" | "vox-typography" | "world-map-focus" | "regional-map-focus" | "editorial-bar-chart" | "editorial-stat-ring" | "editorial-seat-arc" | "createdaley-opener" | "chart-card" | "news-clipping"
 - If the user asks for a Vox or editorial explainer look, prefer "vox-explainer".
 - If the user asks for an image-led historical chronology, documentary timeline, or archival-event sequence, prefer "vox-timeline".
 - If the user asks for a lower-third chronology strip or ribbon timeline, prefer "vox-timeline-ribbon".
 - If the user asks for a ledger timeline, dossier chronology, or stacked archival timeline, prefer "vox-timeline-ledger".
 - If the user asks for a typography opener, typewriter editorial look, or Vox typography look, prefer "vox-typography".
 - If the user asks for a world map, atlas map, or country highlight map, prefer "world-map-focus".
+- If the user asks for a regional map, border map, geopolitics map, conflict map, or regional atlas zoom, prefer "regional-map-focus".
 - If the user asks for a clean editorial bar-chart look, prefer "editorial-bar-chart".
 - If the user asks for a percentage ring, consensus card, or stat ring card, prefer "editorial-stat-ring".
 - If the user asks for a parliament chart, semicircle seat chart, or balance-of-power graphic, prefer "editorial-seat-arc".
@@ -53,6 +54,10 @@ Rules for EDITOR_ACTIONS:
   - line 1: headline
   - line 2: subhead
   - line 3: COUNTRY: Country Name
+- For regional-map-focus scenes, "text" may be structured multiline content:
+  - line 1: headline
+  - line 2: subhead
+  - line 3+: prefixed rows using PRIMARY:, SECONDARY:, LABEL:, YEAR:, and FOCUS:
 - For editorial-bar-chart scenes, "text" may be structured multiline content:
   - line 1: headline
   - line 2: subhead

@@ -142,6 +142,18 @@ const aiSceneSchema = z.object({
         }
 
         if (
+          normalized === "regional-map-focus" ||
+          normalized === "regional map focus" ||
+          normalized === "regional map" ||
+          normalized === "border map" ||
+          normalized === "geopolitics map" ||
+          normalized === "conflict map" ||
+          normalized === "regional atlas zoom"
+        ) {
+          return "regional-map-focus";
+        }
+
+        if (
           normalized === "world-map-focus" ||
           normalized === "world map focus" ||
           normalized === "world map" ||

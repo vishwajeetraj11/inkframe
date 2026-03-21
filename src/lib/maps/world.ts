@@ -39,6 +39,15 @@ export interface ProjectedWorldMap {
   countries: ProjectedWorldCountry[];
 }
 
+export interface ProjectedRegionalWorldMap extends ProjectedWorldMap {
+  primaryCountry: ProjectedWorldCountry | null;
+  secondaryCountry: ProjectedWorldCountry | null;
+  sharedBorderPath: string;
+  sharedBorderCentroid: [number, number] | null;
+}
+
+export type WorldMapPadding = number | { x: number; y: number };
+
 const worldTopology = countries110m as unknown as WorldTopology;
 const topologyInput = worldTopology as unknown as Parameters<typeof feature>[0];
 const countriesObject =
@@ -69,6 +78,70 @@ const normalizeCountryName = (value: string): string =>
     .replace(/[^a-z0-9\s]/g, " ")
     .replace(/\s+/g, " ")
     .trim();
+
+const toProjectedPoint = (value: [number, number]): [number, number] | null =>
+  Number.isFinite(value[0]) && Number.isFinite(value[1]) ? value : null;
+
+const normalizePadding = (padding: WorldMapPadding | undefined): { x: number; y: number } => {
+  if (typeof padding === "number") {
+    return { x: padding, y: padding };
+  }
+
+  return {
+    x: padding?.x ?? 40,
+    y: padding?.y ?? 40,
+  };
+};
+
+const toFeatureCollection = (
+  features: WorldCountryFeature[],
+): FeatureCollection<Geometry, CountryProperties> => ({
+  type: "FeatureCollection",
+  features,
+});
+
+const buildProjectedWorldMap = ({
+  width,
+  height,
+  padding,
+  focusCountries,
+}: {
+  width: number;
+  height: number;
+  padding?: WorldMapPadding;
+  focusCountries?: WorldCountryFeature[];
+}) => {
+  const resolvedPadding = normalizePadding(padding);
+  const fitTarget =
+    focusCountries && focusCountries.length > 0
+      ? toFeatureCollection(focusCountries)
+      : countryCollection;
+  const projection = geoNaturalEarth1().fitExtent(
+    [
+      [resolvedPadding.x, resolvedPadding.y],
+      [width - resolvedPadding.x, height - resolvedPadding.y],
+    ],
+    fitTarget,
+  );
+  const pathBuilder = geoPath(projection);
+  const projectedMap: ProjectedWorldMap = {
+    width,
+    height,
+    landPath: pathBuilder(landFeature) ?? "",
+    bordersPath: pathBuilder(borderMesh) ?? "",
+    countries: WORLD_COUNTRY_FEATURES.map((country) => ({
+      id: String(country.id ?? country.properties?.name ?? ""),
+      name: country.properties?.name ?? "",
+      path: pathBuilder(country) ?? "",
+      centroid: pathBuilder.centroid(country) as [number, number],
+    })).filter((country) => country.path.length > 0),
+  };
+
+  return {
+    pathBuilder,
+    projectedMap,
+  };
+};
 
 export const WORLD_COUNTRY_FEATURES: WorldCountryFeature[] =
   countryCollection.features.map((country) => ({
@@ -134,34 +207,103 @@ export const findProjectedWorldCountry = (
   return partialMatch ?? null;
 };
 
+export const getSharedWorldBorderMesh = (
+  firstCountryName: string,
+  secondCountryName: string,
+): MultiLineString | null => {
+  const firstCountry = findWorldCountry(firstCountryName);
+  const secondCountry = findWorldCountry(secondCountryName);
+
+  if (
+    !firstCountry ||
+    !secondCountry ||
+    String(firstCountry.id) === String(secondCountry.id)
+  ) {
+    return null;
+  }
+
+  const sharedBorder = mesh(
+    topologyInput,
+    meshCountriesObject,
+    (left, right) =>
+      left !== right &&
+      ((String(left?.id) === String(firstCountry.id) &&
+        String(right?.id) === String(secondCountry.id)) ||
+        (String(left?.id) === String(secondCountry.id) &&
+          String(right?.id) === String(firstCountry.id))),
+  ) as MultiLineString;
+
+  return sharedBorder.coordinates.length > 0 ? sharedBorder : null;
+};
+
 export const projectWorldMap = ({
   width,
   height,
   padding = 40,
+  focusCountryNames = [],
 }: {
   width: number;
   height: number;
-  padding?: number;
+  padding?: WorldMapPadding;
+  focusCountryNames?: string[];
 }): ProjectedWorldMap => {
-  const projection = geoNaturalEarth1().fitExtent(
-    [
-      [padding, padding],
-      [width - padding, height - padding],
-    ],
-    countryCollection,
-  );
-  const pathBuilder = geoPath(projection);
+  const focusCountries = focusCountryNames
+    .map((countryName) => findWorldCountry(countryName))
+    .filter((country): country is WorldCountryFeature => country !== null);
 
-  return {
+  return buildProjectedWorldMap({
     width,
     height,
-    landPath: pathBuilder(landFeature) ?? "",
-    bordersPath: pathBuilder(borderMesh) ?? "",
-    countries: WORLD_COUNTRY_FEATURES.map((country) => ({
-      id: String(country.id ?? country.properties?.name ?? ""),
-      name: country.properties?.name ?? "",
-      path: pathBuilder(country) ?? "",
-      centroid: pathBuilder.centroid(country) as [number, number],
-    })).filter((country) => country.path.length > 0),
+    padding,
+    focusCountries,
+  }).projectedMap;
+};
+
+export const projectRegionalWorldMap = ({
+  width,
+  height,
+  padding,
+  primaryCountryName,
+  secondaryCountryName,
+}: {
+  width: number;
+  height: number;
+  padding?: WorldMapPadding;
+  primaryCountryName: string;
+  secondaryCountryName?: string;
+}): ProjectedRegionalWorldMap => {
+  const primaryCountryFeature = findWorldCountry(primaryCountryName);
+  const secondaryCountryFeature = secondaryCountryName
+    ? findWorldCountry(secondaryCountryName)
+    : null;
+  const focusCountries = [
+    primaryCountryFeature,
+    secondaryCountryFeature,
+  ].filter((country): country is WorldCountryFeature => country !== null);
+  const { projectedMap, pathBuilder } = buildProjectedWorldMap({
+    width,
+    height,
+    padding,
+    focusCountries,
+  });
+  const primaryCountry = findProjectedWorldCountry(projectedMap, primaryCountryName);
+  const secondaryCountry = secondaryCountryName
+    ? findProjectedWorldCountry(projectedMap, secondaryCountryName)
+    : null;
+  const sharedBorder = secondaryCountryName
+    ? getSharedWorldBorderMesh(primaryCountryName, secondaryCountryName)
+    : null;
+  const sharedBorderPath = sharedBorder ? pathBuilder(sharedBorder) ?? "" : "";
+  const sharedBorderCentroid =
+    sharedBorder && sharedBorderPath
+      ? toProjectedPoint(pathBuilder.centroid(sharedBorder) as [number, number])
+      : null;
+
+  return {
+    ...projectedMap,
+    primaryCountry,
+    secondaryCountry,
+    sharedBorderPath,
+    sharedBorderCentroid,
   };
 };

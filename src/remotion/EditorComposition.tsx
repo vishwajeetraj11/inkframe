@@ -30,6 +30,7 @@ interface BackdropFlags {
   showEditorialBarBackdrop: boolean;
   showEditorialStatRingBackdrop: boolean;
   showGridKineticBackdrop: boolean;
+  showRegionalMapFocusBackdrop: boolean;
   showVoxExplainerBackdrop: boolean;
   showVoxTimelineBackdrop: boolean;
   showVoxTypographyBackdrop: boolean;
@@ -63,6 +64,10 @@ const WORLD_MAP_BACKGROUND =
   "radial-gradient(circle at 18% 16%, rgba(77, 190, 255, 0.16), rgba(77, 190, 255, 0) 22%)," +
   "radial-gradient(circle at 82% 78%, rgba(22, 107, 163, 0.14), rgba(22, 107, 163, 0) 24%)," +
   "linear-gradient(145deg, #050b12 0%, #0b1520 54%, #060d15 100%)";
+const REGIONAL_MAP_BACKGROUND =
+  "radial-gradient(circle at 16% 14%, rgba(255, 255, 255, 0.48), rgba(255, 255, 255, 0) 22%)," +
+  "radial-gradient(circle at 82% 76%, rgba(156, 119, 73, 0.14), rgba(156, 119, 73, 0) 24%)," +
+  "linear-gradient(160deg, #f2ebdd 0%, #e4dcc8 44%, #cfd5c4 100%)";
 const EDITORIAL_BAR_BACKGROUND =
   "radial-gradient(circle at 14% 9%, rgba(255, 255, 255, 0.52), rgba(255, 255, 255, 0) 36%)," +
   "repeating-linear-gradient(0deg, rgba(96, 102, 109, 0.08) 0 1px, transparent 1px 84px)," +
@@ -84,50 +89,49 @@ const getBackdropFlags = (
   version: VersionTimeline,
   trackEntryCount: number,
 ): BackdropFlags => {
-  const hasNewsClippingOverlay = version.textOverlays.some(
-    (overlay) => overlay.stylePreset === "news-clipping",
-  );
-  const hasVoxExplainerOverlay = version.textOverlays.some(
-    (overlay) => overlay.stylePreset === "vox-explainer",
-  );
-  const hasVoxTypographyOverlay = version.textOverlays.some(
-    (overlay) => overlay.stylePreset === "vox-typography",
-  );
-  const hasVoxTimelineOverlay = version.textOverlays.some(
-    (overlay) => isVoxTimelineStylePreset(overlay.stylePreset),
-  );
-  const hasGridKineticOverlay = version.textOverlays.some(
-    (overlay) => overlay.stylePreset === "grid-kinetic",
-  );
-  const hasWorldMapFocusOverlay = version.textOverlays.some(
-    (overlay) => overlay.stylePreset === "world-map-focus",
-  );
-  const hasEditorialBarOverlay = version.textOverlays.some(
-    (overlay) => overlay.stylePreset === "editorial-bar-chart",
-  );
-  const hasEditorialStatRingOverlay = version.textOverlays.some(
-    (overlay) => overlay.stylePreset === "editorial-stat-ring",
-  );
-  const hasCreatedaleyOpenerOverlay = version.textOverlays.some(
-    (overlay) => overlay.stylePreset === "createdaley-opener",
-  );
-  const hasChartCardOverlay = version.textOverlays.some(
-    (overlay) => isChartCardStylePreset(overlay.stylePreset),
-  );
   const noMediaClips = trackEntryCount === 0;
   const hasMediaClips = trackEntryCount > 0;
+
+  // Build preset detection flags in a single pass
+  const overlayPresetFlags: Record<string, boolean> = {};
+  for (const overlay of version.textOverlays) {
+    const preset = overlay.stylePreset;
+    if (preset === "news-clipping") overlayPresetFlags.hasNewsClippingOverlay = true;
+    if (preset === "vox-explainer") overlayPresetFlags.hasVoxExplainerOverlay = true;
+    if (preset === "vox-typography") overlayPresetFlags.hasVoxTypographyOverlay = true;
+    if (isVoxTimelineStylePreset(preset)) overlayPresetFlags.hasVoxTimelineOverlay = true;
+    if (preset === "grid-kinetic") overlayPresetFlags.hasGridKineticOverlay = true;
+    if (preset === "world-map-focus") overlayPresetFlags.hasWorldMapFocusOverlay = true;
+    if (preset === "regional-map-focus") overlayPresetFlags.hasRegionalMapFocusOverlay = true;
+    if (preset === "editorial-bar-chart") overlayPresetFlags.hasEditorialBarOverlay = true;
+    if (preset === "editorial-stat-ring") overlayPresetFlags.hasEditorialStatRingOverlay = true;
+    if (preset === "createdaley-opener") overlayPresetFlags.hasCreatedaleyOpenerOverlay = true;
+    if (isChartCardStylePreset(preset)) overlayPresetFlags.hasChartCardOverlay = true;
+  }
+
+  const hasNewsClippingOverlay = overlayPresetFlags.hasNewsClippingOverlay || false;
+  const hasVoxExplainerOverlay = overlayPresetFlags.hasVoxExplainerOverlay || false;
+  const hasVoxTypographyOverlay = overlayPresetFlags.hasVoxTypographyOverlay || false;
+  const hasVoxTimelineOverlay = overlayPresetFlags.hasVoxTimelineOverlay || false;
+  const hasGridKineticOverlay = overlayPresetFlags.hasGridKineticOverlay || false;
+  const hasWorldMapFocusOverlay = overlayPresetFlags.hasWorldMapFocusOverlay || false;
+  const hasRegionalMapFocusOverlay = overlayPresetFlags.hasRegionalMapFocusOverlay || false;
+  const hasEditorialBarOverlay = overlayPresetFlags.hasEditorialBarOverlay || false;
+  const hasEditorialStatRingOverlay = overlayPresetFlags.hasEditorialStatRingOverlay || false;
+  const hasCreatedaleyOpenerOverlay = overlayPresetFlags.hasCreatedaleyOpenerOverlay || false;
+  const hasChartCardOverlay = overlayPresetFlags.hasChartCardOverlay || false;
 
   return {
     hasMediaClips,
     hasNewsClippingOverlay,
-    hasTextOverlays:
- version.textOverlays.length > 0,
+    hasTextOverlays: version.textOverlays.length > 0,
     showNewsBackdrop: noMediaClips && hasNewsClippingOverlay,
     showChartCardBackdrop: noMediaClips && hasChartCardOverlay,
     showCreatedaleyBackdrop: noMediaClips && hasCreatedaleyOpenerOverlay,
     showEditorialBarBackdrop: noMediaClips && hasEditorialBarOverlay,
     showEditorialStatRingBackdrop: noMediaClips && hasEditorialStatRingOverlay,
     showGridKineticBackdrop: noMediaClips && hasGridKineticOverlay,
+    showRegionalMapFocusBackdrop: noMediaClips && hasRegionalMapFocusOverlay,
     showVoxExplainerBackdrop: noMediaClips && hasVoxExplainerOverlay,
     showVoxTimelineBackdrop: noMediaClips && hasVoxTimelineOverlay,
     showVoxTypographyBackdrop: noMediaClips && hasVoxTypographyOverlay,
@@ -144,6 +148,9 @@ const getCompositionBackground = (flags: BackdropFlags): string => {
   }
   if (flags.showWorldMapFocusBackdrop) {
     return WORLD_MAP_BACKGROUND;
+  }
+  if (flags.showRegionalMapFocusBackdrop) {
+    return REGIONAL_MAP_BACKGROUND;
   }
   if (flags.showEditorialBarBackdrop) {
     return EDITORIAL_BAR_BACKGROUND;
@@ -198,6 +205,7 @@ const BackdropOverlays = ({
     !flags.hasNewsClippingOverlay &&
     !flags.showGridKineticBackdrop &&
     !flags.showWorldMapFocusBackdrop &&
+    !flags.showRegionalMapFocusBackdrop &&
     !flags.showEditorialBarBackdrop &&
     !flags.showEditorialStatRingBackdrop &&
     !flags.showCreatedaleyBackdrop &&

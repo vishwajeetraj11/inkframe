@@ -42,6 +42,7 @@ export const OVERLAY_STYLE_PRESET_LABEL: Record<TextOverlayStylePreset, string> 
   "vox-timeline-ledger": "vox-timeline-ledger",
   "vox-typography": "vox-typography",
   "world-map-focus": "world-map-focus",
+  "regional-map-focus": "regional-map-focus",
   "editorial-bar-chart": "editorial-bar-chart",
   "editorial-stat-ring": "editorial-stat-ring",
   "editorial-seat-arc": "editorial-seat-arc",

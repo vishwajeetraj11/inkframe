@@ -61,45 +61,70 @@ export const PreviewPane = ({
     }),
     [version, assetSources],
   );
+  const previewDurationSeconds = (safeDurationInFrames / safeFps).toFixed(2);
+  const previewAspectLabel = aspect === "reel_9_16" ? "9:16" : "16:9";
 
   return (
-    <section className="rounded-2xl border border-neutral-700/60 bg-neutral-900/50 p-4">
-      <h2 className="app-panel-label mb-3 text-sm font-semibold uppercase tracking-wide text-neutral-300">
-        Preview
-      </h2>
+    <section className="rounded-[28px] border border-white/8 bg-[linear-gradient(180deg,rgba(28,33,45,0.92),rgba(13,17,27,0.88))] p-4 shadow-[0_20px_58px_rgba(0,0,0,0.28)]">
+      <div className="mb-4 flex items-start justify-between gap-3">
+        <div>
+          <p className="app-eyebrow text-[10px] uppercase tracking-[0.22em] text-neutral-500">
+            Program Monitor
+          </p>
+          <h2 className="mt-2 text-lg font-semibold text-white">Preview Stage</h2>
+          <p className="mt-1 text-sm text-neutral-400">
+            Live Remotion player for the active aspect ratio.
+          </p>
+        </div>
 
-      <div className="overflow-hidden rounded-xl border border-neutral-700 bg-black">
-        <div
-          style={{
-            position: "relative",
-            width: "100%",
-            paddingTop: safePaddingTopPercent,
-          }}
-        >
+        <div className="flex flex-wrap justify-end gap-2">
+          <span className="rounded-full border border-white/10 bg-white/[0.05] px-3 py-1 text-[10px] uppercase tracking-[0.18em] text-neutral-400">
+            {previewAspectLabel}
+          </span>
+          <span className="rounded-full border border-white/10 bg-white/[0.05] px-3 py-1 text-[10px] uppercase tracking-[0.18em] text-neutral-400">
+            {safeWidth}x{safeHeight}
+          </span>
+          <span className="rounded-full border border-white/10 bg-white/[0.05] px-3 py-1 text-[10px] uppercase tracking-[0.18em] text-neutral-400">
+            {previewDurationSeconds}s
+          </span>
+        </div>
+      </div>
+
+      <div className="overflow-hidden rounded-[24px] border border-white/8 bg-[#080c14] p-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.03)]">
+        <div className="rounded-[22px] border border-white/6 bg-[radial-gradient(circle_at_top,rgba(255,255,255,0.06),rgba(0,0,0,0)_30%),linear-gradient(180deg,#0c121d,#04070d)] p-2">
           <div
+            className="overflow-hidden rounded-[18px] border border-white/6 bg-black"
             style={{
-              position: "absolute",
-              inset: 0,
+              position: "relative",
+              width: "100%",
+              paddingTop: safePaddingTopPercent,
             }}
           >
-            <Player
-              key={`${safeWidth}x${safeHeight}@${safeFps}`}
-              component={EditorComposition}
-              inputProps={inputProps}
-              durationInFrames={safeDurationInFrames}
-              compositionWidth={safeWidth}
-              compositionHeight={safeHeight}
-              fps={safeFps}
-              acknowledgeRemotionLicense
+            <div
               style={{
-                width: "100%",
-                height: "100%",
-                backgroundColor: "black",
+                position: "absolute",
+                inset: 0,
               }}
-              controls
-              autoPlay={false}
-              loop
-            />
+            >
+              <Player
+                key={`${safeWidth}x${safeHeight}@${safeFps}`}
+                component={EditorComposition}
+                inputProps={inputProps}
+                durationInFrames={safeDurationInFrames}
+                compositionWidth={safeWidth}
+                compositionHeight={safeHeight}
+                fps={safeFps}
+                acknowledgeRemotionLicense
+                style={{
+                  width: "100%",
+                  height: "100%",
+                  backgroundColor: "black",
+                }}
+                controls
+                autoPlay={false}
+                loop
+              />
+            </div>
           </div>
         </div>
       </div>

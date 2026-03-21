@@ -65,6 +65,15 @@ export const TEMPLATE_DEFINITIONS: TemplateDefinition[] = [
     accentClass: "text-cyan-300",
   },
   {
+    id: "regional-map-focus",
+    stylePreset: "regional-map-focus",
+    name: "Regional Map Focus",
+    description: "Documentary regional atlas zoom with country-or-border emphasis and a compact location label.",
+    sampleText:
+      "Why this border mattered\nA regional atlas zoom shows the local strategic context.\nPRIMARY: Iran\nSECONDARY: Iraq\nLABEL: Iran-Iraq boundary\nYEAR: 1975\nFOCUS: border",
+    accentClass: "text-amber-300",
+  },
+  {
     id: "editorial-bar-chart",
     stylePreset: "editorial-bar-chart",
     name: "Editorial Bar Chart",

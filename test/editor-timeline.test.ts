@@ -137,4 +137,22 @@ describe("editor timeline domain", () => {
     expect(sanitized?.textOverlays[0]?.stylePreset).toBe("vox-timeline-ledger");
     expect((sanitized?.textOverlays[0]?.endFrame ?? 0) - (sanitized?.textOverlays[0]?.startFrame ?? 0)).toBeGreaterThanOrEqual(210);
   });
+
+  it("applies the regional map minimum duration during normalization", () => {
+    const sanitized = sanitizeVersion({
+      ...version,
+      textOverlays: [
+        {
+          ...version.textOverlays[0],
+          stylePreset: "regional-map-focus",
+          endFrame: 30,
+        },
+      ],
+      transitions: [],
+    });
+
+    expect(sanitized).not.toBeNull();
+    expect(sanitized?.textOverlays[0]?.stylePreset).toBe("regional-map-focus");
+    expect((sanitized?.textOverlays[0]?.endFrame ?? 0) - (sanitized?.textOverlays[0]?.startFrame ?? 0)).toBeGreaterThanOrEqual(210);
+  });
 });

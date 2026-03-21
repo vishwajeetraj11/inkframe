@@ -1,16 +1,12 @@
 import {
-  isVoxTimelineStylePreset,
   type AudioTrack,
   type Clip,
   type TextOverlay,
 } from "../types";
+import { PRESET_MIN_DURATIONS_FRAMES } from "../constants";
 import {
   clamp,
-  CREATEDALEY_OPENER_MIN_DURATION_FRAMES,
-  EDITORIAL_STAT_RING_MIN_DURATION_FRAMES,
   getClipDurationInFrames,
-  NEWS_CLIPPING_MIN_DURATION_FRAMES,
-  VOX_TIMELINE_MIN_DURATION_FRAMES,
   normalizeCreatedaleyTexture,
   normalizeTextOverlayFontFamily,
   normalizeTextOverlayFontStyle,
@@ -57,16 +53,7 @@ export const normalizeTextOverlays = (textOverlays: TextOverlay[]): TextOverlay[
         startFrame + 1,
         toSafeInt(overlay.endFrame, startFrame + 1),
       );
-      const minDurationInFrames =
-        stylePreset === "news-clipping"
-          ? NEWS_CLIPPING_MIN_DURATION_FRAMES
-          : stylePreset === "editorial-stat-ring"
-            ? EDITORIAL_STAT_RING_MIN_DURATION_FRAMES
-            : isVoxTimelineStylePreset(stylePreset)
-              ? VOX_TIMELINE_MIN_DURATION_FRAMES
-            : stylePreset === "createdaley-opener"
-              ? CREATEDALEY_OPENER_MIN_DURATION_FRAMES
-              : 1;
+      const minDurationInFrames = PRESET_MIN_DURATIONS_FRAMES[stylePreset] ?? 1;
       const endFrame = Math.max(startFrame + minDurationInFrames, requestedEndFrame);
 
       return {

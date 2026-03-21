@@ -48,16 +48,14 @@ export default function TemplatesPage() {
               <h2 className="mt-2 text-xl font-semibold text-white">{template.name}</h2>
               <p className="mt-2 text-sm text-neutral-300">{template.description}</p>
 
-              <pre className="mt-4 flex-1 rounded-lg border border-neutral-700 bg-neutral-950/70 p-3 text-xs leading-relaxed text-neutral-200 whitespace-pre-wrap">
-                {template.sampleText}
-              </pre>
-
-              <Link
-                href={`/editor?template=${template.id}`}
-                className="mt-4 inline-flex items-center justify-center rounded-lg bg-cyan-300 px-3 py-2 text-sm font-semibold text-neutral-950"
-              >
-                Use Template
-              </Link>
+              <div className="mt-auto pt-5">
+                <Link
+                  href={`/editor?template=${template.id}`}
+                  className="mt-3 block w-full rounded-lg bg-cyan-300 px-3 py-2 text-center text-sm font-semibold text-neutral-950"
+                >
+                  Use Template
+                </Link>
+              </div>
             </article>
           ))}
         </section>

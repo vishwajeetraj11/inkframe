@@ -181,4 +181,35 @@ describe("Inspector routing", () => {
     expect(screen.getAllByText(/timeline ribbon/i).length).toBeGreaterThan(0);
     expect(screen.getAllByRole("button", { name: /add event/i }).length).toBeGreaterThan(0);
   });
+
+  it("routes regional map overlays into the dedicated map inspector", () => {
+    render(
+      <Inspector
+        clip={null}
+        audioTrack={null}
+        textOverlay={{
+          id: "overlay-map",
+          text: "Why this border mattered\nA regional atlas zoom shows the local strategic context.\nPRIMARY: Iran\nSECONDARY: Iraq\nLABEL: Iran-Iraq boundary\nYEAR: 1975\nFOCUS: border",
+          startFrame: 0,
+          endFrame: 90,
+          x: 50,
+          y: 50,
+          fontSize: 82,
+          color: "#1f2b21",
+          fontFamily: "serif",
+          fontWeight: 700,
+          fontStyle: "normal",
+          stylePreset: "regional-map-focus",
+          createdaleyTexture: "plain",
+        }}
+        onUpdateClip={() => undefined}
+        onUpdateText={() => undefined}
+        onUpdateAudio={() => undefined}
+      />,
+    );
+
+    expect(screen.getAllByText(/regional map focus/i).length).toBeGreaterThan(0);
+    expect(screen.getByRole("combobox", { name: /focus mode/i })).toBeInTheDocument();
+    expect(screen.getByRole("combobox", { name: /secondary country/i })).toBeInTheDocument();
+  });
 });

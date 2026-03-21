@@ -1,21 +1,12 @@
 import { MAX_DURATION_FRAMES } from "../lib/editor/constants";
-import { createEmptyVersionTimeline } from "../lib/editor/defaults";
 import type { AspectPreset } from "../lib/editor/types";
 import { Composition } from "remotion";
-import {
-  EditorComposition,
-  type EditorCompositionProps,
-} from "./EditorComposition";
+import { createDefaultEditorCompositionProps } from "./default-editor-composition-props";
+import { EditorComposition } from "./EditorComposition";
 import {
   TextMotionComposition,
   type TextMotionCompositionProps,
 } from "./TextMotionComposition";
-
-const getDefaultProps = (aspect: AspectPreset): EditorCompositionProps => ({
-  version: createEmptyVersionTimeline(aspect),
-  assetSources: {},
-  renderMode: "render",
-});
 
 const getTextMotionDefaultProps = (
   aspect: AspectPreset,
@@ -59,7 +50,7 @@ export const RemotionRoot = () => {
         fps={30}
         width={1080}
         height={1920}
-        defaultProps={getDefaultProps("reel_9_16")}
+        defaultProps={createDefaultEditorCompositionProps("reel_9_16")}
       />
 
       <Composition
@@ -69,7 +60,7 @@ export const RemotionRoot = () => {
         fps={30}
         width={1920}
         height={1080}
-        defaultProps={getDefaultProps("widescreen_16_9")}
+        defaultProps={createDefaultEditorCompositionProps("widescreen_16_9")}
       />
 
       <Composition

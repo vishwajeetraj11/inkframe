@@ -1,4 +1,4 @@
-import type { AspectPreset } from "./types";
+import type { AspectPreset, TextOverlayStylePreset } from "./types";
 
 export const FPS = 30;
 export const MAX_DURATION_SECONDS = 60;
@@ -39,4 +39,28 @@ export const ASPECT_PRESETS: Record<
     maxDurationFrames: MAX_DURATION_FRAMES,
     maxDurationSeconds: MAX_DURATION_SECONDS,
   },
+};
+
+// Preset-specific duration constraints (imported from helpers)
+// These are re-exported here for cleaner circular dependency handling
+export const PRESET_MIN_DURATIONS_FRAMES: Record<TextOverlayStylePreset, number> = {
+  "classic": 1,
+  "impact-grid": 1,
+  "grid-kinetic": 1,
+  "hero-slam": 1,
+  "sticker-cutout": 1,
+  "editorial-mono": 1,
+  "vox-explainer": 1,
+  "vox-typography": 1,
+  "world-map-focus": 1,
+  "editorial-bar-chart": 1,
+  "createdaley-opener": Math.round(FPS * 4.5),
+  "news-clipping": FPS * 5 + FPS * 3, // animation + hold
+  "editorial-stat-ring": Math.round(FPS * 5.35),
+  "vox-timeline": FPS * 7,
+  "vox-timeline-ribbon": FPS * 7,
+  "vox-timeline-ledger": FPS * 7,
+  "regional-map-focus": FPS * 7,
+  "chart-card": 1,
+  "editorial-seat-arc": 1,
 };

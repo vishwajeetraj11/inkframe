@@ -11,6 +11,7 @@ describe("editor template catalog", () => {
     expect(TEMPLATE_DEFINITIONS.map((template) => template.id)).toContain("vox-timeline");
     expect(TEMPLATE_DEFINITIONS.map((template) => template.id)).toContain("vox-timeline-ribbon");
     expect(TEMPLATE_DEFINITIONS.map((template) => template.id)).toContain("vox-timeline-ledger");
+    expect(TEMPLATE_DEFINITIONS.map((template) => template.id)).toContain("regional-map-focus");
     expect(TEMPLATE_DEFINITIONS.map((template) => template.id)).toContain("editorial-seat-arc");
     expect(TEMPLATE_DEFINITIONS.map((template) => template.id)).toContain("news-clipping");
     expect(TEMPLATE_DEFINITION_MAP["vox-explainer"].stylePreset).toBe("vox-explainer");
@@ -61,6 +62,14 @@ describe("editor template catalog", () => {
       id: "editorial-seat-arc",
       stylePreset: "editorial-seat-arc",
       name: "Editorial Seat Arc",
+    });
+  });
+
+  it("resolves the regional map focus template", () => {
+    expect(getTemplateDefinition("regional-map-focus")).toMatchObject({
+      id: "regional-map-focus",
+      stylePreset: "regional-map-focus",
+      name: "Regional Map Focus",
     });
   });
 });

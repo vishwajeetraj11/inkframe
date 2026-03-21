@@ -4,6 +4,7 @@ export { renderEditorialBarChartPreset } from "./editorial-bar-chart";
 export { renderEditorialSeatArcPreset } from "./editorial-seat-arc";
 export { renderEditorialStatRingPreset } from "./editorial-stat-ring";
 export { renderNewsClippingPreset } from "./news-clipping";
+export { renderRegionalMapFocusPreset } from "./regional-map-focus";
 export { renderVoxExplainerPreset } from "./vox-explainer";
 export { renderVoxTimelinePreset } from "./vox-timeline";
 export { renderVoxTimelineRibbonPreset } from "./vox-timeline-ribbon";
