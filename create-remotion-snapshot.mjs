@@ -6,6 +6,7 @@ import { addBundleToSandbox, createSandbox } from "@remotion/vercel";
 
 const cwd = path.dirname(fileURLToPath(import.meta.url));
 const buildDir = ".remotion";
+const sandboxBundleDir = "remotion-bundle";
 const getSnapshotBlobKey = () =>
   `snapshot-cache/${process.env.VERCEL_DEPLOYMENT_ID ?? "local"}.json`;
 const getBlobToken = () =>
@@ -66,6 +67,7 @@ const run = async () => {
 
   try {
     console.log("[create-remotion-snapshot] Uploading bundle to sandbox...");
+    await sandbox.mkDir(sandboxBundleDir);
     await addBundleToSandbox({
       sandbox,
       bundleDir: buildDir,
