@@ -6,15 +6,13 @@ import type { TextMotionProject } from "@/lib/text-motion/types";
 import { getTextMotionDurationInFrames } from "@/lib/text-motion/utils";
 import type { EditorCompositionProps } from "@/remotion/EditorComposition";
 import type { TextMotionCompositionProps } from "@/remotion/TextMotionComposition";
-import { getDownloadUrl } from "@vercel/blob";
-import { bundle } from "@remotion/bundler";
+import { get, getDownloadUrl } from "@vercel/blob";
 import { renderMedia, selectComposition } from "@remotion/renderer";
 import {
-  addBundleToSandbox,
-  createSandbox,
   renderMediaOnVercel,
   uploadToVercelBlob,
 } from "@remotion/vercel";
+import { Sandbox } from "@vercel/sandbox";
 import path from "node:path";
 import {
   getVercelBlobToken,
@@ -57,33 +55,40 @@ const getEditorRenderDurationInFrames = (
   return Math.max(1, Math.min(MAX_DURATION_FRAMES, duration));
 };
 
+const getSnapshotBlobKey = (): string =>
+  `snapshot-cache/${process.env.VERCEL_DEPLOYMENT_ID ?? "local"}.json`;
+
 const getBundleDir = async (): Promise<string> => {
   if (!bundleDirPromise) {
-    bundleDirPromise = bundle({
-      entryPoint: path.join(process.cwd(), "src/remotion/index.ts"),
-      webpackOverride: (currentConfig) => {
-        const existingAlias =
-          currentConfig.resolve &&
-          currentConfig.resolve.alias &&
-          !Array.isArray(currentConfig.resolve.alias)
-            ? currentConfig.resolve.alias
-            : {};
+    bundleDirPromise = import("@remotion/bundler")
+      .then(({ bundle }) =>
+        bundle({
+          entryPoint: path.join(process.cwd(), "src/remotion/index.ts"),
+          webpackOverride: (currentConfig) => {
+            const existingAlias =
+              currentConfig.resolve &&
+              currentConfig.resolve.alias &&
+              !Array.isArray(currentConfig.resolve.alias)
+                ? currentConfig.resolve.alias
+                : {};
 
-        return {
-          ...currentConfig,
-          resolve: {
-            ...currentConfig.resolve,
-            alias: {
-              ...existingAlias,
-              "@": path.join(process.cwd(), "src"),
-            },
+            return {
+              ...currentConfig,
+              resolve: {
+                ...currentConfig.resolve,
+                alias: {
+                  ...existingAlias,
+                  "@": path.join(process.cwd(), "src"),
+                },
+              },
+            };
           },
-        };
-      },
-    }).catch((error) => {
-      bundleDirPromise = null;
-      throw error;
-    });
+        }),
+      )
+      .catch((error) => {
+        bundleDirPromise = null;
+        throw error;
+      });
   }
 
   try {
@@ -92,6 +97,37 @@ const getBundleDir = async (): Promise<string> => {
     bundleDirPromise = null;
     throw error;
   }
+};
+
+const restoreSandboxSnapshot = async (): Promise<Sandbox> => {
+  const blobToken = getVercelBlobToken();
+  const snapshotBlob = await get(getSnapshotBlobKey(), {
+    access: "public",
+    token: blobToken,
+  });
+
+  if (!snapshotBlob || snapshotBlob.statusCode !== 200) {
+    throw new Error(
+      "No Remotion sandbox snapshot found for this deployment. Redeploy so the build can create one.",
+    );
+  }
+
+  const response = new Response(snapshotBlob.stream);
+  const snapshotPayload = (await response.json()) as { snapshotId?: string };
+
+  if (!snapshotPayload.snapshotId) {
+    throw new Error(
+      "The stored Remotion sandbox snapshot is invalid. Redeploy to refresh it.",
+    );
+  }
+
+  return Sandbox.create({
+    source: {
+      type: "snapshot",
+      snapshotId: snapshotPayload.snapshotId,
+    },
+    timeout: 5 * 60 * 1000,
+  });
 };
 
 const renderCompositionLocally = async ({
@@ -145,16 +181,10 @@ const renderCompositionOnVercel = async ({
   blobPath: string;
   sandboxFiles?: SandboxWriteFile[];
 }): Promise<RenderedMediaResult> => {
-  const bundleDir = await getBundleDir();
   const blobToken = getVercelBlobToken();
-  const sandbox = await createSandbox();
+  const sandbox = await restoreSandboxSnapshot();
 
   try {
-    await addBundleToSandbox({
-      sandbox,
-      bundleDir,
-    });
-
     if (sandboxFiles && sandboxFiles.length > 0) {
       await sandbox.writeFiles(sandboxFiles);
     }
