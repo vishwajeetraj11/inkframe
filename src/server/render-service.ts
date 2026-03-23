@@ -13,6 +13,7 @@ import {
   uploadToVercelBlob,
 } from "@remotion/vercel";
 import { Sandbox } from "@vercel/sandbox";
+import { createRequire } from "node:module";
 import path from "node:path";
 import {
   getVercelBlobToken,
@@ -20,6 +21,7 @@ import {
 } from "./rendering-environment";
 
 let bundleDirPromise: Promise<string> | null = null;
+const nodeRequire = createRequire(import.meta.url);
 
 export interface SandboxWriteFile {
   path: string;
@@ -60,9 +62,11 @@ const getSnapshotBlobKey = (): string =>
 
 const getBundleDir = async (): Promise<string> => {
   if (!bundleDirPromise) {
-    bundleDirPromise = import("@remotion/bundler")
-      .then(({ bundle }) =>
-        bundle({
+    bundleDirPromise = Promise.resolve()
+      .then(() => {
+        const { bundle } = nodeRequire("@remotion/bundler") as typeof import("@remotion/bundler");
+
+        return bundle({
           entryPoint: path.join(process.cwd(), "src/remotion/index.ts"),
           webpackOverride: (currentConfig) => {
             const existingAlias =
@@ -83,8 +87,8 @@ const getBundleDir = async (): Promise<string> => {
               },
             };
           },
-        }),
-      )
+        });
+      })
       .catch((error) => {
         bundleDirPromise = null;
         throw error;

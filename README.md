@@ -71,7 +71,7 @@ The AI routes require:
 
 Vercel-hosted exports additionally require:
 
-- `BLOB_READ_WRITE_TOKEN`
+- `new_READ_WRITE_TOKEN`
 
 On Vercel, the build now creates a Remotion sandbox snapshot and stores the snapshot ID in Vercel Blob. Runtime exports restore that snapshot, render, and upload the result to Blob for download. Large editor exports that POST more than about 4.5 MB of source media to a function still need a direct-upload/blob-backed asset flow.
 

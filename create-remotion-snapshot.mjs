@@ -8,6 +8,9 @@ const cwd = path.dirname(fileURLToPath(import.meta.url));
 const buildDir = ".remotion";
 const getSnapshotBlobKey = () =>
   `snapshot-cache/${process.env.VERCEL_DEPLOYMENT_ID ?? "local"}.json`;
+const getBlobToken = () =>
+  process.env.new_READ_WRITE_TOKEN?.trim() ||
+  process.env.BLOB_READ_WRITE_TOKEN?.trim();
 
 const bundleRemotionProject = async () => {
   await bundle({
@@ -41,10 +44,13 @@ const run = async () => {
     return;
   }
 
-  if (!process.env.BLOB_READ_WRITE_TOKEN) {
-    throw new Error(
-      "BLOB_READ_WRITE_TOKEN is required to create the Remotion sandbox snapshot.",
+  const blobToken = getBlobToken();
+
+  if (!blobToken) {
+    console.warn(
+      "[create-remotion-snapshot] Skipping because new_READ_WRITE_TOKEN is not configured. Attach a Vercel Blob store or add the token manually to enable Vercel exports.",
     );
+    return;
   }
 
   console.log("[create-remotion-snapshot] Bundling Remotion project...");
@@ -75,6 +81,7 @@ const run = async () => {
         access: "public",
         contentType: "application/json",
         addRandomSuffix: false,
+        token: blobToken,
       },
     );
 
