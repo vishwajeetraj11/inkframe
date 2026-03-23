@@ -56,11 +56,6 @@ export const getRegionalMapFocusDefaultLabel = (
     : safePrimary;
 };
 
-export const getRegionalMapFocusSubtitleLines = (
-  label: string,
-  year: string,
-): string[] => [label.trim(), year.trim()].filter((value) => value.length > 0);
-
 export const parseRegionalMapFocusText = (
   text: string,
 ): ParsedRegionalMapFocusText => {

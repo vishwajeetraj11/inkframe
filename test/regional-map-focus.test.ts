@@ -1,7 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
   buildRegionalMapFocusText,
-  getRegionalMapFocusSubtitleLines,
   parseRegionalMapFocusText,
 } from "@/lib/editor/regional-map-focus";
 import {
@@ -39,14 +38,6 @@ describe("regional map focus parser", () => {
 
     expect(reparsed.label).toBe("India");
     expect(reparsed.focusMode).toBe("country");
-  });
-
-  it("builds subtitle rows from the label and year", () => {
-    expect(getRegionalMapFocusSubtitleLines("Iran-Iraq boundary", "1975")).toEqual([
-      "Iran-Iraq boundary",
-      "1975",
-    ]);
-    expect(getRegionalMapFocusSubtitleLines("India", "")).toEqual(["India"]);
   });
 });
 

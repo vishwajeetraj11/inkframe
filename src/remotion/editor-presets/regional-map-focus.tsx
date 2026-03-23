@@ -2,10 +2,7 @@ import {
   findProjectedWorldCountry,
   projectRegionalWorldMap,
 } from "@/lib/maps/world";
-import {
-  getRegionalMapFocusSubtitleLines,
-  parseRegionalMapFocusText,
-} from "@/lib/editor/regional-map-focus";
+import { parseRegionalMapFocusText } from "@/lib/editor/regional-map-focus";
 import { Easing, interpolate } from "remotion";
 import type { PresetRendererProps } from "./types";
 import {
@@ -15,12 +12,6 @@ import {
   WORLD_MAP_WIDE,
   clampRange,
 } from "./shared";
-
-const splitSubtitleTokens = (value: string): string[] =>
-  value
-    .split(/\s+/)
-    .map((token) => token.trim())
-    .filter((token) => token.length > 0);
 
 export const renderRegionalMapFocusPreset = ({
   overlay,
@@ -38,7 +29,6 @@ export const renderRegionalMapFocusPreset = ({
     year,
     focusMode,
   } = parseRegionalMapFocusText(overlay.text);
-  const subtitleLines = getRegionalMapFocusSubtitleLines(label, year);
   const isVertical = aspect === "reel_9_16";
   const globalMap = isVertical ? WORLD_MAP_TALL : WORLD_MAP_WIDE;
   const projectedMap = projectRegionalWorldMap({
@@ -120,6 +110,11 @@ export const renderRegionalMapFocusPreset = ({
     extrapolateRight: "clamp",
     easing: easeOut,
   });
+  const labelProgress = interpolate(frame, [50, 68], [0, 1], {
+    extrapolateLeft: "clamp",
+    extrapolateRight: "clamp",
+    easing: easeOut,
+  });
   const wrapperOpacity = animation.baseOpacity;
   const wrapperBlur = animation.blur * 0.08;
   const wrapperTranslateY = animation.baseTranslateY * 0.08;
@@ -131,35 +126,16 @@ export const renderRegionalMapFocusPreset = ({
     extrapolateLeft: "clamp",
     extrapolateRight: "clamp",
   });
-  const subtitleEnterStart = 58;
-  const subtitleStripDelay = 8;
-  const subtitleTextDelay = 8;
-  const subtitleExitStart = Math.max(114, safeDuration - 34);
-  const subtitleExitEnd = Math.max(subtitleExitStart + 12, safeDuration - 4);
   const regionalHoldScale = interpolate(
     frame,
-    [44, Math.max(72, subtitleExitStart - 10)],
-    [1, 1.08],
+    [44, Math.max(72, safeDuration - 12)],
+    [1, 1.12],
     {
       extrapolateLeft: "clamp",
       extrapolateRight: "clamp",
       easing: easeOut,
     },
   );
-  const regionalZoomOutProgress = interpolate(
-    frame,
-    [subtitleExitStart - 6, subtitleExitEnd],
-    [0, 1],
-    {
-      extrapolateLeft: "clamp",
-      extrapolateRight: "clamp",
-      easing: easeOut,
-    },
-  );
-  const regionalZoomOutScale = interpolate(regionalZoomOutProgress, [0, 1], [1, 0.88], {
-    extrapolateLeft: "clamp",
-    extrapolateRight: "clamp",
-  });
   const globalMapScale = interpolate(zoomProgress, [0, 1], [1, 1.32], {
     extrapolateLeft: "clamp",
     extrapolateRight: "clamp",
@@ -387,7 +363,7 @@ export const renderRegionalMapFocusPreset = ({
             transform: `translateY(${interpolate(mapReveal, [0, 1], [18, 0], {
               extrapolateLeft: "clamp",
               extrapolateRight: "clamp",
-            })}px) scale(${mapScale * regionalHoldScale * regionalZoomOutScale})`,
+            })}px) scale(${mapScale * regionalHoldScale})`,
             transformOrigin: `${focusAnchor[0]}px ${focusAnchor[1]}px`,
           }}
         >
@@ -500,154 +476,57 @@ export const renderRegionalMapFocusPreset = ({
             position: "absolute",
             left: `${labelLeft}%`,
             top: `${labelTop}%`,
-            display: "flex",
-            flexDirection: "column",
-            alignItems: "flex-start",
-            gap: isVertical ? "0.26em" : "0.22em",
-            zIndex: 3,
+            padding: year ? "0.7em 0.92em" : "0.66em 0.88em",
+            borderRadius: "1rem",
+            border: "1px solid rgba(116, 100, 70, 0.18)",
+            backgroundColor: "rgba(248, 243, 232, 0.94)",
+            boxShadow: "0 18px 36px rgba(65, 52, 28, 0.16)",
+            opacity: labelProgress,
+            transform: `translateY(${interpolate(labelProgress, [0, 1], [12, 0], {
+              extrapolateLeft: "clamp",
+              extrapolateRight: "clamp",
+            })}px)`,
           }}
         >
-          {subtitleLines.map((line, index) => {
-            const tokens = splitSubtitleTokens(line);
-            const stripEnterStart = subtitleEnterStart + index * subtitleStripDelay;
-            const stripEnter = interpolate(frame, [stripEnterStart, stripEnterStart + 10], [0, 1], {
-              extrapolateLeft: "clamp",
-              extrapolateRight: "clamp",
-              easing: easeOut,
-            });
-            const textEnterStart = stripEnterStart + subtitleTextDelay;
-            const textExitStart = subtitleExitStart + index * 4;
-            const stripExitStart = textExitStart + 6;
-            const stripClose = interpolate(frame, [stripExitStart, stripExitStart + 10], [0, 1], {
-              extrapolateLeft: "clamp",
-              extrapolateRight: "clamp",
-              easing: easeOut,
-            });
-            const stripReveal = stripEnter * (1 - stripClose);
-            const stripOpacity = interpolate(stripReveal, [0, 1], [0.2, 1], {
-              extrapolateLeft: "clamp",
-              extrapolateRight: "clamp",
-            });
-            const stripTranslateY =
-              interpolate(stripEnter, [0, 1], [10, 0], {
-                extrapolateLeft: "clamp",
-                extrapolateRight: "clamp",
-              }) +
-              interpolate(stripClose, [0, 1], [0, -7], {
-                extrapolateLeft: "clamp",
-                extrapolateRight: "clamp",
-              });
-            const stripClipRight = `${Math.round((1 - stripReveal) * 100)}%`;
-            const lineFontSize =
-              index === 0 ? `${layout.subheadSize * 0.9}px` : `${layout.chipSize * 0.96}px`;
-            const lineFontFamily =
-              index === 0 ? FONT_STACK_BY_FAMILY.sans : FONT_STACK_BY_FAMILY.mono;
-            const lineLetterSpacing = index === 0 ? "0.045em" : "0.095em";
-
-            return (
-              <div
-                key={`${line}-${index}`}
-                style={{
-                  position: "relative",
-                  width: "max-content",
-                  maxWidth: isVertical ? "70vw" : "40vw",
-                  overflow: "hidden",
-                  clipPath: `inset(0 ${stripClipRight} 0 0)`,
-                  borderRadius: "2px",
-                  boxShadow: "0 5px 14px rgba(82, 58, 15, 0.18)",
-                  transform: `translateY(${stripTranslateY}px)`,
-                  opacity: stripOpacity,
-                }}
-              >
-                <div
-                  style={{
-                    position: "absolute",
-                    inset: 0,
-                    background:
-                      index === 0
-                        ? "linear-gradient(180deg, rgba(251, 227, 162, 0.98), rgba(240, 208, 123, 0.98))"
-                        : "linear-gradient(180deg, rgba(249, 221, 146, 0.98), rgba(233, 196, 98, 0.98))",
-                    borderTop: "1px solid rgba(255, 246, 212, 0.72)",
-                    borderBottom: "1px solid rgba(167, 124, 29, 0.24)",
-                  }}
-                />
-
-                <div
-                  style={{
-                    position: "relative",
-                    display: "flex",
-                    alignItems: "center",
-                    gap: "0.24em",
-                    padding: index === 0 ? "0.22em 0.44em 0.24em" : "0.16em 0.38em 0.18em",
-                    color: "#2a1d05",
-                    fontFamily: lineFontFamily,
-                    fontWeight: index === 0 ? 800 : 700,
-                    fontSize: lineFontSize,
-                    letterSpacing: lineLetterSpacing,
-                    lineHeight: 1,
-                    textTransform: "uppercase",
-                    whiteSpace: "nowrap",
-                  }}
-                >
-                  {tokens.map((token, tokenIndex) => {
-                    const tokenEnterStart = textEnterStart + tokenIndex * 3;
-                    const tokenEnter = interpolate(
-                      frame,
-                      [tokenEnterStart, tokenEnterStart + 8],
-                      [0, 1],
-                      {
-                        extrapolateLeft: "clamp",
-                        extrapolateRight: "clamp",
-                        easing: easeOut,
-                      },
-                    );
-                    const tokenExit = interpolate(
-                      frame,
-                      [textExitStart + tokenIndex * 2, textExitStart + tokenIndex * 2 + 8],
-                      [0, 1],
-                      {
-                        extrapolateLeft: "clamp",
-                        extrapolateRight: "clamp",
-                        easing: easeOut,
-                      },
-                    );
-                    const tokenOpacity = tokenEnter * (1 - tokenExit);
-                    const tokenTranslateY =
-                      interpolate(tokenEnter, [0, 1], [8, 0], {
-                        extrapolateLeft: "clamp",
-                        extrapolateRight: "clamp",
-                      }) +
-                      interpolate(tokenExit, [0, 1], [0, -6], {
-                        extrapolateLeft: "clamp",
-                        extrapolateRight: "clamp",
-                      });
-                    const tokenTranslateX =
-                      interpolate(tokenEnter, [0, 1], [4, 0], {
-                        extrapolateLeft: "clamp",
-                        extrapolateRight: "clamp",
-                      }) +
-                      interpolate(tokenExit, [0, 1], [0, -4], {
-                        extrapolateLeft: "clamp",
-                        extrapolateRight: "clamp",
-                      });
-
-                    return (
-                      <span
-                        key={`${token}-${tokenIndex}`}
-                        style={{
-                          opacity: tokenOpacity,
-                          transform: `translate(${tokenTranslateX}px, ${tokenTranslateY}px)`,
-                          whiteSpace: "pre",
-                        }}
-                      >
-                        {token}
-                      </span>
-                    );
-                  })}
-                </div>
-              </div>
-            );
-          })}
+          <div
+            style={{
+              color: "#5a684e",
+              fontFamily: FONT_STACK_BY_FAMILY.mono,
+              fontWeight: 700,
+              fontSize: `${layout.chipSize * 0.82}px`,
+              letterSpacing: "0.08em",
+              textTransform: "uppercase",
+            }}
+          >
+            {resolvedFocusMode === "border" ? "Shared Border" : "Regional Focus"}
+          </div>
+          <div
+            style={{
+              marginTop: "0.22em",
+              color: "#182116",
+              fontFamily: FONT_STACK_BY_FAMILY.sans,
+              fontWeight: 800,
+              fontSize: `${layout.subheadSize * 0.98}px`,
+              lineHeight: 1.04,
+            }}
+          >
+            {label}
+          </div>
+          {year ? (
+            <div
+              style={{
+                marginTop: "0.18em",
+                color: "rgba(45, 55, 41, 0.72)",
+                fontFamily: FONT_STACK_BY_FAMILY.mono,
+                fontWeight: 700,
+                fontSize: `${layout.chipSize * 0.84}px`,
+                letterSpacing: "0.08em",
+                textTransform: "uppercase",
+              }}
+            >
+              {year}
+            </div>
+          ) : null}
         </div>
       </div>
     </div>

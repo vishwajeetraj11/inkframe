@@ -90,41 +90,38 @@ export const PreviewPane = ({
         </div>
       </div>
 
-      <div className="overflow-hidden rounded-[24px] border border-white/8 bg-[#080c14] p-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.03)]">
-        <div className="rounded-[22px] border border-white/6 bg-[radial-gradient(circle_at_top,rgba(255,255,255,0.06),rgba(0,0,0,0)_30%),linear-gradient(180deg,#0c121d,#04070d)] p-2">
+      <div className="overflow-hidden rounded-[22px] border border-white/8 bg-black shadow-[inset_0_1px_0_rgba(255,255,255,0.03)]">
+        <div
+          style={{
+            position: "relative",
+            width: "100%",
+            paddingTop: safePaddingTopPercent,
+          }}
+        >
           <div
-            className="overflow-hidden rounded-[18px] border border-white/6 bg-black"
             style={{
-              position: "relative",
-              width: "100%",
-              paddingTop: safePaddingTopPercent,
+              position: "absolute",
+              inset: 0,
             }}
           >
-            <div
+            <Player
+              key={`${safeWidth}x${safeHeight}@${safeFps}`}
+              component={EditorComposition}
+              inputProps={inputProps}
+              durationInFrames={safeDurationInFrames}
+              compositionWidth={safeWidth}
+              compositionHeight={safeHeight}
+              fps={safeFps}
+              acknowledgeRemotionLicense
               style={{
-                position: "absolute",
-                inset: 0,
+                width: "100%",
+                height: "100%",
+                backgroundColor: "black",
               }}
-            >
-              <Player
-                key={`${safeWidth}x${safeHeight}@${safeFps}`}
-                component={EditorComposition}
-                inputProps={inputProps}
-                durationInFrames={safeDurationInFrames}
-                compositionWidth={safeWidth}
-                compositionHeight={safeHeight}
-                fps={safeFps}
-                acknowledgeRemotionLicense
-                style={{
-                  width: "100%",
-                  height: "100%",
-                  backgroundColor: "black",
-                }}
-                controls
-                autoPlay={false}
-                loop
-              />
-            </div>
+              controls
+              autoPlay={false}
+              loop
+            />
           </div>
         </div>
       </div>

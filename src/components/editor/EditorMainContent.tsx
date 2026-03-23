@@ -30,6 +30,7 @@ interface EditorMainContentProps {
   onRemoveText: (overlayId: string) => void;
   onUpdateAudio: (trackId: string, patch: Partial<Omit<AudioTrack, "id">>) => void;
   onRemoveAudio: (trackId: string) => void;
+  showPreview?: boolean;
 }
 
 export const EditorMainContent = ({
@@ -54,14 +55,17 @@ export const EditorMainContent = ({
   onRemoveText,
   onUpdateAudio,
   onRemoveAudio,
+  showPreview = true,
 }: EditorMainContentProps) => {
   return (
     <section className="space-y-4 xl:min-h-0">
-      <PreviewPane
-        aspect={aspect}
-        version={version}
-        assetSources={previewAssetSources}
-      />
+      {showPreview ? (
+        <PreviewPane
+          aspect={aspect}
+          version={version}
+          assetSources={previewAssetSources}
+        />
+      ) : null}
 
       <Timeline
         version={version}

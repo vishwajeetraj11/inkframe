@@ -38,9 +38,6 @@ export const EditorHeader = ({
             <span className="app-eyebrow rounded-full border border-white/10 bg-white/[0.05] px-3 py-1 text-[10px] uppercase tracking-[0.22em] text-cyan-200">
               Ephemeral Studio
             </span>
-            <span className="rounded-full border border-white/10 bg-white/[0.05] px-3 py-1 text-[10px] uppercase tracking-[0.18em] text-neutral-400">
-              Session-only
-            </span>
           </div>
 
           <h1 className="app-title mt-3 text-2xl font-semibold tracking-[-0.05em] text-white md:text-3xl">
