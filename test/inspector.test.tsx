@@ -1,6 +1,7 @@
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { Inspector } from "@/components/editor/Inspector";
+import { EditorialStatRingInspector } from "@/components/editor/inspector/preset-inspectors/EditorialStatRingInspector";
 
 afterEach(() => {
   cleanup();
@@ -120,6 +121,39 @@ describe("Inspector routing", () => {
     expect(onUpdateText).toHaveBeenCalledWith("overlay-seat-arc", {
       createdaleyTexture: "warm-editorial",
     });
+  });
+
+  it("allows clearing editorial stat ring value while translating empty input to zero", () => {
+    const onUpdateText = vi.fn();
+    const data = {
+      headline: "The overwhelming scientific consensus on climate change",
+      highlight: "scientific consensus",
+      subhead: "Analysis of peer-reviewed climate studies.",
+      value: 9,
+      suffix: "%",
+      color: "#ef5a29",
+    };
+
+    render(
+      <EditorialStatRingInspector
+        data={data}
+        onUpdateText={onUpdateText}
+      />,
+    );
+
+    const input = screen.getByLabelText(/value/i) as HTMLInputElement;
+
+    fireEvent.focus(input);
+    fireEvent.change(input, { target: { value: "" } });
+
+    expect(input.value).toBe("");
+
+    const updater = onUpdateText.mock.calls.at(-1)?.[0] as
+      | ((current: typeof data) => typeof data)
+      | undefined;
+
+    expect(updater).toBeTypeOf("function");
+    expect(updater?.(data).value).toBe(0);
   });
 
   it("routes vox-timeline overlays into the timeline inspector", () => {

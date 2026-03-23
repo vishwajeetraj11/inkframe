@@ -57,7 +57,7 @@ export const EditorSidebar = ({
 }: EditorSidebarProps) => {
   return (
     <aside className="space-y-4 xl:min-h-0">
-      <section className="rounded-[26px] border border-white/8 bg-[linear-gradient(180deg,rgba(28,33,45,0.9),rgba(12,15,23,0.88))] p-4 shadow-[0_18px_52px_rgba(0,0,0,0.22)]">
+      <section className="rounded-[26px] border border-white/10 bg-[linear-gradient(180deg,rgba(28,33,45,0.9),rgba(12,15,23,0.88))] p-4">
         <div className="flex items-start justify-between gap-3">
           <div>
             <p className="app-eyebrow text-[10px] uppercase tracking-[0.22em] text-neutral-500">
@@ -83,7 +83,7 @@ export const EditorSidebar = ({
         onRemoveAsset={onRemoveAsset}
       />
 
-      <section className="rounded-[26px] border border-white/8 bg-[linear-gradient(180deg,rgba(28,33,45,0.9),rgba(12,15,23,0.88))] p-4 shadow-[0_18px_52px_rgba(0,0,0,0.22)]">
+      <section className="rounded-[26px] border border-white/10 bg-[linear-gradient(180deg,rgba(28,33,45,0.9),rgba(12,15,23,0.88))] p-4">
         <div className="flex items-center justify-between gap-3">
           <div>
             <p className="app-eyebrow text-[10px] uppercase tracking-[0.22em] text-neutral-500">
@@ -124,7 +124,7 @@ export const EditorSidebar = ({
                     onClick={() => onSelectClip(clip.id)}
                     className={`w-full rounded-2xl border px-3 py-3 text-left transition ${
                       selectedClipId === clip.id
-                        ? "border-emerald-300/35 bg-emerald-300/10 shadow-[0_0_0_1px_rgba(110,231,183,0.14)]"
+                        ? "border-emerald-300/35 bg-emerald-300/10 ring-1 ring-emerald-300/15"
                         : "border-white/8 bg-white/[0.03] hover:bg-white/[0.05]"
                     }`}
                   >
@@ -169,7 +169,7 @@ export const EditorSidebar = ({
                     onClick={() => onSelectText(overlay.id)}
                     className={`w-full rounded-2xl border px-3 py-3 text-left transition ${
                       selectedTextId === overlay.id
-                        ? "border-cyan-300/35 bg-cyan-300/10 shadow-[0_0_0_1px_rgba(103,232,249,0.14)]"
+                        ? "border-cyan-300/35 bg-cyan-300/10 ring-1 ring-cyan-300/15"
                         : "border-white/8 bg-white/[0.03] hover:bg-white/[0.05]"
                     }`}
                   >
@@ -214,7 +214,7 @@ export const EditorSidebar = ({
                     onClick={() => onSelectAudio(track.id)}
                     className={`w-full rounded-2xl border px-3 py-3 text-left transition ${
                       selectedAudioId === track.id
-                        ? "border-amber-300/35 bg-amber-300/10 shadow-[0_0_0_1px_rgba(252,211,77,0.14)]"
+                        ? "border-amber-300/35 bg-amber-300/10 ring-1 ring-amber-300/15"
                         : "border-white/8 bg-white/[0.03] hover:bg-white/[0.05]"
                     }`}
                   >

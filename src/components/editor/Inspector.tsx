@@ -27,7 +27,7 @@ export const Inspector = ({
   const activeKind = clip ? "Clip" : textOverlay ? "Text Overlay" : audioTrack ? "Audio Track" : null;
 
   return (
-    <section className="space-y-4 rounded-[28px] border border-white/8 bg-[linear-gradient(180deg,rgba(24,28,38,0.96),rgba(11,13,20,0.88))] p-5 shadow-[0_18px_48px_rgba(0,0,0,0.28)] backdrop-blur-md">
+    <section className="space-y-4 rounded-[28px] border border-white/10 bg-[linear-gradient(180deg,rgba(24,28,38,0.96),rgba(11,13,20,0.88))] p-5 backdrop-blur-md">
       <div className="flex items-start justify-between gap-3">
         <div>
           <p className="app-eyebrow text-[10px] uppercase tracking-[0.22em] text-neutral-500">

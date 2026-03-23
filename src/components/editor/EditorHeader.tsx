@@ -31,7 +31,7 @@ export const EditorHeader = ({
   onExport,
 }: EditorHeaderProps) => {
   return (
-    <header className="rounded-[26px] border border-white/8 bg-[linear-gradient(180deg,rgba(28,33,45,0.96),rgba(13,17,27,0.9))] px-4 py-4 shadow-[0_18px_60px_rgba(0,0,0,0.32)] backdrop-blur-md md:px-5">
+    <header className="rounded-[26px] border border-white/10 bg-[linear-gradient(180deg,rgba(28,33,45,0.96),rgba(13,17,27,0.9))] px-4 py-4 backdrop-blur-md md:px-5">
       <div className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
         <div className="min-w-0">
           <div className="flex flex-wrap items-center gap-2">
@@ -60,7 +60,7 @@ export const EditorHeader = ({
             type="button"
             disabled={isExporting || !canExport}
             onClick={onExport}
-            className="rounded-xl bg-[linear-gradient(135deg,#67e8f9,#34d399)] px-4 py-2.5 text-sm font-semibold text-neutral-950 shadow-[0_16px_38px_rgba(52,211,153,0.22)] transition hover:-translate-y-0.5 disabled:cursor-not-allowed disabled:opacity-60"
+            className="rounded-xl bg-[linear-gradient(135deg,#67e8f9,#34d399)] px-4 py-2.5 text-sm font-semibold text-neutral-950 transition hover:bg-[linear-gradient(135deg,#73ebfb,#43deab)] disabled:cursor-not-allowed disabled:opacity-60"
           >
             {isExporting ? "Rendering..." : "Export MP4"}
           </button>

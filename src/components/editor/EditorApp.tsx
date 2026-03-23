@@ -12,10 +12,14 @@ import { useEditorSession } from "./hooks/use-editor-session";
 
 interface EditorAppProps {
   enableAIChat: boolean;
+  isVercelDeployment: boolean;
 }
 
-export const EditorApp = ({ enableAIChat }: EditorAppProps) => {
-  const session = useEditorSession();
+export const EditorApp = ({
+  enableAIChat,
+  isVercelDeployment,
+}: EditorAppProps) => {
+  const session = useEditorSession({ isVercelDeployment });
 
   const selectClip = (clipId: string | null) => {
     session.setSelectedClipId(clipId);

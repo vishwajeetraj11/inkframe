@@ -1,7 +1,7 @@
 import { exportProjectSchema } from "@/lib/editor/schema";
 import { jsonError, getErrorMessage } from "@/server/http";
 import { ensureStartupCleanup } from "@/server/startup";
-import { exportEditorProjectToBuffer } from "@/server/services/editor-export-service";
+import { exportEditorProject } from "@/server/services/editor-export-service";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -34,15 +34,30 @@ export async function POST(request: Request): Promise<Response> {
       .getAll("assets")
       .filter((value): value is File => value instanceof File);
 
-    const result = await exportEditorProjectToBuffer({
+    const result = await exportEditorProject({
       project: projectParse.data,
       files,
     });
 
+    if (result.kind === "download-url") {
+      return Response.json(
+        {
+          downloadUrl: result.downloadUrl,
+          filename: result.filename,
+        },
+        {
+          status: 200,
+          headers: {
+            "Cache-Control": "no-store",
+          },
+        },
+      );
+    }
+
     return new Response(new Uint8Array(result.buffer), {
       status: 200,
       headers: {
-        "Content-Type": "video/mp4",
+        "Content-Type": result.contentType,
         "Content-Disposition": `attachment; filename="${result.filename}"`,
         "Cache-Control": "no-store",
       },

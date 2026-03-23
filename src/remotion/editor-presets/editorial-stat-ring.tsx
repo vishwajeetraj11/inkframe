@@ -202,6 +202,7 @@ export const renderEditorialStatRingPreset = ({
                 extrapolateLeft: "clamp",
                 extrapolateRight: "clamp",
               }),
+              paddingBottom: "0.08em",
             }}
           >
             <div
@@ -209,11 +210,12 @@ export const renderEditorialStatRingPreset = ({
                 fontFamily: STAT_RING_HEADLINE_STACK,
                 fontWeight: 700,
                 fontSize: `${headlineSize}px`,
-                lineHeight: 0.9,
+                lineHeight: 1.02,
                 letterSpacing: "-0.035em",
                 maxWidth: "100%",
                 whiteSpace: "normal",
                 textWrap: "wrap",
+                paddingBottom: "0.12em",
               }}
             >
               {before}
@@ -223,7 +225,8 @@ export const renderEditorialStatRingPreset = ({
                     position: "relative",
                     display: "inline-block",
                     fontStyle: "italic",
-                    padding: "0 0.12em 0.02em",
+                    padding: "0.01em 0.12em 0.08em",
+                    overflow: "visible",
                   }}
                 >
                   <span
@@ -232,7 +235,7 @@ export const renderEditorialStatRingPreset = ({
                       left: "0.02em",
                       right: "0.02em",
                       top: "0.41em",
-                      bottom: "0.04em",
+                      bottom: "0.06em",
                       backgroundColor: color,
                       transform: `scaleX(${highlightProgress})`,
                       transformOrigin: "left center",

@@ -69,4 +69,10 @@ The AI routes require:
 
 - `OPENAI_API_KEY`
 
+Vercel-hosted exports additionally require:
+
+- `BLOB_READ_WRITE_TOKEN`
+
+On Vercel, rendered outputs are uploaded to Vercel Blob for download. Large editor exports that POST more than about 4.5 MB of source media to a function still need a direct-upload/blob-backed asset flow.
+
 Optional local artifacts and generated media are kept under the workspace `artifacts/` directory when present.

@@ -4,26 +4,27 @@ import {
   type ExportProjectInput,
 } from "@/lib/editor/schema";
 import { collectUsedAssetIds } from "@/lib/editor/timeline";
-import { renderProjectToFile } from "@/server/render-service";
+import {
+  renderProject,
+  type SandboxWriteFile,
+} from "@/server/render-service";
+import { shouldUseVercelSandboxRender } from "@/server/rendering-environment";
 import { sanitizeFilename } from "@/server/temp-storage";
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { pathToFileURL } from "node:url";
+import type { ExportResult } from "./export-types";
 import { withRequestTempDir } from "./request-temp-dir";
 
-export interface EditorExportResult {
-  buffer: Buffer;
-  filename: string;
-}
-
-export const exportEditorProjectToBuffer = async ({
+export const exportEditorProject = async ({
   project,
   files,
 }: {
   project: ExportProjectInput;
   files: File[];
-}): Promise<EditorExportResult> =>
+}): Promise<ExportResult> =>
   withRequestTempDir(async ({ requestDir, requestId }) => {
+    const useVercelSandbox = shouldUseVercelSandboxRender();
     const activeVersion = project.versions[project.activeVersion];
     const usedAssetIds = collectUsedAssetIds(activeVersion);
 
@@ -38,6 +39,8 @@ export const exportEditorProjectToBuffer = async ({
     const assetMetaById = new Map(project.assets.map((asset) => [asset.assetId, asset]));
     const storedAssetPathById = new Map<string, string>();
     const inlineImageSourceById = new Map<string, string>();
+    const sandboxAssetPathById = new Map<string, string>();
+    const sandboxFiles: SandboxWriteFile[] = [];
 
     for (const file of files) {
       const assetId = extractAssetIdFromUploadedFilename(file.name);
@@ -70,6 +73,15 @@ export const exportEditorProjectToBuffer = async ({
       await writeFile(targetPath, fileBuffer);
       storedAssetPathById.set(assetId, targetPath);
 
+      if (useVercelSandbox && assetMeta.kind !== "image") {
+        const sandboxPath = `/tmp/${assetId}-${safeFilename}`;
+        sandboxAssetPathById.set(assetId, sandboxPath);
+        sandboxFiles.push({
+          path: sandboxPath,
+          content: fileBuffer,
+        });
+      }
+
       if (assetMeta.kind === "image") {
         const imageMimeType = (file.type || assetMeta.mimeType || "").trim();
         if (imageMimeType.startsWith("image/")) {
@@ -86,6 +98,7 @@ export const exportEditorProjectToBuffer = async ({
     for (const usedAssetId of usedAssetIds) {
       const assetMeta = assetMetaById.get(usedAssetId);
       const resolvedPath = storedAssetPathById.get(usedAssetId);
+
       if (!resolvedPath) {
         throw new Error(`Missing uploaded file for required asset ${usedAssetId}.`);
       }
@@ -98,17 +111,44 @@ export const exportEditorProjectToBuffer = async ({
         }
       }
 
+      if (useVercelSandbox) {
+        const sandboxPath = sandboxAssetPathById.get(usedAssetId);
+
+        if (!sandboxPath) {
+          throw new Error(`Missing sandbox file for required asset ${usedAssetId}.`);
+        }
+
+        assetSources[usedAssetId] = pathToFileURL(sandboxPath).toString();
+        continue;
+      }
+
       assetSources[usedAssetId] = pathToFileURL(resolvedPath).toString();
     }
 
-    await renderProjectToFile({
+    const renderResult = await renderProject({
       project,
       assetSources,
       outputLocation: outputPath,
+      blobPath: path.posix.join(
+        "exports",
+        "editor",
+        `${project.activeVersion}-${requestId}.mp4`,
+      ),
+      sandboxFiles,
     });
 
+    if (renderResult.kind === "download-url") {
+      return {
+        kind: "download-url",
+        downloadUrl: renderResult.downloadUrl,
+        filename: `${project.activeVersion}.mp4`,
+      };
+    }
+
     return {
+      kind: "buffer",
       buffer: await readFile(outputPath),
+      contentType: "video/mp4",
       filename: `${project.activeVersion}.mp4`,
     };
   });

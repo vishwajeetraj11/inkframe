@@ -37,7 +37,7 @@ export const EditorRightSidebar = ({
         onUpdateAudio={onUpdateAudio}
       />
 
-      <section className="rounded-[26px] border border-white/8 bg-[linear-gradient(180deg,rgba(28,33,45,0.9),rgba(12,15,23,0.88))] p-4 shadow-[0_18px_52px_rgba(0,0,0,0.22)]">
+      <section className="rounded-[26px] border border-white/10 bg-[linear-gradient(180deg,rgba(28,33,45,0.9),rgba(12,15,23,0.88))] p-4">
         <p className="app-eyebrow text-[10px] uppercase tracking-[0.22em] text-neutral-500">
           Session Memory
         </p>

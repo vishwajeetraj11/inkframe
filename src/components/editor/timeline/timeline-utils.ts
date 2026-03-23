@@ -127,7 +127,7 @@ export const getClipBlockClassName = (kind: Clip["kind"], selected: boolean): st
       : "border-amber-400/45 bg-amber-400/18 text-amber-50";
 
   return [
-    "group absolute top-1/2 h-14 -translate-y-1/2 overflow-hidden rounded-xl border px-3 text-left shadow-[0_10px_24px_rgba(0,0,0,0.22)] transition",
+    "group absolute top-1/2 h-14 -translate-y-1/2 overflow-hidden rounded-xl border px-3 text-left transition",
     baseClassName,
     selected ? "ring-2 ring-cyan-300/80" : "hover:border-neutral-400",
   ].join(" ");
@@ -135,14 +135,14 @@ export const getClipBlockClassName = (kind: Clip["kind"], selected: boolean): st
 
 export const getTextBlockClassName = (selected: boolean): string => {
   return [
-    "group absolute top-1/2 h-11 -translate-y-1/2 overflow-hidden rounded-lg border border-fuchsia-300/35 bg-fuchsia-300/14 px-3 text-left text-fuchsia-50 shadow-[0_8px_20px_rgba(0,0,0,0.2)] transition",
+    "group absolute top-1/2 h-11 -translate-y-1/2 overflow-hidden rounded-lg border border-fuchsia-300/35 bg-fuchsia-300/14 px-3 text-left text-fuchsia-50 transition",
     selected ? "ring-2 ring-cyan-300/80" : "hover:border-fuchsia-200/55",
   ].join(" ");
 };
 
 export const getAudioBlockClassName = (selected: boolean): string => {
   return [
-    "group absolute top-1/2 h-11 -translate-y-1/2 overflow-hidden rounded-lg border border-emerald-300/35 bg-emerald-300/14 px-3 text-left text-emerald-50 shadow-[0_8px_20px_rgba(0,0,0,0.2)] transition",
+    "group absolute top-1/2 h-11 -translate-y-1/2 overflow-hidden rounded-lg border border-emerald-300/35 bg-emerald-300/14 px-3 text-left text-emerald-50 transition",
     selected ? "ring-2 ring-cyan-300/80" : "hover:border-emerald-200/55",
   ].join(" ");
 };

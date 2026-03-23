@@ -35,9 +35,9 @@ import {
 } from "./utils";
 
 const INSPECTOR_INPUT_CLASS =
-  "w-full rounded-xl border border-white/10 bg-neutral-950/70 px-3 py-2.5 text-sm text-neutral-100 shadow-[inset_0_1px_0_rgba(255,255,255,0.03)] outline-none transition focus:border-cyan-300/35 focus:ring-2 focus:ring-cyan-300/12";
+  "w-full rounded-xl border border-white/10 bg-neutral-950/70 px-3 py-2.5 text-sm text-neutral-100 outline-none transition focus:border-cyan-300/35 focus:ring-2 focus:ring-cyan-300/12";
 const INSPECTOR_COLOR_INPUT_CLASS =
-  "h-11 w-full rounded-xl border border-white/10 bg-neutral-950/70 p-1 shadow-[inset_0_1px_0_rgba(255,255,255,0.03)] outline-none transition focus:border-cyan-300/35 focus:ring-2 focus:ring-cyan-300/12";
+  "h-11 w-full rounded-xl border border-white/10 bg-neutral-950/70 p-1 outline-none transition focus:border-cyan-300/35 focus:ring-2 focus:ring-cyan-300/12";
 
 /**
  * Factory for creating preset-specific update handlers

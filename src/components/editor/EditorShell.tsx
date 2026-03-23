@@ -4,6 +4,7 @@ import dynamic from "next/dynamic";
 
 interface EditorShellProps {
   enableAIChat: boolean;
+  isVercelDeployment: boolean;
 }
 
 const EditorApp = dynamic<EditorShellProps>(
@@ -13,6 +14,14 @@ const EditorApp = dynamic<EditorShellProps>(
   },
 );
 
-export const EditorShell = ({ enableAIChat }: EditorShellProps) => {
-  return <EditorApp enableAIChat={enableAIChat} />;
+export const EditorShell = ({
+  enableAIChat,
+  isVercelDeployment,
+}: EditorShellProps) => {
+  return (
+    <EditorApp
+      enableAIChat={enableAIChat}
+      isVercelDeployment={isVercelDeployment}
+    />
+  );
 };

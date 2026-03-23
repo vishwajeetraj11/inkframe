@@ -9,6 +9,10 @@ import {
   createDefaultTextOverlay,
   createInitialProjectSession,
 } from "@/lib/editor/defaults";
+import {
+  isExportDownloadPayload,
+  triggerBrowserDownload,
+} from "@/lib/export/download";
 import { editorReducer } from "@/lib/editor/reducer";
 import { isSupportedImageMimeType, assetKindFromMimeType } from "@/lib/editor/schema";
 import { getTemplateDefinition } from "@/lib/editor/templates";
@@ -21,6 +25,7 @@ import { flushSync } from "react-dom";
 import { applyAIEditorActions } from "./editor-session-ai";
 import {
   ALL_ASPECTS,
+  bytesToLabel,
   getAssetTooLargeMessage,
   OVERLAY_DEFAULTS_BY_PRESET,
   sanitizeUploadFilename,
@@ -28,7 +33,13 @@ import {
 } from "./editor-session-config";
 import type { ExportActionResult, LocalAsset } from "./editor-session-types";
 
-export const useEditorSession = () => {
+const VERCEL_FUNCTION_BODY_LIMIT_BYTES = 4_500_000;
+
+export const useEditorSession = ({
+  isVercelDeployment = false,
+}: {
+  isVercelDeployment?: boolean;
+} = {}) => {
   const searchParams = useSearchParams();
   const [project, dispatch] = useReducer(editorReducer, undefined, createInitialProjectSession);
   const [assets, setAssets] = useState<Record<string, LocalAsset>>({});
@@ -291,6 +302,22 @@ export const useEditorSession = () => {
     setStatusMessage(null);
 
     try {
+      const usedAssets = Array.from(usedAssetIds, (assetId) => currentAssets[assetId]).filter(
+        (asset): asset is LocalAsset => Boolean(asset),
+      );
+      const totalUploadBytes = usedAssets.reduce((sum, asset) => sum + asset.file.size, 0);
+
+      if (
+        isVercelDeployment &&
+        totalUploadBytes > VERCEL_FUNCTION_BODY_LIMIT_BYTES
+      ) {
+        const message = `This export includes ${bytesToLabel(
+          totalUploadBytes,
+        )} of media, but Vercel Functions only accept about 4.5 MB per request. Export locally for now, or move source uploads to Blob-backed storage.`;
+        setStatusMessage(message);
+        return { ok: false, message };
+      }
+
       const payload: ExportProject = {
         activeVersion: currentProject.activeVersion,
         versions: currentProject.versions,
@@ -300,7 +327,7 @@ export const useEditorSession = () => {
       const formData = new FormData();
       formData.append("project", JSON.stringify(payload));
 
-      for (const asset of Object.values(currentAssets)) {
+      for (const asset of usedAssets) {
         formData.append(
           "assets",
           asset.file,
@@ -323,15 +350,28 @@ export const useEditorSession = () => {
         throw new Error(message);
       }
 
-      const renderedVideo = await response.blob();
-      const url = URL.createObjectURL(renderedVideo);
-      const anchor = document.createElement("a");
-      anchor.href = url;
-      anchor.download = `${currentProject.activeVersion}-${Date.now()}.mp4`;
-      document.body.append(anchor);
-      anchor.click();
-      anchor.remove();
-      URL.revokeObjectURL(url);
+      const contentType = response.headers.get("Content-Type") ?? "";
+
+      if (contentType.includes("application/json")) {
+        const payload = await response.json().catch(() => null);
+
+        if (!isExportDownloadPayload(payload)) {
+          throw new Error("Export finished, but the download link was malformed.");
+        }
+
+        triggerBrowserDownload({
+          url: payload.downloadUrl,
+          filename: payload.filename,
+        });
+      } else {
+        const renderedVideo = await response.blob();
+        const url = URL.createObjectURL(renderedVideo);
+        triggerBrowserDownload({
+          url,
+          filename: `${currentProject.activeVersion}-${Date.now()}.mp4`,
+        });
+        URL.revokeObjectURL(url);
+      }
 
       const message = "Video rendered successfully and download started.";
       setStatusMessage(message);

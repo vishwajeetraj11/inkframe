@@ -1,5 +1,9 @@
 "use client";
 
+import {
+  isExportDownloadPayload,
+  triggerBrowserDownload,
+} from "@/lib/export/download";
 import { createDefaultTextMotionProject } from "@/lib/text-motion/defaults";
 import {
   MAX_TEXT_MOTION_DURATION_FRAMES,
@@ -184,15 +188,28 @@ export const useTextMotionProject = () => {
         );
       }
 
-      const blob = await response.blob();
-      const url = URL.createObjectURL(blob);
-      const anchor = document.createElement("a");
-      anchor.href = url;
-      anchor.download = `text-motion-${safeProject.aspect}-${Date.now()}.mp4`;
-      document.body.append(anchor);
-      anchor.click();
-      anchor.remove();
-      URL.revokeObjectURL(url);
+      const contentType = response.headers.get("Content-Type") ?? "";
+
+      if (contentType.includes("application/json")) {
+        const payload = await response.json().catch(() => null);
+
+        if (!isExportDownloadPayload(payload)) {
+          throw new Error("Export finished, but the download link was malformed.");
+        }
+
+        triggerBrowserDownload({
+          url: payload.downloadUrl,
+          filename: payload.filename,
+        });
+      } else {
+        const blob = await response.blob();
+        const url = URL.createObjectURL(blob);
+        triggerBrowserDownload({
+          url,
+          filename: `text-motion-${safeProject.aspect}-${Date.now()}.mp4`,
+        });
+        URL.revokeObjectURL(url);
+      }
 
       setStatusMessage("Text motion video exported.");
     } catch (error) {

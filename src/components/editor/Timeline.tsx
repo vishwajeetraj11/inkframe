@@ -100,7 +100,7 @@ export const Timeline = ({
     version.audioTracks.length > 0;
 
   return (
-    <section className="space-y-4 rounded-[28px] border border-white/8 bg-[linear-gradient(180deg,rgba(28,33,45,0.92),rgba(13,17,27,0.88))] p-4 shadow-[0_20px_58px_rgba(0,0,0,0.28)]">
+    <section className="space-y-4 rounded-[28px] border border-white/10 bg-[linear-gradient(180deg,rgba(28,33,45,0.92),rgba(13,17,27,0.88))] p-4">
       <div className="flex items-start justify-between gap-3">
         <div>
           <p className="app-eyebrow text-[10px] uppercase tracking-[0.22em] text-neutral-500">
@@ -119,7 +119,7 @@ export const Timeline = ({
         </div>
       </div>
 
-      <div className="rounded-[24px] border border-white/8 bg-[#090d15]/80 p-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.03)]">
+      <div className="rounded-[24px] border border-white/10 bg-[#090d15]/80 p-3">
         {!hasTimelineItems ? (
           <div className="rounded-2xl border border-dashed border-white/8 bg-white/[0.03] px-3 py-6 text-sm text-neutral-400">
             Upload media or add overlays to build the timeline.

@@ -220,7 +220,7 @@ export const AIChatDrawer = ({
   return (
     <div className="fixed bottom-4 right-4 z-50">
       {isOpen ? (
-        <section className="flex h-[30rem] w-[min(24rem,calc(100vw-2rem))] flex-col overflow-hidden rounded-2xl border border-neutral-700 bg-neutral-950/95 shadow-[0_20px_70px_rgba(0,0,0,0.6)] backdrop-blur">
+        <section className="flex h-[30rem] w-[min(24rem,calc(100vw-2rem))] flex-col overflow-hidden rounded-2xl border border-neutral-700/90 bg-neutral-950/95 backdrop-blur">
           <header className="flex items-center justify-between border-b border-neutral-700 px-4 py-3">
             <div>
               <h2 className="app-panel-label text-sm font-semibold uppercase tracking-wide text-neutral-100">
@@ -334,7 +334,7 @@ export const AIChatDrawer = ({
         <button
           type="button"
           onClick={() => setIsOpen(true)}
-          className="rounded-full border border-neutral-700 bg-neutral-900/90 px-4 py-2 text-sm font-semibold text-neutral-100 shadow-[0_12px_32px_rgba(0,0,0,0.5)]"
+          className="rounded-full border border-neutral-700 bg-neutral-900/90 px-4 py-2 text-sm font-semibold text-neutral-100 transition hover:bg-neutral-800/90"
         >
           Open AI Chat
         </button>

@@ -1,10 +1,11 @@
+import { createDefaultTextMotionProject } from "@/lib/text-motion/defaults";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const editorExportServiceMock = {
-  exportEditorProjectToBuffer: vi.fn(),
+  exportEditorProject: vi.fn(),
 };
 const textMotionExportServiceMock = {
-  exportTextMotionProjectToBuffer: vi.fn(),
+  exportTextMotionProject: vi.fn(),
 };
 
 vi.mock("@/server/services/editor-export-service", () => editorExportServiceMock);
@@ -15,8 +16,8 @@ const { POST: textMotionExportRoute } = await import("@/app/api/text-motion/expo
 
 describe("API route validation", () => {
   beforeEach(() => {
-    editorExportServiceMock.exportEditorProjectToBuffer.mockReset();
-    textMotionExportServiceMock.exportTextMotionProjectToBuffer.mockReset();
+    editorExportServiceMock.exportEditorProject.mockReset();
+    textMotionExportServiceMock.exportTextMotionProject.mockReset();
   });
 
   it("returns 400 for missing editor export payloads", async () => {
@@ -32,7 +33,7 @@ describe("API route validation", () => {
     await expect(response.json()).resolves.toMatchObject({
       error: "Missing project payload.",
     });
-    expect(editorExportServiceMock.exportEditorProjectToBuffer).not.toHaveBeenCalled();
+    expect(editorExportServiceMock.exportEditorProject).not.toHaveBeenCalled();
   });
 
   it("returns 400 for invalid text motion export payloads", async () => {
@@ -50,6 +51,33 @@ describe("API route validation", () => {
     await expect(response.json()).resolves.toMatchObject({
       error: expect.any(String),
     });
-    expect(textMotionExportServiceMock.exportTextMotionProjectToBuffer).not.toHaveBeenCalled();
+    expect(textMotionExportServiceMock.exportTextMotionProject).not.toHaveBeenCalled();
+  });
+
+  it("returns download URLs for vercel-backed text motion exports", async () => {
+    textMotionExportServiceMock.exportTextMotionProject.mockResolvedValue({
+      kind: "download-url",
+      downloadUrl: "https://example.com/text-motion.mp4?download=1",
+      filename: "text-motion-reel_9_16.mp4",
+    });
+
+    const response = await textMotionExportRoute(
+      new Request("http://localhost/api/text-motion/export", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          project: createDefaultTextMotionProject("reel_9_16"),
+        }),
+      }),
+    );
+
+    expect(response.status).toBe(200);
+    expect(response.headers.get("content-type")).toContain("application/json");
+    await expect(response.json()).resolves.toMatchObject({
+      downloadUrl: "https://example.com/text-motion.mp4?download=1",
+      filename: "text-motion-reel_9_16.mp4",
+    });
   });
 });

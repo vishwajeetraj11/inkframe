@@ -3,7 +3,7 @@ import { TEXT_OVERLAY_STYLE_PRESET_LABELS, type TextOverlay } from "@/lib/editor
 import type { getEditableRegionalMapFocusData } from "../utils";
 
 const MAP_INPUT_CLASS =
-  "w-full rounded-xl border border-white/10 bg-neutral-950/70 px-3 py-2.5 text-sm text-neutral-100 shadow-[inset_0_1px_0_rgba(255,255,255,0.03)] outline-none transition focus:border-cyan-300/35 focus:ring-2 focus:ring-cyan-300/12";
+  "w-full rounded-xl border border-white/10 bg-neutral-950/70 px-3 py-2.5 text-sm text-neutral-100 outline-none transition focus:border-cyan-300/35 focus:ring-2 focus:ring-cyan-300/12";
 
 interface RegionalMapFocusInspectorProps {
   countryOptions: string[];
@@ -31,7 +31,7 @@ export const RegionalMapFocusInspector = ({
   const presetLabel = TEXT_OVERLAY_STYLE_PRESET_LABELS[overlay.stylePreset];
 
   return (
-    <div className="space-y-5 rounded-[22px] border border-white/8 bg-[linear-gradient(180deg,rgba(23,26,34,0.92),rgba(16,18,26,0.82))] p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.03)]">
+    <div className="space-y-5 rounded-[22px] border border-white/10 bg-[linear-gradient(180deg,rgba(23,26,34,0.92),rgba(16,18,26,0.82))] p-4">
       <div className="flex items-start justify-between gap-3">
         <div>
           <p className="app-eyebrow text-[11px] uppercase tracking-[0.22em] text-cyan-200/85">

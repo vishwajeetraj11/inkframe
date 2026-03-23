@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { LabeledControl } from "@/components/editor/controls/LabeledControl";
 import { EDITORIAL_STAT_RING_DEFAULT_COLOR } from "@/lib/editor/editorial-stat-ring";
 import type { getEditableEditorialStatRingData } from "../utils";
@@ -18,6 +19,8 @@ export const EditorialStatRingInspector = ({
   disabled,
   onUpdateText,
 }: EditorialStatRingInspectorProps) => {
+  const [valueInput, setValueInput] = useState<string | null>(null);
+
   return (
     <div className="space-y-3 rounded-lg border border-neutral-700/70 bg-neutral-900/45 p-3">
       <div>
@@ -81,12 +84,23 @@ export const EditorialStatRingInspector = ({
             max={100}
             step={0.1}
             disabled={disabled}
-            value={data.value}
+            value={valueInput ?? `${data.value}`}
+            onFocus={() => {
+              setValueInput(`${data.value}`);
+            }}
             onChange={(event) => {
+              const nextValue = event.currentTarget.value;
+              setValueInput(nextValue);
               onUpdateText((current) => ({
                 ...current,
-                value: Math.max(0, Math.min(100, parseNumber(event.currentTarget.value, current.value))),
+                value:
+                  nextValue.trim().length === 0
+                    ? 0
+                    : Math.max(0, Math.min(100, parseNumber(nextValue, current.value))),
               }));
+            }}
+            onBlur={() => {
+              setValueInput(null);
             }}
             className="w-full rounded border border-neutral-600 bg-neutral-900 px-2 py-1"
           />
