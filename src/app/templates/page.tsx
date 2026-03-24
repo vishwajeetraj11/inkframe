@@ -110,9 +110,24 @@ export default async function TemplatesPage() {
                 <div className="mt-auto pt-5">
                   <Link
                     href={`/editor?template=${template.id}`}
-                    className="mt-3 block w-full rounded-lg bg-cyan-300 px-3 py-2 text-center text-sm font-semibold text-neutral-950"
+                    className="group flex w-full items-center justify-between rounded-xl border border-cyan-400/30 bg-cyan-400/10 px-4 py-2.5 text-sm font-semibold text-cyan-300 transition-all duration-150 hover:border-cyan-300/60 hover:bg-cyan-400/20 hover:text-white"
                   >
-                    Use Template
+                    <span>Use Template</span>
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      width="16"
+                      height="16"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      className="transition-transform duration-150 group-hover:translate-x-0.5"
+                    >
+                      <path d="M5 12h14" />
+                      <path d="m12 5 7 7-7 7" />
+                    </svg>
                   </Link>
                 </div>
               </article>
