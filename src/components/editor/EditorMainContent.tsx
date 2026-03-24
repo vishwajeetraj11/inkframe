@@ -1,6 +1,6 @@
 "use client";
 
-import type { VersionTimeline, Clip, TextOverlay, AudioTrack } from "@/lib/editor/types";
+import type { VersionTimeline, Clip, TextOverlay } from "@/lib/editor/types";
 import { PreviewPane } from "@/components/editor/PreviewPane";
 import { Timeline } from "@/components/editor/Timeline";
 
@@ -28,8 +28,6 @@ interface EditorMainContentProps {
   onRemoveTransition: (fromClipId: string, toClipId: string) => void;
   onUpdateText: (overlayId: string, patch: Partial<Omit<TextOverlay, "id">>) => void;
   onRemoveText: (overlayId: string) => void;
-  onUpdateAudio: (trackId: string, patch: Partial<Omit<AudioTrack, "id">>) => void;
-  onRemoveAudio: (trackId: string) => void;
   showPreview?: boolean;
 }
 
@@ -53,8 +51,6 @@ export const EditorMainContent = ({
   onRemoveTransition,
   onUpdateText,
   onRemoveText,
-  onUpdateAudio,
-  onRemoveAudio,
   showPreview = true,
 }: EditorMainContentProps) => {
   return (
@@ -85,8 +81,6 @@ export const EditorMainContent = ({
         onAddText={onAddText}
         onUpdateText={onUpdateText}
         onRemoveText={onRemoveText}
-        onUpdateAudio={onUpdateAudio}
-        onRemoveAudio={onRemoveAudio}
       />
     </section>
   );

@@ -36,12 +36,12 @@ export const EditorHeader = ({
         <div className="min-w-0">
           <div className="flex flex-wrap items-center gap-2">
             <span className="app-eyebrow rounded-full border border-white/10 bg-white/[0.05] px-3 py-1 text-[10px] uppercase tracking-[0.22em] text-cyan-200">
-              Ephemeral Studio
+              Inkframe Studio
             </span>
           </div>
 
           <h1 className="app-title mt-3 text-2xl font-semibold tracking-[-0.05em] text-white md:text-3xl">
-            Video editor with a real studio workspace
+            Inkframe Video Studio
           </h1>
           <p className="mt-2 max-w-3xl text-sm leading-6 text-neutral-400">
             Cut footage, manage overlays, preview Remotion output, and export without leaving

@@ -1,4 +1,5 @@
 import { buildRenderTrack } from "@/lib/editor/timeline";
+import { parseVoxTimelineText } from "@/lib/editor/vox-timeline";
 import {
   isChartCardStylePreset,
   isVoxTimelineStylePreset,
@@ -160,6 +161,88 @@ const getCompositionBackground = (flags: BackdropFlags): string => {
     }
   }
   return "black";
+};
+
+const getEventDrivenTimelineOverlay = (version: VersionTimeline) =>
+  version.textOverlays.find(
+    (overlay) =>
+      isVoxTimelineStylePreset(overlay.stylePreset) &&
+      overlay.syncMediaToTimelineEvents,
+  ) ?? null;
+
+const buildEventDrivenMediaSegments = ({
+  overlay,
+  trackDurationInFrames,
+  clipCount,
+}: {
+  overlay: VersionTimeline["textOverlays"][number];
+  trackDurationInFrames: number;
+  clipCount: number;
+}) => {
+  if (clipCount === 0 || trackDurationInFrames <= 0) {
+    return [];
+  }
+
+  const { events } = parseVoxTimelineText(overlay.text);
+  const overlayStart = Math.max(0, overlay.startFrame);
+  const overlayEnd = Math.min(
+    trackDurationInFrames,
+    Math.max(overlayStart + 1, overlay.endFrame),
+  );
+  const safeDuration = Math.max(1, overlayEnd - overlayStart);
+  const introFrames = Math.min(42, Math.max(24, Math.round(safeDuration * 0.18)));
+  const outroFrames = Math.min(18, Math.max(10, Math.round(safeDuration * 0.1)));
+  const eventWindow = Math.max(1, safeDuration - introFrames - outroFrames);
+  const segmentFrames = eventWindow / Math.max(1, events.length);
+  const boundaries = Array.from({ length: events.length + 1 }, (_, index) => {
+    if (index === 0) {
+      return overlayStart;
+    }
+
+    if (index === events.length) {
+      return overlayEnd;
+    }
+
+    return overlayStart + Math.round(introFrames + segmentFrames * index);
+  });
+  const segments: Array<{
+    clipEntryIndex: number;
+    startFrame: number;
+    durationInFrames: number;
+  }> = [];
+
+  if (overlayStart > 0) {
+    segments.push({
+      clipEntryIndex: 0,
+      startFrame: 0,
+      durationInFrames: overlayStart,
+    });
+  }
+
+  events.forEach((_, index) => {
+    const startFrame = boundaries[index] ?? overlayStart;
+    const endFrame = boundaries[index + 1] ?? overlayEnd;
+
+    if (endFrame <= startFrame) {
+      return;
+    }
+
+    segments.push({
+      clipEntryIndex: Math.min(index, clipCount - 1),
+      startFrame,
+      durationInFrames: endFrame - startFrame,
+    });
+  });
+
+  if (overlayEnd < trackDurationInFrames) {
+    segments.push({
+      clipEntryIndex: Math.max(0, clipCount - 1),
+      startFrame: overlayEnd,
+      durationInFrames: trackDurationInFrames - overlayEnd,
+    });
+  }
+
+  return segments;
 };
 
 const BackdropOverlays = ({
@@ -508,8 +591,22 @@ export const EditorComposition = ({
 }: EditorCompositionProps) => {
   const frame = useCurrentFrame();
   const track = buildRenderTrack(version);
+  const eventDrivenTimelineOverlay = getEventDrivenTimelineOverlay(version);
+  const eventDrivenMediaSegments = eventDrivenTimelineOverlay
+    ? buildEventDrivenMediaSegments({
+        overlay: eventDrivenTimelineOverlay,
+        trackDurationInFrames: track.durationInFrames,
+        clipCount: track.entries.length,
+      })
+    : [];
   const flags = getBackdropFlags(version, track.entries.length);
   const showEmptyState = track.entries.length === 0 && !flags.hasTextOverlays;
+  const enableFilmFrameGalleryMotion = version.textOverlays.some(
+    (overlay) =>
+      overlay.stylePreset === "film-frame-gallery" &&
+      frame >= overlay.startFrame &&
+      frame < overlay.endFrame,
+  );
 
   return (
     <AbsoluteFill
@@ -538,30 +635,63 @@ export const EditorComposition = ({
         </AbsoluteFill>
       ) : null}
 
-      {track.entries.map((entry) => {
-        const source = assetSources[entry.clip.assetId];
+      {eventDrivenMediaSegments.length > 0
+        ? eventDrivenMediaSegments.map((segment) => {
+            const entry = track.entries[segment.clipEntryIndex];
 
-        return (
-          <Sequence
-            key={entry.clip.id}
-            from={entry.startFrame}
-            durationInFrames={entry.durationInFrames}
-          >
-            {source ? (
-              <ClipLayer
-                clip={entry.clip}
-                src={source}
+            if (!entry) {
+              return null;
+            }
+
+            const source = assetSources[entry.clip.assetId];
+
+            return (
+              <Sequence
+                key={`${entry.clip.id}-event-segment-${segment.startFrame}`}
+                from={segment.startFrame}
+                durationInFrames={segment.durationInFrames}
+              >
+                {source ? (
+                  <ClipLayer
+                    clip={entry.clip}
+                    src={source}
+                    durationInFrames={segment.durationInFrames}
+                    fadeInFrames={0}
+                    fadeOutFrames={0}
+                    renderMode={renderMode}
+                    enableFilmFrameGalleryMotion={enableFilmFrameGalleryMotion}
+                  />
+                ) : (
+                  <MissingAsset assetId={entry.clip.assetId} />
+                )}
+              </Sequence>
+            );
+          })
+        : track.entries.map((entry) => {
+            const source = assetSources[entry.clip.assetId];
+
+            return (
+              <Sequence
+                key={entry.clip.id}
+                from={entry.startFrame}
                 durationInFrames={entry.durationInFrames}
-                fadeInFrames={entry.fadeInFrames}
-                fadeOutFrames={entry.fadeOutFrames}
-                renderMode={renderMode}
-              />
-            ) : (
-              <MissingAsset assetId={entry.clip.assetId} />
-            )}
-          </Sequence>
-        );
-      })}
+              >
+                {source ? (
+                  <ClipLayer
+                    clip={entry.clip}
+                    src={source}
+                    durationInFrames={entry.durationInFrames}
+                    fadeInFrames={entry.fadeInFrames}
+                    fadeOutFrames={entry.fadeOutFrames}
+                    renderMode={renderMode}
+                    enableFilmFrameGalleryMotion={enableFilmFrameGalleryMotion}
+                  />
+                ) : (
+                  <MissingAsset assetId={entry.clip.assetId} />
+                )}
+              </Sequence>
+            );
+          })}
 
       {version.audioTracks.map((trackItem) => {
         const source = assetSources[trackItem.assetId];
@@ -589,6 +719,16 @@ export const EditorComposition = ({
 
       {version.textOverlays.map((overlay) => {
         const duration = Math.max(1, overlay.endFrame - overlay.startFrame);
+        const usesEventDrivenTimelineMedia =
+          isVoxTimelineStylePreset(overlay.stylePreset) &&
+          Boolean(overlay.syncMediaToTimelineEvents);
+        const activeTrackEntryIndex = track.entries.findIndex(
+          (entry) =>
+            frame >= entry.startFrame &&
+            frame < entry.startFrame + entry.durationInFrames,
+        );
+        const activeTrackEntry =
+          activeTrackEntryIndex >= 0 ? track.entries[activeTrackEntryIndex] : null;
 
         return (
           <Sequence
@@ -601,6 +741,22 @@ export const EditorComposition = ({
               durationInFrames={duration}
               aspect={version.aspect}
               hasMediaClips={track.entries.length > 0}
+              activeMediaClipIndex={
+                usesEventDrivenTimelineMedia
+                  ? undefined
+                  : activeTrackEntryIndex >= 0
+                    ? activeTrackEntryIndex
+                    : undefined
+              }
+              activeMediaClipStartFrame={
+                usesEventDrivenTimelineMedia
+                  ? undefined
+                  : activeTrackEntry
+                    ? Math.max(0, activeTrackEntry.startFrame - overlay.startFrame)
+                    : undefined
+              }
+              activeMediaClipDurationInFrames={activeTrackEntry?.durationInFrames}
+              mediaClipCount={track.entries.length}
             />
           </Sequence>
         );

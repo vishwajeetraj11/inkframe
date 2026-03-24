@@ -27,6 +27,7 @@ export const TEXT_OVERLAY_STYLE_PRESETS = [
   "vox-typography",
   "world-map-focus",
   "regional-map-focus",
+  "film-frame-gallery",
   "editorial-bar-chart",
   "editorial-stat-ring",
   "editorial-seat-arc",
@@ -94,6 +95,7 @@ export const TEXT_OVERLAY_STYLE_PRESET_LABELS: Record<TextOverlayStylePreset, st
   "vox-typography": "Vox Typography",
   "world-map-focus": "World Map Focus",
   "regional-map-focus": "Regional Map Focus",
+  "film-frame-gallery": "Film Frame Gallery",
   "editorial-bar-chart": "Editorial Bar Chart",
   "editorial-stat-ring": "Stat Ring Card",
   "editorial-seat-arc": "Editorial Seat Arc",
@@ -108,6 +110,7 @@ export interface AssetRef {
   mimeType: string;
   name: string;
   size: number;
+  externalUrl?: string;
 }
 
 export interface Clip {
@@ -135,6 +138,7 @@ export interface TextOverlay {
   fontStyle: TextOverlayFontStyle;
   stylePreset: TextOverlayStylePreset;
   createdaleyTexture: CreatedaleyOpenerTexture;
+  syncMediaToTimelineEvents?: boolean;
 }
 
 export interface AudioTrack {

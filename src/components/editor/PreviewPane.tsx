@@ -63,6 +63,7 @@ export const PreviewPane = ({
   );
   const previewDurationSeconds = (safeDurationInFrames / safeFps).toFixed(2);
   const previewAspectLabel = aspect === "reel_9_16" ? "9:16" : "16:9";
+  const stageMaxWidth = aspect === "reel_9_16" ? "340px" : "100%";
 
   return (
     <section className="rounded-[28px] border border-white/10 bg-[linear-gradient(180deg,rgba(28,33,45,0.92),rgba(13,17,27,0.88))] p-4">
@@ -90,7 +91,13 @@ export const PreviewPane = ({
         </div>
       </div>
 
-      <div className="overflow-hidden rounded-[22px] border border-white/10 bg-black">
+      <div
+        className="mx-auto overflow-hidden rounded-[22px] border border-white/10 bg-black"
+        style={{
+          width: "100%",
+          maxWidth: stageMaxWidth,
+        }}
+      >
         <div
           style={{
             position: "relative",

@@ -8,22 +8,26 @@ interface EditorRightSidebarProps {
   selectedClip: Clip | null;
   selectedTextOverlay: TextOverlay | null;
   selectedAudioTrack: AudioTrack | null;
+  assetNames: Record<string, string>;
   isExporting: boolean;
   activeMediaFootprintBytes: number;
   onUpdateClip: (clipId: string, patch: Partial<Omit<Clip, "id">>) => void;
   onUpdateText: (overlayId: string, patch: Partial<Omit<TextOverlay, "id">>) => void;
   onUpdateAudio: (trackId: string, patch: Partial<Omit<AudioTrack, "id">>) => void;
+  onRemoveAudio: (trackId: string) => void;
 }
 
 export const EditorRightSidebar = ({
   selectedClip,
   selectedTextOverlay,
   selectedAudioTrack,
+  assetNames,
   isExporting,
   activeMediaFootprintBytes,
   onUpdateClip,
   onUpdateText,
   onUpdateAudio,
+  onRemoveAudio,
 }: EditorRightSidebarProps) => {
   return (
     <aside className="space-y-4 xl:min-h-0">
@@ -31,10 +35,12 @@ export const EditorRightSidebar = ({
         clip={selectedClip}
         textOverlay={selectedTextOverlay}
         audioTrack={selectedAudioTrack}
+        assetNames={assetNames}
         disabled={isExporting}
         onUpdateClip={onUpdateClip}
         onUpdateText={onUpdateText}
         onUpdateAudio={onUpdateAudio}
+        onRemoveAudio={onRemoveAudio}
       />
 
       <section className="rounded-[26px] border border-white/10 bg-[linear-gradient(180deg,rgba(28,33,45,0.9),rgba(12,15,23,0.88))] p-4">

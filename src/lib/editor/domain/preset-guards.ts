@@ -14,6 +14,10 @@ import {
 export const isMapPreset = (preset: TextOverlayStylePreset): boolean =>
   preset === "world-map-focus" || preset === "regional-map-focus";
 
+export const isFilmFramePreset = (
+  preset: TextOverlayStylePreset,
+): preset is "film-frame-gallery" => preset === "film-frame-gallery";
+
 export const isEditorialPreset = (preset: TextOverlayStylePreset): boolean =>
   preset === "editorial-mono" ||
   preset === "editorial-bar-chart" ||
@@ -39,6 +43,7 @@ export const requiresMinimalDuration = (preset: TextOverlayStylePreset): boolean
 
 export const hasCustomInspector = (preset: TextOverlayStylePreset): boolean =>
   isMapPreset(preset) ||
+  isFilmFramePreset(preset) ||
   isEditorialPreset(preset) ||
   isCreatedaleyPreset(preset) ||
   isTextMotionPreset(preset);

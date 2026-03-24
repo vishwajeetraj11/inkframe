@@ -72,6 +72,7 @@ const textOverlaySchema = z
     fontStyle: z.enum(TEXT_OVERLAY_FONT_STYLES).default("normal"),
     stylePreset: z.enum(TEXT_OVERLAY_STYLE_PRESETS).default("classic"),
     createdaleyTexture: z.enum(CREATEDALEY_OPENER_TEXTURES).default("plain"),
+    syncMediaToTimelineEvents: z.boolean().default(false),
   })
   .superRefine((overlay, context) => {
     if (overlay.endFrame <= overlay.startFrame) {
@@ -132,7 +133,8 @@ const assetRefSchema = z.object({
   kind: assetKindSchema,
   mimeType: z.string().min(1),
   name: z.string().min(1),
-  size: z.number().int().min(1),
+  size: z.number().int().min(0),
+  externalUrl: z.string().url().optional(),
 });
 
 const clipHasAdjacentTransition = (

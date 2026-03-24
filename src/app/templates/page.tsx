@@ -1,8 +1,53 @@
 import { TEMPLATE_DEFINITIONS } from "@/lib/editor/templates";
-import { TEXT_OVERLAY_STYLE_PRESET_LABELS } from "@/lib/editor/types";
 import Link from "next/link";
+import { readdir } from "node:fs/promises";
+import path from "node:path";
 
-export default function TemplatesPage() {
+const TEMPLATE_PREVIEW_DIR = path.join(process.cwd(), "public", "template-previews");
+const BOTTOM_TEMPLATE_IDS = new Set([
+  "vox-timeline",
+  "vox-timeline-ribbon",
+  "vox-timeline-ledger",
+] satisfies (typeof TEMPLATE_DEFINITIONS)[number]["id"][]);
+
+const getTemplatePreviewCandidates = (templateId: (typeof TEMPLATE_DEFINITIONS)[number]["id"]) => [
+  `widescreen_16_9-${templateId}.mp4`,
+  `${templateId}.mp4`,
+];
+
+const getTemplateVideoPreviews = async (): Promise<
+  Partial<Record<(typeof TEMPLATE_DEFINITIONS)[number]["id"], string>>
+> => {
+  const entries = await readdir(TEMPLATE_PREVIEW_DIR).catch(() => []);
+  const availableFiles = new Set(entries);
+
+  return Object.fromEntries(
+    TEMPLATE_DEFINITIONS.map((template) => {
+      const matchedFilename = getTemplatePreviewCandidates(template.id).find((candidate) =>
+        availableFiles.has(candidate),
+      );
+
+      return [
+        template.id,
+        matchedFilename ? `/template-previews/${matchedFilename}` : undefined,
+      ];
+    }).filter(([, value]) => typeof value === "string"),
+  );
+};
+
+export default async function TemplatesPage() {
+  const templateVideoPreviews = await getTemplateVideoPreviews();
+  const orderedTemplates = [...TEMPLATE_DEFINITIONS].sort((left, right) => {
+    const leftBottom = BOTTOM_TEMPLATE_IDS.has(left.id);
+    const rightBottom = BOTTOM_TEMPLATE_IDS.has(right.id);
+
+    if (leftBottom === rightBottom) {
+      return 0;
+    }
+
+    return leftBottom ? 1 : -1;
+  });
+
   return (
     <main className="min-h-screen bg-[radial-gradient(circle_at_20%_20%,_#334155,_#020617_65%)] px-6 py-8 text-neutral-100">
       <div className="mx-auto w-full max-w-6xl">
@@ -35,29 +80,44 @@ export default function TemplatesPage() {
         </header>
 
         <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-          {TEMPLATE_DEFINITIONS.map((template) => (
-            <article
-              key={template.id}
-              className="flex h-full flex-col rounded-2xl border border-neutral-700/70 bg-neutral-900/65 p-5"
-            >
-              <p
-                className={`text-xs font-semibold uppercase tracking-[0.16em] ${template.accentClass}`}
-              >
-                {TEXT_OVERLAY_STYLE_PRESET_LABELS[template.stylePreset]}
-              </p>
-              <h2 className="mt-2 text-xl font-semibold text-white">{template.name}</h2>
-              <p className="mt-2 text-sm text-neutral-300">{template.description}</p>
+          {orderedTemplates.map((template) => {
+            const previewVideo = templateVideoPreviews[template.id];
 
-              <div className="mt-auto pt-5">
-                <Link
-                  href={`/editor?template=${template.id}`}
-                  className="mt-3 block w-full rounded-lg bg-cyan-300 px-3 py-2 text-center text-sm font-semibold text-neutral-950"
-                >
-                  Use Template
-                </Link>
-              </div>
-            </article>
-          ))}
+            return (
+              <article
+                key={template.id}
+                className="flex h-full flex-col rounded-2xl border border-neutral-700/70 bg-neutral-900/65 p-5"
+              >
+                {previewVideo ? (
+                  <div className="mb-4 overflow-hidden rounded-2xl border border-white/10 bg-black shadow-[0_18px_40px_rgba(0,0,0,0.28)]">
+                    <div className="aspect-video">
+                      <video
+                        src={previewVideo}
+                        autoPlay
+                        muted
+                        loop
+                        playsInline
+                        preload="metadata"
+                        className="h-full w-full object-cover"
+                      />
+                    </div>
+                  </div>
+                ) : null}
+
+                <h2 className={`text-xl font-semibold ${template.accentClass}`}>{template.name}</h2>
+                <p className="mt-2 text-sm text-neutral-300">{template.description}</p>
+
+                <div className="mt-auto pt-5">
+                  <Link
+                    href={`/editor?template=${template.id}`}
+                    className="mt-3 block w-full rounded-lg bg-cyan-300 px-3 py-2 text-center text-sm font-semibold text-neutral-950"
+                  >
+                    Use Template
+                  </Link>
+                </div>
+              </article>
+            );
+          })}
         </section>
       </div>
     </main>

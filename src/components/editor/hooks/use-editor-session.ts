@@ -2,7 +2,11 @@
 
 import type { AIChatEditorContext } from "@/components/editor/AIChatDrawer";
 import type { AIEditorActions } from "@/lib/editor/ai-actions";
-import { FPS, MAX_DURATION_FRAMES } from "@/lib/editor/constants";
+import {
+  DEFAULT_CLIP_DURATION_FRAMES,
+  FPS,
+  MAX_DURATION_FRAMES,
+} from "@/lib/editor/constants";
 import {
   createDefaultAudioTrack,
   createDefaultClip,
@@ -10,10 +14,12 @@ import {
   createInitialProjectSession,
 } from "@/lib/editor/defaults";
 import {
+  getFilenameFromContentDisposition,
   isExportDownloadPayload,
   triggerBrowserDownload,
 } from "@/lib/export/download";
 import { editorReducer } from "@/lib/editor/reducer";
+import { getRemotionSfxById, type RemotionSfxId } from "@/lib/editor/remotion-sfx";
 import { isSupportedImageMimeType, assetKindFromMimeType } from "@/lib/editor/schema";
 import { getTemplateDefinition } from "@/lib/editor/templates";
 import { collectUsedAssetIds, getTimelineDurationInFrames } from "@/lib/editor/timeline";
@@ -34,6 +40,11 @@ import {
 import type { ExportActionResult, LocalAsset } from "./editor-session-types";
 
 const VERCEL_FUNCTION_BODY_LIMIT_BYTES = 4_500_000;
+
+const getStarterAssetFilename = (publicPath: string): string => {
+  const filename = publicPath.split("/").filter(Boolean).pop();
+  return filename ? sanitizeUploadFilename(filename) : "starter-asset";
+};
 
 export const useEditorSession = ({
   isVercelDeployment = false,
@@ -90,8 +101,35 @@ export const useEditorSession = ({
     }
 
     const styleDefaults = OVERLAY_DEFAULTS_BY_PRESET[initialTemplate.stylePreset];
+    const starterAssets =
+      initialTemplate.starterAssets?.map((asset) => ({
+        assetId: nanoid(10),
+        asset,
+      })) ?? [];
+    let cancelled = false;
+    const templateDurationInFrames = Math.max(
+      DEFAULT_CLIP_DURATION_FRAMES,
+      starterAssets.length * DEFAULT_CLIP_DURATION_FRAMES,
+    );
 
     let nextSelectedOverlayId: string | null = null;
+    let nextAssets: Record<string, LocalAsset> | null = null;
+
+    if (starterAssets.length > 0) {
+      nextAssets = Object.fromEntries(
+        starterAssets.map(({ asset, assetId }) => [
+          assetId,
+          {
+            assetId,
+            kind: asset.kind,
+            mimeType: asset.mimeType,
+            name: asset.name,
+            size: 0,
+            externalUrl: new URL(asset.publicPath, window.location.origin).toString(),
+          } satisfies LocalAsset,
+        ]),
+      );
+    }
 
     for (const aspect of ALL_ASPECTS) {
       const overlayId = nanoid(10);
@@ -102,6 +140,7 @@ export const useEditorSession = ({
         overlay: {
           ...createDefaultTextOverlay(overlayId),
           text: initialTemplate.sampleText,
+          endFrame: templateDurationInFrames,
           x: styleDefaults.x,
           y: styleDefaults.y,
           fontSize: styleDefaults.fontSize,
@@ -120,14 +159,103 @@ export const useEditorSession = ({
       if (aspect === activeAspect) {
         nextSelectedOverlayId = overlayId;
       }
+
+      for (const { assetId, asset } of starterAssets) {
+        if (asset.kind !== "image") {
+          continue;
+        }
+
+        const clipId = nanoid(10);
+
+        dispatch({
+          type: "add-clip",
+          aspect,
+          clip: {
+            ...createDefaultClip(clipId, assetId, "image"),
+            endFrame: DEFAULT_CLIP_DURATION_FRAMES,
+            trimEndFrame: DEFAULT_CLIP_DURATION_FRAMES,
+          },
+        });
+      }
+    }
+
+    if (nextAssets) {
+      setAssets((previous) => ({
+        ...previous,
+        ...nextAssets,
+      }));
     }
 
     setSelectedTextId(nextSelectedOverlayId);
     setSelectedClipId(null);
     setSelectedAudioId(null);
-    setStatusMessage(
-      `Template ready: ${initialTemplate.name}. Upload media and adjust text (works in 9:16 and 16:9).`,
-    );
+    setStatusMessage(`Template ready: ${initialTemplate.name}.`);
+
+    if (starterAssets.length === 0) {
+      return;
+    }
+
+    void (async () => {
+      try {
+        const loadedAssets = await Promise.all(
+          starterAssets.map(async ({ assetId, asset }) => {
+            const response = await fetch(asset.publicPath);
+
+            if (!response.ok) {
+              throw new Error(`Failed to load starter asset ${asset.publicPath}.`);
+            }
+
+            const blob = await response.blob();
+            const file = new File([blob], getStarterAssetFilename(asset.publicPath), {
+              type: asset.mimeType || blob.type,
+            });
+            const objectUrl = URL.createObjectURL(file);
+
+            return [
+              assetId,
+              {
+                assetId,
+                kind: asset.kind,
+                mimeType: asset.mimeType,
+                name: asset.name,
+                size: file.size,
+                file,
+                objectUrl,
+              } satisfies LocalAsset,
+            ] as const;
+          }),
+        );
+
+        if (cancelled) {
+          for (const [, asset] of loadedAssets) {
+            if (asset.objectUrl) {
+              URL.revokeObjectURL(asset.objectUrl);
+            }
+          }
+          return;
+        }
+
+        for (const [, asset] of loadedAssets) {
+          if (asset.objectUrl) {
+            objectUrlsRef.current.add(asset.objectUrl);
+          }
+        }
+
+        setAssets((previous) => ({
+          ...previous,
+          ...Object.fromEntries(loadedAssets),
+        }));
+      } catch (error) {
+        console.error(error);
+        if (!cancelled) {
+          setStatusMessage(`Template media could not be loaded for ${initialTemplate.name}.`);
+        }
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
   }, [activeAspect, initialTemplate]);
 
   const timelineDurationInFrames = useMemo(
@@ -167,10 +295,11 @@ export const useEditorSession = ({
 
   const previewAssetSources = useMemo(
     () =>
-      Object.fromEntries(assetList.map((asset) => [asset.assetId, asset.objectUrl])) as Record<
-        string,
-        string
-      >,
+      Object.fromEntries(
+        assetList
+          .map((asset) => [asset.assetId, asset.objectUrl ?? asset.externalUrl] as const)
+          .filter((entry): entry is readonly [string, string] => Boolean(entry[1])),
+      ) as Record<string, string>,
     [assetList],
   );
 
@@ -270,6 +399,49 @@ export const useEditorSession = ({
     setStatusMessage(rejectedMessages.length > 0 ? rejectedMessages.join(" ") : null);
   };
 
+  const onAddRemotionSfx = (effectId: RemotionSfxId): void => {
+    if (isExporting) {
+      return;
+    }
+
+    const effect = getRemotionSfxById(effectId);
+
+    if (!effect) {
+      setStatusMessage("Could not find that Remotion sound effect.");
+      return;
+    }
+
+    const assetId = nanoid(10);
+    const trackId = nanoid(10);
+
+    setAssets((previous) => ({
+      ...previous,
+      [assetId]: {
+        assetId,
+        kind: "audio",
+        mimeType: "audio/wav",
+        name: effect.label,
+        size: 0,
+        externalUrl: effect.url,
+      },
+    }));
+
+    dispatch({
+      type: "add-audio-track",
+      aspect: activeAspect,
+      track: {
+        ...createDefaultAudioTrack(trackId, assetId),
+        endFrame: effect.defaultDurationInFrames,
+        trimEndFrame: effect.defaultDurationInFrames,
+      },
+    });
+
+    setSelectedAudioId(trackId);
+    setSelectedClipId(null);
+    setSelectedTextId(null);
+    setStatusMessage(`Added ${effect.label} from Remotion SFX.`);
+  };
+
   const onExport = async (): Promise<ExportActionResult> => {
     const currentProject = projectRef.current;
     const currentAssets = assetsRef.current;
@@ -292,7 +464,7 @@ export const useEditorSession = ({
     const usedAssetIds = collectUsedAssetIds(currentVersion);
     for (const usedAssetId of usedAssetIds) {
       if (!currentAssets[usedAssetId]) {
-        const message = `Missing file for asset ${usedAssetId}. Re-upload media.`;
+        const message = `Missing asset ${usedAssetId}. Re-add the media and try again.`;
         setStatusMessage(message);
         return { ok: false, message };
       }
@@ -305,7 +477,10 @@ export const useEditorSession = ({
       const usedAssets = Array.from(usedAssetIds, (assetId) => currentAssets[assetId]).filter(
         (asset): asset is LocalAsset => Boolean(asset),
       );
-      const totalUploadBytes = usedAssets.reduce((sum, asset) => sum + asset.file.size, 0);
+      const uploadedAssets = usedAssets.filter(
+        (asset): asset is LocalAsset & { file: File } => Boolean(asset.file),
+      );
+      const totalUploadBytes = uploadedAssets.reduce((sum, asset) => sum + asset.file.size, 0);
 
       if (
         isVercelDeployment &&
@@ -327,7 +502,7 @@ export const useEditorSession = ({
       const formData = new FormData();
       formData.append("project", JSON.stringify(payload));
 
-      for (const asset of usedAssets) {
+      for (const asset of uploadedAssets) {
         formData.append(
           "assets",
           asset.file,
@@ -366,9 +541,13 @@ export const useEditorSession = ({
       } else {
         const renderedVideo = await response.blob();
         const url = URL.createObjectURL(renderedVideo);
+        const filename =
+          getFilenameFromContentDisposition(
+            response.headers.get("Content-Disposition"),
+          ) ?? `${currentProject.activeVersion}.mp4`;
         triggerBrowserDownload({
           url,
-          filename: `${currentProject.activeVersion}-${Date.now()}.mp4`,
+          filename,
         });
         URL.revokeObjectURL(url);
       }
@@ -522,6 +701,7 @@ export const useEditorSession = ({
     editorChatContext,
     isExporting,
     onApplyEditorActions,
+    onAddRemotionSfx,
     onExport,
     onFilesSelected,
     onRemoveAsset,

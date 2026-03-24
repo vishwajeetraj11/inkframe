@@ -8,10 +8,10 @@ export interface ParsedEditorialStatRingText {
 }
 
 export const EDITORIAL_STAT_RING_DEFAULT_HEADLINE =
-  "The overwhelming scientific consensus on climate change";
+  "Most of our ocean remains unexplored";
 export const EDITORIAL_STAT_RING_DEFAULT_SUBHEAD =
-  "Analysis of peer-reviewed climate studies published between 2012 and 2020. Source: IPCC.";
-export const EDITORIAL_STAT_RING_DEFAULT_VALUE = 97;
+  "NOAA says humans have explored only about 5% of the ocean, leaving 95% still unexplored.";
+export const EDITORIAL_STAT_RING_DEFAULT_VALUE = 95;
 export const EDITORIAL_STAT_RING_DEFAULT_SUFFIX = "%";
 export const EDITORIAL_STAT_RING_DEFAULT_COLOR = "#ef5a29";
 

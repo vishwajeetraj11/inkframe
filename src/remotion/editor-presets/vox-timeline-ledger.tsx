@@ -16,6 +16,8 @@ export const renderVoxTimelineLedgerPreset = ({
   animation,
   aspect,
   hasMediaClips,
+  activeMediaClipIndex,
+  activeMediaClipStartFrame,
 }: PresetRendererProps) => {
   const { kicker, headline, events } = parseVoxTimelineText(overlay.text);
   const isVertical = aspect === "reel_9_16";
@@ -24,12 +26,19 @@ export const renderVoxTimelineLedgerPreset = ({
   const outroFrames = Math.min(18, Math.max(10, Math.round(safeDuration * 0.1)));
   const eventWindow = Math.max(1, safeDuration - introFrames - outroFrames);
   const segmentFrames = eventWindow / Math.max(1, events.length);
-  const activeIndex = Math.min(
+  const timedActiveIndex = Math.min(
     events.length - 1,
     Math.max(0, Math.floor(Math.max(0, frame - introFrames) / Math.max(1, segmentFrames))),
   );
+  const activeIndex =
+    hasMediaClips && activeMediaClipIndex !== undefined
+      ? Math.min(events.length - 1, Math.max(0, activeMediaClipIndex))
+      : timedActiveIndex;
   const activeEvent = events[activeIndex] ?? events[0];
-  const activeCardStart = introFrames + segmentFrames * activeIndex;
+  const activeCardStart =
+    hasMediaClips && activeMediaClipStartFrame !== undefined
+      ? Math.max(introFrames, activeMediaClipStartFrame)
+      : introFrames + segmentFrames * activeIndex;
   const entry = spring({
     frame,
     fps: 30,
@@ -106,6 +115,20 @@ export const renderVoxTimelineLedgerPreset = ({
   const rowTitleSize = overlay.fontSize * (isVertical ? 0.19 : 0.18);
   const rowCaptionSize = overlay.fontSize * 0.15;
   const rowDateSize = overlay.fontSize * 0.14;
+  const firstEventDate = events[0]?.date ?? activeEvent.date;
+  const lastEventDate = events[events.length - 1]?.date ?? activeEvent.date;
+  const timelineRangeLabel =
+    firstEventDate === lastEventDate
+      ? firstEventDate
+      : `${firstEventDate} - ${lastEventDate}`;
+  const activeEventProgressLabel = `${String(activeIndex + 1).padStart(2, "0")} / ${String(
+    events.length,
+  ).padStart(2, "0")}`;
+  const summaryMetrics = [
+    { label: "Span", value: timelineRangeLabel },
+    { label: "Events", value: String(events.length) },
+    { label: "Active", value: activeEventProgressLabel },
+  ];
 
   return (
     <div
@@ -192,8 +215,8 @@ export const renderVoxTimelineLedgerPreset = ({
             style={{
               display: "flex",
               flexDirection: "column",
-              justifyContent: "space-between",
-              gap: "0.96em",
+              justifyContent: isVertical ? "flex-start" : "space-between",
+              gap: isVertical ? "0.78em" : "0.96em",
               minWidth: 0,
               opacity: interpolate(summaryReveal, [0, 1], [0, 1], {
                 extrapolateLeft: "clamp",
@@ -242,6 +265,61 @@ export const renderVoxTimelineLedgerPreset = ({
                 }}
               >
                 {headline}
+              </div>
+            </div>
+
+            <div
+              style={{
+                padding: isVertical ? "0.72em 0.8em 0.78em" : "0.76em 0.86em 0.82em",
+                border: "1px solid rgba(45, 33, 17, 0.1)",
+                background: "rgba(255, 255, 255, 0.46)",
+                opacity: interpolate(summaryReveal, [0, 1], [0, 1], {
+                  extrapolateLeft: "clamp",
+                  extrapolateRight: "clamp",
+                }),
+                clipPath: getRevealClipPath(summaryReveal, 0.04),
+                transform: `translateY(${interpolate(summaryReveal, [0, 1], [14, 0], {
+                  extrapolateLeft: "clamp",
+                  extrapolateRight: "clamp",
+                })}px)`,
+              }}
+            >
+              <div
+                style={{
+                  display: "grid",
+                  gridTemplateColumns: "repeat(3, minmax(0, 1fr))",
+                  gap: "0.66em",
+                }}
+              >
+                {summaryMetrics.map((metric) => (
+                  <div key={`${overlay.id}-${metric.label}`}>
+                    <div
+                      style={{
+                        color: "rgba(36, 46, 58, 0.62)",
+                        fontFamily: FONT_STACK_BY_FAMILY.mono,
+                        fontSize: `${overlay.fontSize * 0.12}px`,
+                        fontWeight: 700,
+                        letterSpacing: "0.12em",
+                        textTransform: "uppercase",
+                      }}
+                    >
+                      {metric.label}
+                    </div>
+                    <div
+                      style={{
+                        marginTop: "0.26em",
+                        color: overlay.color,
+                        fontFamily: metric.label === "Span" ? EDITORIAL_SERIF_STACK : FONT_STACK_BY_FAMILY.sans,
+                        fontSize: `${overlay.fontSize * (metric.label === "Span" ? 0.2 : 0.22)}px`,
+                        fontWeight: metric.label === "Span" ? 700 : 800,
+                        lineHeight: 1,
+                        letterSpacing: metric.label === "Span" ? "-0.03em" : "-0.02em",
+                      }}
+                    >
+                      {metric.value}
+                    </div>
+                  </div>
+                ))}
               </div>
             </div>
 
@@ -399,14 +477,51 @@ export const renderVoxTimelineLedgerPreset = ({
               transform: `translateY(${interpolate(ledgerReveal, [0, 1], [24, 0], {
                 extrapolateLeft: "clamp",
                 extrapolateRight: "clamp",
-              })}px)`,
+                })}px)`,
             }}
           >
             <div
               style={{
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "space-between",
+                marginLeft: isVertical ? 26 : 16,
+                marginBottom: isVertical ? "0.54em" : "0.44em",
+                paddingRight: isVertical ? 2 : 0,
+              }}
+            >
+              <div
+                style={{
+                  color: "rgba(36, 46, 58, 0.76)",
+                  fontFamily: FONT_STACK_BY_FAMILY.mono,
+                  fontSize: `${overlay.fontSize * 0.13}px`,
+                  fontWeight: 700,
+                  letterSpacing: "0.12em",
+                  textTransform: "uppercase",
+                }}
+              >
+                Chronology
+              </div>
+
+              <div
+                style={{
+                  color: "#a96c0a",
+                  fontFamily: FONT_STACK_BY_FAMILY.mono,
+                  fontSize: `${overlay.fontSize * 0.12}px`,
+                  fontWeight: 700,
+                  letterSpacing: "0.08em",
+                  textTransform: "uppercase",
+                }}
+              >
+                {activeEventProgressLabel}
+              </div>
+            </div>
+
+            <div
+              style={{
                 position: "absolute",
                 left: isVertical ? 12 : 0,
-                top: 6,
+                top: isVertical ? 26 : 6,
                 bottom: 6,
                 width: 3,
                 borderRadius: 999,
@@ -420,7 +535,7 @@ export const renderVoxTimelineLedgerPreset = ({
               style={{
                 position: "absolute",
                 left: isVertical ? 12 : 0,
-                top: 6,
+                top: isVertical ? 26 : 6,
                 height: `${activeSpinePercent}%`,
                 width: 3,
                 borderRadius: 999,
@@ -437,7 +552,7 @@ export const renderVoxTimelineLedgerPreset = ({
                 flexDirection: "column",
                 gap: "0.54em",
                 height: "100%",
-                justifyContent: "center",
+                justifyContent: isVertical ? "flex-start" : "center",
               }}
             >
               {events.map((event, index) => {

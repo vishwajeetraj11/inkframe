@@ -1,12 +1,19 @@
 import { useState } from "react";
 import { LabeledControl } from "@/components/editor/controls/LabeledControl";
 import { EDITORIAL_STAT_RING_DEFAULT_COLOR } from "@/lib/editor/editorial-stat-ring";
+import {
+  CREATEDALEY_OPENER_TEXTURE_LABELS,
+  CREATEDALEY_OPENER_TEXTURES,
+  type TextOverlay,
+} from "@/lib/editor/types";
 import type { getEditableEditorialStatRingData } from "../utils";
 import { parseNumber } from "../utils";
 
 interface EditorialStatRingInspectorProps {
   data: ReturnType<typeof getEditableEditorialStatRingData>;
   disabled?: boolean;
+  overlay: TextOverlay;
+  onUpdateOverlay: (patch: Partial<Omit<TextOverlay, "id">>) => void;
   onUpdateText: (
     updater: (
       current: ReturnType<typeof getEditableEditorialStatRingData>,
@@ -17,6 +24,8 @@ interface EditorialStatRingInspectorProps {
 export const EditorialStatRingInspector = ({
   data,
   disabled,
+  overlay,
+  onUpdateOverlay,
   onUpdateText,
 }: EditorialStatRingInspectorProps) => {
   const [valueInput, setValueInput] = useState<string | null>(null);
@@ -74,6 +83,25 @@ export const EditorialStatRingInspector = ({
           }}
           className="min-h-16 w-full rounded border border-neutral-600 bg-neutral-900 px-2 py-1"
         />
+      </LabeledControl>
+
+      <LabeledControl className="block space-y-1 text-xs text-neutral-200" label="Paper Texture">
+        <select
+          disabled={disabled}
+          value={overlay.createdaleyTexture}
+          onChange={(event) => {
+            onUpdateOverlay({
+              createdaleyTexture: event.currentTarget.value as TextOverlay["createdaleyTexture"],
+            });
+          }}
+          className="w-full rounded border border-neutral-600 bg-neutral-900 px-2 py-1"
+        >
+          {CREATEDALEY_OPENER_TEXTURES.map((texture) => (
+            <option key={texture} value={texture}>
+              {CREATEDALEY_OPENER_TEXTURE_LABELS[texture]}
+            </option>
+          ))}
+        </select>
       </LabeledControl>
 
       <div className="grid grid-cols-3 gap-2">

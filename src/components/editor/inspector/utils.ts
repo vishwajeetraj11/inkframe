@@ -12,6 +12,12 @@ import {
   parseEditorialStatRingText,
 } from "@/lib/editor/editorial-stat-ring";
 import {
+  buildFilmFrameGalleryText,
+  FILM_FRAME_GALLERY_DEFAULT_HEADLINE,
+  FILM_FRAME_GALLERY_DEFAULT_SUBHEAD,
+  parseFilmFrameGalleryText,
+} from "@/lib/editor/film-frame-gallery";
+import {
   buildRegionalMapFocusText,
   parseRegionalMapFocusText,
   REGIONAL_MAP_FOCUS_DEFAULT_HEADLINE,
@@ -113,6 +119,17 @@ export const getEditableRegionalMapFocusData = (text: string) => {
   };
 };
 
+export const getEditableFilmFrameGalleryData = (text: string) => {
+  const parsed = parseFilmFrameGalleryText(text);
+
+  return {
+    headline: parsed.headline || FILM_FRAME_GALLERY_DEFAULT_HEADLINE,
+    subhead: parsed.subhead || FILM_FRAME_GALLERY_DEFAULT_SUBHEAD,
+    location: parsed.location,
+    year: parsed.year,
+  };
+};
+
 export const getEditableChartCardData = (text: string) => {
   const parsed = parseChartCardText(text, { useFallbackRows: false });
 
@@ -158,6 +175,7 @@ export {
   buildChartCardText,
   buildCreatedaleyOpenerText,
   buildEditorialStatRingText,
+  buildFilmFrameGalleryText,
   buildRegionalMapFocusText,
   buildVoxTimelineText,
 };
@@ -200,6 +218,7 @@ export const PRESET_DATA_PARSERS = {
     };
   },
   "regional-map-focus": parseRegionalMapFocusText,
+  "film-frame-gallery": parseFilmFrameGalleryText,
   "createdaley-opener": parseCreatedaleyOpenerText,
   "vox-timeline": parseVoxTimelineText,
 } as const;

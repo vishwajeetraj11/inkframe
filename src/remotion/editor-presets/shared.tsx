@@ -8,6 +8,7 @@ import type {
 import { REMOTION_FONT_STACKS } from "../fonts";
 import {
   AbsoluteFill,
+  Easing,
   Img,
   interpolate,
   OffthreadVideo,
@@ -43,6 +44,7 @@ export const OVERLAY_STYLE_PRESET_LABEL: Record<TextOverlayStylePreset, string> 
   "vox-typography": "vox-typography",
   "world-map-focus": "world-map-focus",
   "regional-map-focus": "regional-map-focus",
+  "film-frame-gallery": "film-frame-gallery",
   "editorial-bar-chart": "editorial-bar-chart",
   "editorial-stat-ring": "editorial-stat-ring",
   "editorial-seat-arc": "editorial-seat-arc",
@@ -112,6 +114,7 @@ export const ClipLayer = ({
   fadeInFrames,
   fadeOutFrames,
   renderMode,
+  enableFilmFrameGalleryMotion = false,
 }: {
   clip: VersionTimeline["clips"][number];
   src: string;
@@ -119,6 +122,7 @@ export const ClipLayer = ({
   fadeInFrames: number;
   fadeOutFrames: number;
   renderMode: RenderMode;
+  enableFilmFrameGalleryMotion?: boolean;
 }) => {
   const frame = useCurrentFrame();
 
@@ -144,6 +148,50 @@ export const ClipLayer = ({
       : 1;
 
   const opacity = Math.max(0, Math.min(1, fadeInOpacity * fadeOutOpacity));
+  const motionSeed = Array.from(clip.id).reduce(
+    (total, character) => total + character.charCodeAt(0),
+    0,
+  );
+  const imageMotionProgress = clamp01(
+    durationInFrames <= 1 ? 1 : frame / Math.max(1, durationInFrames - 1),
+  );
+  const driftDirection = motionSeed % 2 === 0 ? 1 : -1;
+  const panStartX = ((motionSeed % 7) - 3) * 0.6;
+  const panEndX = panStartX * -0.5;
+  const panStartY = (((motionSeed >> 1) % 7) - 3) * 0.45;
+  const panEndY = panStartY * -0.55;
+  const scaleStart = 1.06 + ((motionSeed >> 2) % 3) * 0.012;
+  const scaleEnd = 1.015 + ((motionSeed >> 3) % 2) * 0.01;
+  const filmEntryBlur = enableFilmFrameGalleryMotion
+    ? interpolate(frame, [0, 18], [10, 0], {
+        extrapolateLeft: "clamp",
+        extrapolateRight: "clamp",
+        easing: Easing.bezier(0.22, 1, 0.36, 1),
+      })
+    : 0;
+  const imageScale = enableFilmFrameGalleryMotion
+    ? interpolate(
+        imageMotionProgress,
+        [0, 1],
+        driftDirection > 0 ? [scaleStart, scaleEnd] : [scaleEnd, scaleStart],
+        {
+          extrapolateLeft: "clamp",
+          extrapolateRight: "clamp",
+        },
+      )
+    : 1;
+  const imageTranslateX = enableFilmFrameGalleryMotion
+    ? interpolate(imageMotionProgress, [0, 1], [panStartX, panEndX], {
+        extrapolateLeft: "clamp",
+        extrapolateRight: "clamp",
+      })
+    : 0;
+  const imageTranslateY = enableFilmFrameGalleryMotion
+    ? interpolate(imageMotionProgress, [0, 1], [panStartY, panEndY], {
+        extrapolateLeft: "clamp",
+        extrapolateRight: "clamp",
+      })
+    : 0;
 
   const mediaProps = {
     src,
@@ -158,7 +206,7 @@ export const ClipLayer = ({
   };
 
   return (
-    <AbsoluteFill style={{ opacity }}>
+    <AbsoluteFill style={{ opacity, ...(filmEntryBlur > 0.05 ? { filter: `blur(${filmEntryBlur}px)` } : {}) }}>
       {clip.kind === "image" ? (
         <Img
           src={src}
@@ -166,6 +214,7 @@ export const ClipLayer = ({
             width: "100%",
             height: "100%",
             objectFit: "cover",
+            transform: `translate(${imageTranslateX}%, ${imageTranslateY}%) scale(${imageScale})`,
           }}
         />
       ) : renderMode === "render" ? (

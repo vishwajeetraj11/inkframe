@@ -1,5 +1,6 @@
 "use client";
 
+import type { RemotionSfxId } from "@/lib/editor/remotion-sfx";
 import type { Clip, TextOverlay, AudioTrack, AssetKind } from "@/lib/editor/types";
 import { TEXT_OVERLAY_STYLE_PRESET_LABELS } from "@/lib/editor/types";
 import { MediaLibrary } from "@/components/editor/MediaLibrary";
@@ -28,6 +29,7 @@ interface EditorSidebarProps {
   onSelectAudio: (audioId: string | null) => void;
   onAddText: () => void;
   onFilesSelected: (files: FileList | null) => void;
+  onAddRemotionSfx: (effectId: RemotionSfxId) => void;
   onRemoveAsset: (assetId: string) => void;
 }
 
@@ -53,33 +55,16 @@ export const EditorSidebar = ({
   onSelectAudio,
   onAddText,
   onFilesSelected,
+  onAddRemotionSfx,
   onRemoveAsset,
 }: EditorSidebarProps) => {
   return (
     <aside className="space-y-4 xl:min-h-0">
-      <section className="rounded-[26px] border border-white/10 bg-[linear-gradient(180deg,rgba(28,33,45,0.9),rgba(12,15,23,0.88))] p-4">
-        <div className="flex items-start justify-between gap-3">
-          <div>
-            <p className="app-eyebrow text-[10px] uppercase tracking-[0.22em] text-neutral-500">
-              Project
-            </p>
-            <h2 className="mt-2 text-lg font-semibold text-white">Workspace Navigator</h2>
-          </div>
-
-          <span className="rounded-full border border-white/10 bg-white/[0.05] px-3 py-1 text-[10px] uppercase tracking-[0.18em] text-neutral-400">
-            {clips.length + textOverlays.length + audioTracks.length} layers
-          </span>
-        </div>
-
-        <p className="mt-2 text-sm leading-6 text-neutral-400">
-          Use the left rail to manage assets and jump between clips, overlays, and audio.
-        </p>
-      </section>
-
       <MediaLibrary
         assets={assets}
         disabled={isExporting}
         onFilesSelected={onFilesSelected}
+        onAddRemotionSfx={onAddRemotionSfx}
         onRemoveAsset={onRemoveAsset}
       />
 

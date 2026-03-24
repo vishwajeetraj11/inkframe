@@ -7,18 +7,50 @@ export interface TemplateDefinition {
   description: string;
   sampleText: string;
   accentClass: string;
+  starterAssets?: {
+    kind: "image";
+    name: string;
+    mimeType: string;
+    publicPath: string;
+  }[];
 }
 
-export const TEMPLATE_DEFINITIONS: TemplateDefinition[] = [
+const BERLIN_WALL_TIMELINE_STARTER_ASSETS: NonNullable<
+  TemplateDefinition["starterAssets"]
+> = [
   {
-    id: "vox-explainer",
-    stylePreset: "vox-explainer",
-    name: "Vox Explainer",
-    description: "Signature explainer card with kicker, headline, and stat payoff.",
-    sampleText:
-      "EXPLAINED\nWhy cities keep getting hotter\nMaps, asphalt, and policy choices\n+7 degrees in dense neighborhoods",
-    accentClass: "text-yellow-300",
+    kind: "image",
+    name: "Alexanderplatz demonstration, 4 November 1989",
+    mimeType: "image/jpeg",
+    publicPath: "/starter-assets/berlin-wall/alexanderplatz-demonstration-1989.jpg",
   },
+  {
+    kind: "image",
+    name: "Gunter Schabowski press conference, 9 November 1989",
+    mimeType: "image/jpeg",
+    publicPath: "/starter-assets/berlin-wall/schabowski-press-conference-1989.jpg",
+  },
+  {
+    kind: "image",
+    name: "Bornholmer Strasse border opening, 10 November 1989",
+    mimeType: "image/jpeg",
+    publicPath: "/starter-assets/berlin-wall/bornholmer-strasse-opening-1989.jpg",
+  },
+  {
+    kind: "image",
+    name: "Berlin Wall crowds at Brandenburg Gate, November 1989",
+    mimeType: "image/jpeg",
+    publicPath: "/starter-assets/berlin-wall/brandenburg-gate-crowds-1989.jpg",
+  },
+  {
+    kind: "image",
+    name: "German reunification, October 1990",
+    mimeType: "image/jpeg",
+    publicPath: "/starter-assets/berlin-wall/german-reunification-1990.jpg",
+  },
+];
+
+export const TEMPLATE_DEFINITIONS: TemplateDefinition[] = [
   {
     id: "vox-timeline",
     stylePreset: "vox-timeline",
@@ -27,6 +59,7 @@ export const TEMPLATE_DEFINITIONS: TemplateDefinition[] = [
     sampleText:
       "HOW IT HAPPENED\nThe fall of the Berlin Wall\n1989|Protests spread|Demonstrations grow across East Germany.\nNov 9|Press conference|A botched announcement sets crowds in motion.\nNov 9|Checkpoint opens|Border guards begin letting Berliners through.\nNov 10|Wall breached|People climb the wall and start chipping it apart.\n1990|Germany reunifies|The Cold War map of Europe begins to change.",
     accentClass: "text-yellow-300",
+    starterAssets: BERLIN_WALL_TIMELINE_STARTER_ASSETS,
   },
   {
     id: "vox-timeline-ribbon",
@@ -36,6 +69,7 @@ export const TEMPLATE_DEFINITIONS: TemplateDefinition[] = [
     sampleText:
       "HOW IT HAPPENED\nThe fall of the Berlin Wall\n1989|Protests spread|Demonstrations grow across East Germany.\nNov 9|Press conference|A botched announcement sets crowds in motion.\nNov 9|Checkpoint opens|Border guards begin letting Berliners through.\nNov 10|Wall breached|People climb the wall and start chipping it apart.\n1990|Germany reunifies|The Cold War map of Europe begins to change.",
     accentClass: "text-amber-300",
+    starterAssets: BERLIN_WALL_TIMELINE_STARTER_ASSETS,
   },
   {
     id: "vox-timeline-ledger",
@@ -45,15 +79,7 @@ export const TEMPLATE_DEFINITIONS: TemplateDefinition[] = [
     sampleText:
       "HOW IT HAPPENED\nThe fall of the Berlin Wall\n1989|Protests spread|Demonstrations grow across East Germany.\nNov 9|Press conference|A botched announcement sets crowds in motion.\nNov 9|Checkpoint opens|Border guards begin letting Berliners through.\nNov 10|Wall breached|People climb the wall and start chipping it apart.\n1990|Germany reunifies|The Cold War map of Europe begins to change.",
     accentClass: "text-orange-300",
-  },
-  {
-    id: "vox-typography",
-    stylePreset: "vox-typography",
-    name: "Vox Typography",
-    description: "Dark editorial typography opener with yellow badge, serif hero word, and typewriter payoff.",
-    sampleText:
-      "Vox\ntypography\nanimations\nfeel so\nVox typography\nAa",
-    accentClass: "text-yellow-300",
+    starterAssets: BERLIN_WALL_TIMELINE_STARTER_ASSETS,
   },
   {
     id: "world-map-focus",
@@ -74,6 +100,16 @@ export const TEMPLATE_DEFINITIONS: TemplateDefinition[] = [
     accentClass: "text-amber-300",
   },
   {
+    id: "film-frame-gallery",
+    stylePreset: "film-frame-gallery",
+    name: "Film Frame Gallery",
+    description: "Single-image film gate with archival matte, subtle drift, and a compact editorial caption.",
+    sampleText:
+      "The night the wall opened\nA framed archival image sequence from the fall of the Berlin Wall.\nLOCATION: Berlin\nYEAR: 1989",
+    accentClass: "text-amber-200",
+    starterAssets: BERLIN_WALL_TIMELINE_STARTER_ASSETS,
+  },
+  {
     id: "editorial-bar-chart",
     stylePreset: "editorial-bar-chart",
     name: "Editorial Bar Chart",
@@ -88,7 +124,7 @@ export const TEMPLATE_DEFINITIONS: TemplateDefinition[] = [
     name: "Stat Ring Card",
     description: "Editorial percentage card with highlighted headline, count-up stat, and ring reveal.",
     sampleText:
-      "The overwhelming [[scientific]] consensus on climate change\nAnalysis of peer-reviewed climate studies published between 2012 and 2020. Source: IPCC.\n97|%|#ef5a29",
+      "Most of our ocean remains [[unexplored]]\nNOAA says humans have explored only about 5% of the ocean, leaving 95% still unexplored.\n95|%|#ef5a29",
     accentClass: "text-orange-300",
   },
   {

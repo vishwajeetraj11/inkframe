@@ -18,6 +18,7 @@
     "@remotion/google-fonts": "4.0.438",
     "@remotion/player": "4.0.438",
     "@remotion/renderer": "4.0.438",
+    "@remotion/sfx": "4.0.438",
     "@remotion/vercel": "^4.0.438",
     "@rspack/binding": "^1.7.6",
     "@rspack/core": "^1.7.6",

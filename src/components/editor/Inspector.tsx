@@ -9,20 +9,24 @@ interface InspectorProps {
   clip: Clip | null;
   textOverlay: TextOverlay | null;
   audioTrack: AudioTrack | null;
+  assetNames?: Record<string, string>;
   disabled?: boolean;
   onUpdateClip: (clipId: string, patch: Partial<Omit<Clip, "id" | "assetId" | "kind">>) => void;
   onUpdateText: (overlayId: string, patch: Partial<Omit<TextOverlay, "id">>) => void;
   onUpdateAudio: (audioId: string, patch: Partial<Omit<AudioTrack, "id" | "assetId">>) => void;
+  onRemoveAudio?: (audioId: string) => void;
 }
 
 export const Inspector = ({
   clip,
   textOverlay,
   audioTrack,
+  assetNames = {},
   disabled,
   onUpdateClip,
   onUpdateText,
   onUpdateAudio,
+  onRemoveAudio,
 }: InspectorProps) => {
   const activeKind = clip ? "Clip" : textOverlay ? "Text Overlay" : audioTrack ? "Audio Track" : null;
 
@@ -66,8 +70,10 @@ export const Inspector = ({
       {audioTrack ? (
         <AudioInspector
           audioTrack={audioTrack}
+          audioLabel={assetNames[audioTrack.assetId] ?? audioTrack.assetId}
           disabled={disabled}
           onUpdateAudio={onUpdateAudio}
+          onRemoveAudio={onRemoveAudio}
         />
       ) : null}
     </section>

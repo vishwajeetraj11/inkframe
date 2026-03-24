@@ -1,5 +1,7 @@
 import { InspectorCard } from "@/components/editor/controls/InspectorCard";
 import { LabeledControl } from "@/components/editor/controls/LabeledControl";
+import { STYLE_PRESET_SEQUENCE } from "@/components/editor/hooks/editor-session-config";
+import { hasCustomInspector } from "@/lib/editor/domain/preset-guards";
 import type { TextOverlay } from "@/lib/editor/types";
 import {
   isChartCardStylePreset,
@@ -7,11 +9,11 @@ import {
   TEXT_OVERLAY_FONT_FAMILIES,
   TEXT_OVERLAY_FONT_STYLES,
   TEXT_OVERLAY_STYLE_PRESET_LABELS,
-  TEXT_OVERLAY_STYLE_PRESETS,
 } from "@/lib/editor/types";
 import { ChartCardInspector } from "./preset-inspectors/ChartCardInspector";
 import { CreatedaleyOpenerInspector } from "./preset-inspectors/CreatedaleyOpenerInspector";
 import { EditorialStatRingInspector } from "./preset-inspectors/EditorialStatRingInspector";
+import { FilmFrameGalleryInspector } from "./preset-inspectors/FilmFrameGalleryInspector";
 import { RegionalMapFocusInspector } from "./preset-inspectors/RegionalMapFocusInspector";
 import { VoxTimelineInspector } from "./preset-inspectors/VoxTimelineInspector";
 import { WorldMapFocusInspector } from "./preset-inspectors/WorldMapFocusInspector";
@@ -19,12 +21,14 @@ import {
   buildChartCardText,
   buildCreatedaleyOpenerText,
   buildEditorialStatRingText,
+  buildFilmFrameGalleryText,
   buildRegionalMapFocusText,
   buildVoxTimelineText,
   buildWorldMapFocusText,
   getEditableChartCardData,
   getEditableCreatedaleyOpenerData,
   getEditableEditorialStatRingData,
+  getEditableFilmFrameGalleryData,
   getEditableRegionalMapFocusData,
   getEditableVoxTimelineData,
   getEditableWorldMapFocusData,
@@ -77,6 +81,7 @@ interface InspectorRendererProps {
   editorialStatRingData: ReturnType<typeof getEditableEditorialStatRingData> | null;
   worldMapFocusData: ReturnType<typeof getEditableWorldMapFocusData> | null;
   regionalMapFocusData: ReturnType<typeof getEditableRegionalMapFocusData> | null;
+  filmFrameGalleryData: ReturnType<typeof getEditableFilmFrameGalleryData> | null;
   createdaleyOpenerData: ReturnType<typeof getEditableCreatedaleyOpenerData> | null;
   voxTimelineData: ReturnType<typeof getEditableVoxTimelineData> | null;
   updateChartCard: (updater: (current: ReturnType<typeof getEditableChartCardData>) => ReturnType<typeof getEditableChartCardData>) => void;
@@ -84,6 +89,7 @@ interface InspectorRendererProps {
   updateEditorialStatRing: (updater: (current: ReturnType<typeof getEditableEditorialStatRingData>) => ReturnType<typeof getEditableEditorialStatRingData>) => void;
   updateWorldMapFocus: (updater: (current: ReturnType<typeof getEditableWorldMapFocusData>) => ReturnType<typeof getEditableWorldMapFocusData>) => void;
   updateRegionalMapFocus: (updater: (current: ReturnType<typeof getEditableRegionalMapFocusData>) => ReturnType<typeof getEditableRegionalMapFocusData>) => void;
+  updateFilmFrameGallery: (updater: (current: ReturnType<typeof getEditableFilmFrameGalleryData>) => ReturnType<typeof getEditableFilmFrameGalleryData>) => void;
   updateVoxTimeline: (updater: (current: ReturnType<typeof getEditableVoxTimelineData>) => ReturnType<typeof getEditableVoxTimelineData>) => void;
   selectedCountryName?: string;
   countryOptions: string[];
@@ -97,6 +103,7 @@ const renderPresetInspector = (props: {
   editorialStatRingData: ReturnType<typeof getEditableEditorialStatRingData> | null;
   worldMapFocusData: ReturnType<typeof getEditableWorldMapFocusData> | null;
   regionalMapFocusData: ReturnType<typeof getEditableRegionalMapFocusData> | null;
+  filmFrameGalleryData: ReturnType<typeof getEditableFilmFrameGalleryData> | null;
   voxTimelineData: ReturnType<typeof getEditableVoxTimelineData> | null;
   chartCardData: ReturnType<typeof getEditableChartCardData> | null;
   overlay: TextOverlay;
@@ -106,6 +113,7 @@ const renderPresetInspector = (props: {
   updateEditorialStatRing: (updater: (current: ReturnType<typeof getEditableEditorialStatRingData>) => ReturnType<typeof getEditableEditorialStatRingData>) => void;
   updateWorldMapFocus: (updater: (current: ReturnType<typeof getEditableWorldMapFocusData>) => ReturnType<typeof getEditableWorldMapFocusData>) => void;
   updateRegionalMapFocus: (updater: (current: ReturnType<typeof getEditableRegionalMapFocusData>) => ReturnType<typeof getEditableRegionalMapFocusData>) => void;
+  updateFilmFrameGallery: (updater: (current: ReturnType<typeof getEditableFilmFrameGalleryData>) => ReturnType<typeof getEditableFilmFrameGalleryData>) => void;
   updateVoxTimeline: (updater: (current: ReturnType<typeof getEditableVoxTimelineData>) => ReturnType<typeof getEditableVoxTimelineData>) => void;
   updateChartCard: (updater: (current: ReturnType<typeof getEditableChartCardData>) => ReturnType<typeof getEditableChartCardData>) => void;
   selectedCountryName?: string;
@@ -119,6 +127,7 @@ const renderPresetInspector = (props: {
     editorialStatRingData,
     worldMapFocusData,
     regionalMapFocusData,
+    filmFrameGalleryData,
     voxTimelineData,
     chartCardData,
     overlay,
@@ -128,6 +137,7 @@ const renderPresetInspector = (props: {
     updateEditorialStatRing,
     updateWorldMapFocus,
     updateRegionalMapFocus,
+    updateFilmFrameGallery,
     updateVoxTimeline,
     updateChartCard,
     selectedCountryName,
@@ -155,6 +165,8 @@ const renderPresetInspector = (props: {
       <EditorialStatRingInspector
         data={editorialStatRingData}
         disabled={disabled}
+        overlay={overlay}
+        onUpdateOverlay={(patch) => onUpdateText(overlay.id, patch)}
         onUpdateText={updateEditorialStatRing}
       />
     );
@@ -186,12 +198,24 @@ const renderPresetInspector = (props: {
     );
   }
 
+  if (filmFrameGalleryData) {
+    return (
+      <FilmFrameGalleryInspector
+        data={filmFrameGalleryData}
+        disabled={disabled}
+        overlay={overlay}
+        onUpdateText={updateFilmFrameGallery}
+      />
+    );
+  }
+
   if (voxTimelineData) {
     return (
       <VoxTimelineInspector
         data={voxTimelineData}
         disabled={disabled}
         overlay={overlay}
+        onUpdateOverlay={(patch) => onUpdateText(overlay.id, patch)}
         onUpdateText={updateVoxTimeline}
       />
     );
@@ -231,6 +255,14 @@ export const TextOverlayInspector = ({
   onUpdateText,
   overlay,
 }: TextOverlayInspectorProps) => {
+  const hasDedicatedInspector = hasCustomInspector(overlay.stylePreset);
+  const stylePresetOptions = Array.from(
+    new Set(
+      STYLE_PRESET_SEQUENCE.includes(overlay.stylePreset)
+        ? STYLE_PRESET_SEQUENCE
+        : [overlay.stylePreset, ...STYLE_PRESET_SEQUENCE],
+    ),
+  );
   const chartCardData = isChartCardStylePreset(overlay.stylePreset)
     ? getEditableChartCardData(overlay.text)
     : null;
@@ -245,6 +277,10 @@ export const TextOverlayInspector = ({
   const regionalMapFocusData =
     overlay.stylePreset === "regional-map-focus"
       ? getEditableRegionalMapFocusData(overlay.text)
+      : null;
+  const filmFrameGalleryData =
+    overlay.stylePreset === "film-frame-gallery"
+      ? getEditableFilmFrameGalleryData(overlay.text)
       : null;
   const createdaleyOpenerData =
     overlay.stylePreset === "createdaley-opener"
@@ -290,6 +326,13 @@ export const TextOverlayInspector = ({
     overlay.id,
   );
 
+  const updateFilmFrameGallery = createPresetUpdateHandler(
+    filmFrameGalleryData,
+    buildFilmFrameGalleryText,
+    onUpdateText,
+    overlay.id,
+  );
+
   const updateVoxTimeline = createPresetUpdateHandler(
     voxTimelineData,
     buildVoxTimelineText,
@@ -323,6 +366,7 @@ export const TextOverlayInspector = ({
         editorialStatRingData,
         worldMapFocusData,
         regionalMapFocusData,
+        filmFrameGalleryData,
         voxTimelineData,
         chartCardData,
         overlay,
@@ -332,6 +376,7 @@ export const TextOverlayInspector = ({
         updateEditorialStatRing,
         updateWorldMapFocus,
         updateRegionalMapFocus,
+        updateFilmFrameGallery,
         updateVoxTimeline,
         updateChartCard,
         selectedCountryName,
@@ -341,14 +386,14 @@ export const TextOverlayInspector = ({
         regionalCountryOptions,
       })}
 
-      <div className="grid gap-5 xl:grid-cols-2">
+      {hasDedicatedInspector ? (
         <section className="space-y-3">
           <div>
             <p className="app-eyebrow text-[10px] uppercase tracking-[0.22em] text-neutral-500">
               Placement
             </p>
             <p className="mt-1 text-[11px] text-neutral-500">
-              Position the overlay on the canvas and tune scale.
+              Fine-tune where this preset sits on the canvas.
             </p>
           </div>
 
@@ -386,127 +431,176 @@ export const TextOverlayInspector = ({
                 className={INSPECTOR_INPUT_CLASS}
               />
             </LabeledControl>
-
-            <LabeledControl label="Font Size">
-              <input
-                type="number"
-                min={12}
-                max={200}
-                step={1}
-                disabled={disabled}
-                value={overlay.fontSize}
-                onChange={(event) => {
-                  onUpdateText(overlay.id, {
-                    fontSize: parseNumber(event.currentTarget.value, overlay.fontSize),
-                  });
-                }}
-                className={INSPECTOR_INPUT_CLASS}
-              />
-            </LabeledControl>
-
-            <LabeledControl label="Color">
-              <input
-                type="color"
-                disabled={disabled}
-                value={overlay.color}
-                onChange={(event) => {
-                  onUpdateText(overlay.id, {
-                    color: event.currentTarget.value,
-                  });
-                }}
-                className={INSPECTOR_COLOR_INPUT_CLASS}
-              />
-            </LabeledControl>
           </div>
         </section>
+      ) : (
+        <div className="grid gap-5 xl:grid-cols-2">
+          <section className="space-y-3">
+            <div>
+              <p className="app-eyebrow text-[10px] uppercase tracking-[0.22em] text-neutral-500">
+                Placement
+              </p>
+              <p className="mt-1 text-[11px] text-neutral-500">
+                Position the overlay on the canvas and tune scale.
+              </p>
+            </div>
 
-        <section className="space-y-3">
-          <div>
-            <p className="app-eyebrow text-[10px] uppercase tracking-[0.22em] text-neutral-500">
-              Typography
-            </p>
-            <p className="mt-1 text-[11px] text-neutral-500">
-              Control the family, weight, style, and active preset.
-            </p>
-          </div>
+            <div className="grid grid-cols-2 gap-3 text-xs text-neutral-200">
+              <LabeledControl label="X (%)">
+                <input
+                  type="number"
+                  min={0}
+                  max={100}
+                  step={1}
+                  disabled={disabled}
+                  value={overlay.x}
+                  onChange={(event) => {
+                    onUpdateText(overlay.id, {
+                      x: parseNumber(event.currentTarget.value, overlay.x),
+                    });
+                  }}
+                  className={INSPECTOR_INPUT_CLASS}
+                />
+              </LabeledControl>
 
-          <div className="grid grid-cols-2 gap-3 text-xs text-neutral-200">
-            <LabeledControl label="Font Family">
-              <select
-                disabled={disabled}
-                value={overlay.fontFamily}
-                onChange={(event) => {
-                  onUpdateText(overlay.id, {
-                    fontFamily: event.currentTarget.value as TextOverlay["fontFamily"],
-                  });
-                }}
-                className={INSPECTOR_INPUT_CLASS}
-              >
-                {TEXT_OVERLAY_FONT_FAMILIES.map((fontFamily) => (
-                  <option key={fontFamily} value={fontFamily}>
-                    {fontFamily}
-                  </option>
-                ))}
-              </select>
-            </LabeledControl>
+              <LabeledControl label="Y (%)">
+                <input
+                  type="number"
+                  min={0}
+                  max={100}
+                  step={1}
+                  disabled={disabled}
+                  value={overlay.y}
+                  onChange={(event) => {
+                    onUpdateText(overlay.id, {
+                      y: parseNumber(event.currentTarget.value, overlay.y),
+                    });
+                  }}
+                  className={INSPECTOR_INPUT_CLASS}
+                />
+              </LabeledControl>
 
-            <LabeledControl label="Font Weight">
-              <input
-                type="number"
-                min={100}
-                max={900}
-                step={100}
-                disabled={disabled}
-                value={overlay.fontWeight}
-                onChange={(event) => {
-                  onUpdateText(overlay.id, {
-                    fontWeight: parseNumber(event.currentTarget.value, overlay.fontWeight),
-                  });
-                }}
-                className={INSPECTOR_INPUT_CLASS}
-              />
-            </LabeledControl>
+              <LabeledControl label="Font Size">
+                <input
+                  type="number"
+                  min={12}
+                  max={200}
+                  step={1}
+                  disabled={disabled}
+                  value={overlay.fontSize}
+                  onChange={(event) => {
+                    onUpdateText(overlay.id, {
+                      fontSize: parseNumber(event.currentTarget.value, overlay.fontSize),
+                    });
+                  }}
+                  className={INSPECTOR_INPUT_CLASS}
+                />
+              </LabeledControl>
 
-            <LabeledControl label="Font Style">
-              <select
-                disabled={disabled}
-                value={overlay.fontStyle}
-                onChange={(event) => {
-                  onUpdateText(overlay.id, {
-                    fontStyle: event.currentTarget.value as TextOverlay["fontStyle"],
-                  });
-                }}
-                className={INSPECTOR_INPUT_CLASS}
-              >
-                {TEXT_OVERLAY_FONT_STYLES.map((fontStyle) => (
-                  <option key={fontStyle} value={fontStyle}>
-                    {fontStyle}
-                  </option>
-                ))}
-              </select>
-            </LabeledControl>
+              <LabeledControl label="Color">
+                <input
+                  type="color"
+                  disabled={disabled}
+                  value={overlay.color}
+                  onChange={(event) => {
+                    onUpdateText(overlay.id, {
+                      color: event.currentTarget.value,
+                    });
+                  }}
+                  className={INSPECTOR_COLOR_INPUT_CLASS}
+                />
+              </LabeledControl>
+            </div>
+          </section>
 
-            <LabeledControl label="Style Preset">
-              <select
-                disabled={disabled}
-                value={overlay.stylePreset}
-                onChange={(event) => {
-                  onUpdateText(overlay.id, {
-                    stylePreset: event.currentTarget.value as TextOverlay["stylePreset"],
-                  });
-                }}
-                className={INSPECTOR_INPUT_CLASS}
-              >
-                {TEXT_OVERLAY_STYLE_PRESETS.map((stylePreset) => (
-                  <option key={stylePreset} value={stylePreset}>
-                    {TEXT_OVERLAY_STYLE_PRESET_LABELS[stylePreset]}
-                  </option>
-                ))}
-              </select>
-            </LabeledControl>
-          </div>
-        </section>
-      </div>
+          <section className="space-y-3">
+            <div>
+              <p className="app-eyebrow text-[10px] uppercase tracking-[0.22em] text-neutral-500">
+                Typography
+              </p>
+              <p className="mt-1 text-[11px] text-neutral-500">
+                Control the family, weight, style, and active preset.
+              </p>
+            </div>
+
+            <div className="grid grid-cols-2 gap-3 text-xs text-neutral-200">
+              <LabeledControl label="Font Family">
+                <select
+                  disabled={disabled}
+                  value={overlay.fontFamily}
+                  onChange={(event) => {
+                    onUpdateText(overlay.id, {
+                      fontFamily: event.currentTarget.value as TextOverlay["fontFamily"],
+                    });
+                  }}
+                  className={INSPECTOR_INPUT_CLASS}
+                >
+                  {TEXT_OVERLAY_FONT_FAMILIES.map((fontFamily) => (
+                    <option key={fontFamily} value={fontFamily}>
+                      {fontFamily}
+                    </option>
+                  ))}
+                </select>
+              </LabeledControl>
+
+              <LabeledControl label="Font Weight">
+                <input
+                  type="number"
+                  min={100}
+                  max={900}
+                  step={100}
+                  disabled={disabled}
+                  value={overlay.fontWeight}
+                  onChange={(event) => {
+                    onUpdateText(overlay.id, {
+                      fontWeight: parseNumber(event.currentTarget.value, overlay.fontWeight),
+                    });
+                  }}
+                  className={INSPECTOR_INPUT_CLASS}
+                />
+              </LabeledControl>
+
+              <LabeledControl label="Font Style">
+                <select
+                  disabled={disabled}
+                  value={overlay.fontStyle}
+                  onChange={(event) => {
+                    onUpdateText(overlay.id, {
+                      fontStyle: event.currentTarget.value as TextOverlay["fontStyle"],
+                    });
+                  }}
+                  className={INSPECTOR_INPUT_CLASS}
+                >
+                  {TEXT_OVERLAY_FONT_STYLES.map((fontStyle) => (
+                    <option key={fontStyle} value={fontStyle}>
+                      {fontStyle}
+                    </option>
+                  ))}
+                </select>
+              </LabeledControl>
+
+              <LabeledControl label="Style Preset">
+                <select
+                  disabled={disabled}
+                  value={overlay.stylePreset}
+                  onChange={(event) => {
+                    onUpdateText(overlay.id, {
+                      stylePreset: event.currentTarget.value as TextOverlay["stylePreset"],
+                    });
+                  }}
+                  className={INSPECTOR_INPUT_CLASS}
+                >
+                  {stylePresetOptions.map((stylePreset) => (
+                    <option key={stylePreset} value={stylePreset}>
+                      {TEXT_OVERLAY_STYLE_PRESET_LABELS[stylePreset]}
+                    </option>
+                  ))}
+                </select>
+              </LabeledControl>
+            </div>
+          </section>
+        </div>
+      )}
     </InspectorCard>
   );
 };

@@ -16,6 +16,10 @@ export interface MotionTypographyLayerProps {
   durationInFrames: number;
   aspect: AspectPreset;
   hasMediaClips: boolean;
+  activeMediaClipIndex?: number;
+  activeMediaClipStartFrame?: number;
+  activeMediaClipDurationInFrames?: number;
+  mediaClipCount?: number;
 }
 
 export interface PresetRendererProps extends MotionTypographyLayerProps {

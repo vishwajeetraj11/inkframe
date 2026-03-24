@@ -120,25 +120,27 @@ const aiSceneSchema = z.object({
         }
 
         if (
-          normalized === "vox-explainer" ||
-          normalized === "vox explainer" ||
-          normalized === "vox" ||
-          normalized === "explainer" ||
-          normalized === "editorial explainer" ||
-          normalized === "editorial-explainer"
+          normalized === "vox-explainer"
         ) {
           return "vox-explainer";
         }
 
         if (
-          normalized === "vox-typography" ||
-          normalized === "vox typography" ||
-          normalized === "typography opener" ||
-          normalized === "editorial typography" ||
-          normalized === "typewriter typography" ||
-          normalized === "vox typewriter"
+          normalized === "vox-typography"
         ) {
           return "vox-typography";
+        }
+
+        if (
+          normalized === "film-frame-gallery" ||
+          normalized === "film frame gallery" ||
+          normalized === "image gallery" ||
+          normalized === "photo gallery" ||
+          normalized === "archival slideshow" ||
+          normalized === "film frame" ||
+          normalized === "projector slideshow"
+        ) {
+          return "film-frame-gallery";
         }
 
         if (

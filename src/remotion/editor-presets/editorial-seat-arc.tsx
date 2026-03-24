@@ -146,10 +146,49 @@ const getLeaderLayout = (
   centerY: number,
   outerRadius: number,
   angle: number,
+  isVertical: boolean,
 ) => {
   const anchor = polarToCartesian(centerX, centerY, outerRadius - 1.5, angle);
   const elbow = polarToCartesian(centerX, centerY, outerRadius + 8, angle);
   const isTop = Math.abs(angle - 270) < 18;
+  const isLeft = angle < 270;
+
+  if (isVertical) {
+    if (isTop) {
+      const end = {
+        x: Math.min(84, Math.max(16, elbow.x)),
+        y: elbow.y - 5.2,
+      };
+
+      return {
+        anchor,
+        elbow,
+        end,
+        textX: end.x,
+        textY: end.y - 1.2,
+        textAnchor: "middle" as const,
+        inlineLabel: false,
+      };
+    }
+
+    const horizontalRun = 12;
+    const end = {
+      x: isLeft
+        ? Math.max(10, elbow.x - horizontalRun)
+        : Math.min(90, elbow.x + horizontalRun),
+      y: elbow.y,
+    };
+
+    return {
+      anchor,
+      elbow,
+      end,
+      textX: end.x + (isLeft ? -1.8 : 1.8),
+      textY: end.y,
+      textAnchor: isLeft ? ("end" as const) : ("start" as const),
+      inlineLabel: true,
+    };
+  }
 
   if (isTop) {
     const end = { x: elbow.x + 10, y: elbow.y };
@@ -161,22 +200,23 @@ const getLeaderLayout = (
       textX: end.x,
       textY: end.y - 1.2,
       textAnchor: "start" as const,
+      inlineLabel: false,
     };
   }
 
-  const isLeft = angle < 270;
   const end = {
     x: elbow.x + (isLeft ? -20 : 20),
-    y: elbow.y + (isLeft ? -1 : 1),
+    y: elbow.y,
   };
 
   return {
     anchor,
     elbow,
     end,
-    textX: end.x + (isLeft ? -0.8 : 0.8),
-    textY: end.y - 1.2,
+    textX: end.x + (isLeft ? -1.6 : 1.6),
+    textY: end.y,
     textAnchor: isLeft ? ("end" as const) : ("start" as const),
+    inlineLabel: true,
   };
 };
 
@@ -279,7 +319,7 @@ export const renderEditorialSeatArcPreset = ({
   const wrapperBlur = animation.blur * 0.15;
   const headlineSize = overlay.fontSize * (isVertical ? 0.92 : 1.02);
   const subheadSize = overlay.fontSize * (isVertical ? 0.26 : 0.22);
-  const labelSize = isVertical ? 2.8 : 2.15;
+  const labelSize = isVertical ? 2.55 : 2.15;
   const showDotTexture =
     seatArcTexture === "dots" ||
     seatArcTexture === "grid-dots" ||
@@ -306,8 +346,8 @@ export const renderEditorialSeatArcPreset = ({
         headerTop: "12%",
         headerWidth: "84%",
         chartLeft: "50%",
-        chartTop: "70%",
-        chartWidth: "82%",
+        chartTop: "71.5%",
+        chartWidth: "72%",
       }
     : {
         headerLeft: "16%",
@@ -540,7 +580,7 @@ export const renderEditorialSeatArcPreset = ({
               extrapolateRight: "clamp",
               easing: easeOut,
             });
-            const leader = getLeaderLayout(50, 62, 31.5, segment.midAngle);
+            const leader = getLeaderLayout(50, 62, 31.5, segment.midAngle, isVertical);
             const elbowProgress = Math.min(1, labelProgress / 0.56);
             const endProgress = clamp01((labelProgress - 0.36) / 0.64);
             const currentElbow = {
@@ -571,6 +611,7 @@ export const renderEditorialSeatArcPreset = ({
                   x={leader.textX}
                   y={leader.textY}
                   textAnchor={leader.textAnchor}
+                  dominantBaseline={leader.inlineLabel ? "middle" : undefined}
                   fontFamily={FONT_STACK_BY_FAMILY.sans}
                   fontWeight={700}
                   fontSize={labelSize}

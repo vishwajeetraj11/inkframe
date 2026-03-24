@@ -6,6 +6,7 @@ import {
   renderEditorialBarChartPreset,
   renderEditorialSeatArcPreset,
   renderEditorialStatRingPreset,
+  renderFilmFrameGalleryPreset,
   renderNewsClippingPreset,
   renderRegionalMapFocusPreset,
   renderVoxExplainerPreset,
@@ -43,6 +44,7 @@ const PRESET_RENDERERS = {
   "vox-typography": renderVoxTypographyPreset,
   "world-map-focus": renderWorldMapFocusPreset,
   "regional-map-focus": renderRegionalMapFocusPreset,
+  "film-frame-gallery": renderFilmFrameGalleryPreset,
   "editorial-bar-chart": renderEditorialBarChartPreset,
   "editorial-stat-ring": renderEditorialStatRingPreset,
   "editorial-seat-arc": renderEditorialSeatArcPreset,
@@ -56,6 +58,10 @@ export const MotionTypographyLayer = ({
   durationInFrames,
   aspect,
   hasMediaClips,
+  activeMediaClipIndex,
+  activeMediaClipStartFrame,
+  activeMediaClipDurationInFrames,
+  mediaClipCount,
 }: MotionTypographyLayerProps) => {
   const frame = useCurrentFrame();
   const safeDuration = Math.max(1, Math.round(durationInFrames));
@@ -69,6 +75,10 @@ export const MotionTypographyLayer = ({
     durationInFrames,
     aspect,
     hasMediaClips,
+    activeMediaClipIndex,
+    activeMediaClipStartFrame,
+    activeMediaClipDurationInFrames,
+    mediaClipCount,
     frame,
     safeDuration,
     animation,

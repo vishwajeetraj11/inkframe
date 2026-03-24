@@ -263,7 +263,7 @@ export default function Home() {
             <div className="relative">
               <div className="flex flex-wrap items-center gap-2">
                 <span className="app-eyebrow rounded-full border border-white/10 bg-white/[0.06] px-3 py-1 text-[11px] uppercase tracking-[0.22em] text-cyan-200">
-                  Ephemeral Studio
+                  Inkframe Studio
                 </span>
                 <span className="rounded-full border border-white/10 bg-white/[0.05] px-3 py-1 text-[10px] uppercase tracking-[0.18em] text-white/60">
                   Next.js + Remotion

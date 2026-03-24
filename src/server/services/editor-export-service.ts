@@ -8,9 +8,13 @@ import {
   renderProject,
   type SandboxWriteFile,
 } from "@/server/render-service";
+import {
+  getNextEditorExportFilename,
+  LOCAL_EDITOR_EXPORT_DIR,
+} from "@/server/export-filenames";
 import { shouldUseVercelSandboxRender } from "@/server/rendering-environment";
 import { sanitizeFilename } from "@/server/temp-storage";
-import { mkdir, readFile, writeFile } from "node:fs/promises";
+import { copyFile, mkdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { pathToFileURL } from "node:url";
 import type { ExportResult } from "./export-types";
@@ -27,13 +31,10 @@ export const exportEditorProject = async ({
     const useVercelSandbox = shouldUseVercelSandboxRender();
     const activeVersion = project.versions[project.activeVersion];
     const usedAssetIds = collectUsedAssetIds(activeVersion);
-
-    if (usedAssetIds.size > 0 && files.length === 0) {
-      throw new Error("Missing uploaded files for timeline media assets.");
-    }
+    const exportFilename = await getNextEditorExportFilename(project);
 
     const assetsDir = path.join(requestDir, "assets");
-    const outputPath = path.join(requestDir, `${project.activeVersion}-${requestId}.mp4`);
+    const outputPath = path.join(requestDir, `${requestId}-${exportFilename}`);
     await mkdir(assetsDir, { recursive: true });
 
     const assetMetaById = new Map(project.assets.map((asset) => [asset.assetId, asset]));
@@ -99,6 +100,11 @@ export const exportEditorProject = async ({
       const assetMeta = assetMetaById.get(usedAssetId);
       const resolvedPath = storedAssetPathById.get(usedAssetId);
 
+      if (assetMeta?.externalUrl) {
+        assetSources[usedAssetId] = assetMeta.externalUrl;
+        continue;
+      }
+
       if (!resolvedPath) {
         throw new Error(`Missing uploaded file for required asset ${usedAssetId}.`);
       }
@@ -132,7 +138,7 @@ export const exportEditorProject = async ({
       blobPath: path.posix.join(
         "exports",
         "editor",
-        `${project.activeVersion}-${requestId}.mp4`,
+        exportFilename,
       ),
       sandboxFiles,
     });
@@ -141,14 +147,18 @@ export const exportEditorProject = async ({
       return {
         kind: "download-url",
         downloadUrl: renderResult.downloadUrl,
-        filename: `${project.activeVersion}.mp4`,
+        filename: exportFilename,
       };
     }
 
+    await mkdir(LOCAL_EDITOR_EXPORT_DIR, { recursive: true });
+    const persistedOutputPath = path.join(LOCAL_EDITOR_EXPORT_DIR, exportFilename);
+    await copyFile(outputPath, persistedOutputPath);
+
     return {
       kind: "buffer",
-      buffer: await readFile(outputPath),
+      buffer: await readFile(persistedOutputPath),
       contentType: "video/mp4",
-      filename: `${project.activeVersion}.mp4`,
+      filename: exportFilename,
     };
   });

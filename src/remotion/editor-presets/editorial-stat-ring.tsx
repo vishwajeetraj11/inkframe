@@ -3,6 +3,7 @@ import {
   parseEditorialStatRingText,
   splitEditorialStatRingHeadline,
 } from "@/lib/editor/editorial-stat-ring";
+import type { CreatedaleyOpenerTexture } from "@/lib/editor/types";
 import { Easing, interpolate } from "remotion";
 import type { PresetRendererProps } from "./types";
 import {
@@ -12,6 +13,130 @@ import {
   clamp01,
   getRevealClipPath,
 } from "./shared";
+
+const getStatRingPaperFill = (texture: CreatedaleyOpenerTexture): string => {
+  switch (texture) {
+    case "dots":
+      return "linear-gradient(180deg, #faf5ea 0%, #f2e8d7 100%)";
+    case "grid-dots":
+      return "linear-gradient(180deg, #f8f0e1 0%, #eadfca 100%)";
+    case "newsprint-grain":
+      return "linear-gradient(180deg, #f1eadc 0%, #e3d7c1 100%)";
+    case "warm-editorial":
+      return "linear-gradient(180deg, #f6ecd7 0%, #e9d0a7 54%, #deb886 100%)";
+    case "plain":
+    default:
+      return "linear-gradient(180deg, #fbf8f2 0%, #f6f2e9 100%)";
+  }
+};
+
+const getStatRingPaperShade = (texture: CreatedaleyOpenerTexture): string => {
+  switch (texture) {
+    case "dots":
+      return (
+        "radial-gradient(circle at 18% 14%, rgba(255, 255, 255, 0.82), rgba(255, 255, 255, 0) 26%)," +
+        "radial-gradient(circle at 84% 74%, rgba(173, 132, 70, 0.12), rgba(173, 132, 70, 0) 28%)"
+      );
+    case "grid-dots":
+      return (
+        "radial-gradient(circle at 18% 14%, rgba(255, 255, 255, 0.72), rgba(255, 255, 255, 0) 25%)," +
+        "radial-gradient(circle at 82% 74%, rgba(130, 103, 64, 0.12), rgba(130, 103, 64, 0) 28%)"
+      );
+    case "newsprint-grain":
+      return (
+        "radial-gradient(circle at 18% 14%, rgba(255, 255, 255, 0.44), rgba(255, 255, 255, 0) 24%)," +
+        "linear-gradient(180deg, rgba(116, 90, 57, 0.02) 0%, rgba(116, 90, 57, 0.1) 100%)"
+      );
+    case "warm-editorial":
+      return (
+        "radial-gradient(circle at 18% 14%, rgba(255, 248, 234, 0.84), rgba(255, 248, 234, 0) 26%)," +
+        "radial-gradient(circle at 82% 74%, rgba(194, 118, 39, 0.18), rgba(194, 118, 39, 0) 30%)," +
+        "linear-gradient(180deg, rgba(112, 82, 48, 0.02) 0%, rgba(112, 82, 48, 0.12) 100%)"
+      );
+    case "plain":
+    default:
+      return (
+        "radial-gradient(circle at 18% 14%, rgba(255, 255, 255, 0.76), rgba(255, 255, 255, 0) 24%)," +
+        "linear-gradient(180deg, rgba(92, 76, 54, 0.02) 0%, rgba(92, 76, 54, 0) 100%)"
+      );
+  }
+};
+
+const getStatRingTextureDotBackground = (
+  texture: CreatedaleyOpenerTexture,
+  isVertical: boolean,
+): { backgroundImage: string; backgroundSize: string; opacity: number } | null => {
+  switch (texture) {
+    case "dots":
+      return {
+        backgroundImage:
+          "radial-gradient(circle at 2px 2px, rgba(88, 64, 36, 0.22) 1.3px, transparent 1.5px)",
+        backgroundSize: isVertical ? "18px 18px" : "20px 20px",
+        opacity: 1,
+      };
+    case "grid-dots":
+      return {
+        backgroundImage:
+          "radial-gradient(circle at 2px 2px, rgba(88, 64, 36, 0.2) 1.2px, transparent 1.45px)",
+        backgroundSize: isVertical ? "18px 18px" : "20px 20px",
+        opacity: 1,
+      };
+    case "warm-editorial":
+      return {
+        backgroundImage:
+          "radial-gradient(circle at 2px 2px, rgba(120, 72, 24, 0.18) 1.25px, transparent 1.55px)",
+        backgroundSize: isVertical ? "18px 18px" : "20px 20px",
+        opacity: 1,
+      };
+    default:
+      return null;
+  }
+};
+
+const getStatRingTextureGridBackground = (
+  texture: CreatedaleyOpenerTexture,
+): { background: string; opacity: number } | null => {
+  switch (texture) {
+    case "grid-dots":
+      return {
+        background:
+          "repeating-linear-gradient(0deg, rgba(88, 76, 58, 0.14) 0 1.25px, transparent 1.25px 112px)," +
+          "repeating-linear-gradient(90deg, rgba(88, 76, 58, 0.14) 0 1.25px, transparent 1.25px 112px)",
+        opacity: 1,
+      };
+    case "plain":
+      return {
+        background:
+          "repeating-linear-gradient(0deg, rgba(88, 76, 58, 0.045) 0 1px, transparent 1px 112px)," +
+          "repeating-linear-gradient(90deg, rgba(88, 76, 58, 0.045) 0 1px, transparent 1px 112px)",
+        opacity: 1,
+      };
+    default:
+      return null;
+  }
+};
+
+const getStatRingTextureVeil = (
+  texture: CreatedaleyOpenerTexture,
+): { background: string; opacity: number } | null => {
+  switch (texture) {
+    case "newsprint-grain":
+      return {
+        background:
+          "linear-gradient(180deg, rgba(80, 58, 32, 0.04) 0%, rgba(80, 58, 32, 0.11) 100%)",
+        opacity: 1,
+      };
+    case "warm-editorial":
+      return {
+        background:
+          "linear-gradient(180deg, rgba(163, 94, 28, 0.04) 0%, rgba(163, 94, 28, 0.12) 100%)",
+        opacity: 1,
+      };
+    default:
+      return null;
+  }
+};
+
 export const renderEditorialStatRingPreset = ({
   overlay,
   frame,
@@ -25,6 +150,7 @@ export const renderEditorialStatRingPreset = ({
     headline,
     highlight,
   );
+  const statRingTexture = overlay.createdaleyTexture ?? "plain";
   const isVertical = aspect === "reel_9_16";
   const easeOut = Easing.bezier(0.22, 1, 0.36, 1);
   const sheetEntry = interpolate(frame, [0, 12], [0, 1], {
@@ -98,7 +224,8 @@ export const renderEditorialStatRingPreset = ({
   const ringRadius = 42;
   const ringCircumference = 2 * Math.PI * ringRadius;
   const ringTarget = clamp01(value / 100);
-  const ringSweep = Math.max(0.001, ringTarget * ringReveal * ringCircumference);
+  const ringSweep =
+    ringReveal <= 0 ? 0 : Math.max(0.001, ringTarget * ringReveal * ringCircumference);
   const counterRaw = value * counterReveal;
   const displayValue =
     counterReveal >= 1
@@ -106,11 +233,22 @@ export const renderEditorialStatRingPreset = ({
       : Number.isInteger(value)
         ? Math.floor(counterRaw)
         : Number(counterRaw.toFixed(1));
-  const ringScale = interpolate(ringReveal, [0, 1], [0.96, 1], {
+  const ringPresence = interpolate(frame, [18, 28], [0, 1], {
+    extrapolateLeft: "clamp",
+    extrapolateRight: "clamp",
+    easing: easeOut,
+  });
+  const ringScale = interpolate(ringPresence, [0, 1], [0.92, 1], {
     extrapolateLeft: "clamp",
     extrapolateRight: "clamp",
   });
   const ringStrokeWidth = isVertical ? 3.9 : 4.5;
+  const dotTexture = getStatRingTextureDotBackground(statRingTexture, isVertical);
+  const gridTexture = getStatRingTextureGridBackground(statRingTexture);
+  const textureVeil = getStatRingTextureVeil(statRingTexture);
+  const showNewsprintTexture =
+    statRingTexture === "newsprint-grain" || statRingTexture === "warm-editorial";
+  const newsprintOpacity = statRingTexture === "warm-editorial" ? 0.18 : 0.24;
 
   return (
     <div
@@ -139,9 +277,7 @@ export const renderEditorialStatRingPreset = ({
           inset: paperInset,
           borderRadius: paperRadius,
           overflow: "hidden",
-          background:
-            "radial-gradient(circle at 18% 14%, rgba(255, 255, 255, 0.76), rgba(255, 255, 255, 0) 24%)," +
-            "linear-gradient(180deg, #fbf8f2 0%, #f6f2e9 100%)",
+          background: getStatRingPaperFill(statRingTexture),
           boxShadow: hasMediaClips
             ? "0 22px 60px rgba(0, 0, 0, 0.28), inset 0 0 0 1px rgba(110, 92, 66, 0.08)"
             : "inset 0 0 0 1px rgba(110, 92, 66, 0.05)",
@@ -152,38 +288,63 @@ export const renderEditorialStatRingPreset = ({
           transformOrigin: "center center",
         }}
       >
-        <NewsCrumpleTexture
-          style={{
-            opacity: 0.05,
-            mixBlendMode: "multiply",
-            pointerEvents: "none",
-          }}
-        />
+        {showNewsprintTexture ? (
+          <NewsCrumpleTexture
+            style={{
+              opacity: newsprintOpacity,
+              mixBlendMode: "multiply",
+              pointerEvents: "none",
+            }}
+          />
+        ) : null}
 
         <div
           style={{
             position: "absolute",
             inset: 0,
-            background:
-              "repeating-linear-gradient(0deg, rgba(88, 76, 58, 0.03) 0 1px, transparent 1px 112px)," +
-              "repeating-linear-gradient(90deg, rgba(88, 76, 58, 0.03) 0 1px, transparent 1px 112px)",
-            opacity: 0.68,
+            background: getStatRingPaperShade(statRingTexture),
             pointerEvents: "none",
           }}
         />
 
-        <div
-          style={{
-            position: "absolute",
-            inset: 0,
-            backgroundImage:
-              "radial-gradient(circle at 1px 1px, rgba(55, 42, 28, 0.03) 0.45px, transparent 0.8px)",
-            backgroundSize: isVertical ? "12px 12px" : "15px 15px",
-            opacity: 0.12,
-            mixBlendMode: "multiply",
-            pointerEvents: "none",
-          }}
-        />
+        {gridTexture ? (
+          <div
+            style={{
+              position: "absolute",
+              inset: 0,
+              background: gridTexture.background,
+              opacity: gridTexture.opacity,
+              pointerEvents: "none",
+            }}
+          />
+        ) : null}
+
+        {dotTexture ? (
+          <div
+            style={{
+              position: "absolute",
+              inset: 0,
+              backgroundImage: dotTexture.backgroundImage,
+              backgroundSize: dotTexture.backgroundSize,
+              opacity: dotTexture.opacity,
+              mixBlendMode: "multiply",
+              pointerEvents: "none",
+            }}
+          />
+        ) : null}
+
+        {textureVeil ? (
+          <div
+            style={{
+              position: "absolute",
+              inset: 0,
+              background: textureVeil.background,
+              opacity: textureVeil.opacity,
+              mixBlendMode: "multiply",
+              pointerEvents: "none",
+            }}
+          />
+        ) : null}
 
         <div
           style={{
@@ -288,10 +449,11 @@ export const renderEditorialStatRingPreset = ({
             width: layout.ringWidth,
             aspectRatio: "1 / 1",
             transform: `translate(-50%, -50%) scale(${ringScale})`,
-            opacity: interpolate(ringReveal, [0, 1], [0.28, 1], {
+            opacity: ringPresence,
+            filter: `blur(${interpolate(ringPresence, [0, 1], [1.6, 0], {
               extrapolateLeft: "clamp",
               extrapolateRight: "clamp",
-            }),
+            })}px)`,
           }}
         >
           <svg viewBox="0 0 100 100" style={{ width: "100%", height: "100%" }}>

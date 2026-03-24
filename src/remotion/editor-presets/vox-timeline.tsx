@@ -51,6 +51,8 @@ export const renderVoxTimelinePreset = ({
   animation,
   aspect,
   hasMediaClips,
+  activeMediaClipIndex,
+  activeMediaClipStartFrame,
 }: PresetRendererProps) => {
   const { kicker, headline, events } = parseVoxTimelineText(overlay.text);
   const isVertical = aspect === "reel_9_16";
@@ -68,12 +70,19 @@ export const renderVoxTimelinePreset = ({
   const outroFrames = Math.min(18, Math.max(10, Math.round(safeDuration * 0.1)));
   const eventWindow = Math.max(1, safeDuration - introFrames - outroFrames);
   const segmentFrames = eventWindow / Math.max(1, events.length);
-  const activeIndex = Math.min(
+  const timedActiveIndex = Math.min(
     events.length - 1,
     Math.max(0, Math.floor(Math.max(0, frame - introFrames) / Math.max(1, segmentFrames))),
   );
+  const activeIndex =
+    hasMediaClips && activeMediaClipIndex !== undefined
+      ? Math.min(events.length - 1, Math.max(0, activeMediaClipIndex))
+      : timedActiveIndex;
   const activeEvent = events[activeIndex] ?? events[0];
-  const activeCardStart = introFrames + segmentFrames * activeIndex;
+  const activeCardStart =
+    hasMediaClips && activeMediaClipStartFrame !== undefined
+      ? Math.max(introFrames, activeMediaClipStartFrame)
+      : introFrames + segmentFrames * activeIndex;
   const activeCardEntry = spring({
     frame: frame - activeCardStart,
     fps: 30,
@@ -132,6 +141,8 @@ export const renderVoxTimelinePreset = ({
   const activeTitleSize = overlay.fontSize * (isVertical ? 0.46 : 0.42);
   const activeCaptionSize = overlay.fontSize * 0.21;
   const dateSize = overlay.fontSize * 0.18;
+  const verticalDateLabelLeft = 34;
+  const verticalDateLabelWidth = 96;
 
   return (
     <div
@@ -334,10 +345,10 @@ export const renderVoxTimelinePreset = ({
             <div
               style={{
                 position: "absolute",
-                left: isVertical ? 22 : "50%",
+                left: isVertical ? verticalDateLabelLeft : "50%",
                 top: isVertical ? "50%" : 26,
-                minWidth: isVertical ? 0 : 84,
-                padding: "0.38em 0.6em",
+                minWidth: isVertical ? verticalDateLabelWidth : 84,
+                padding: isVertical ? "0.38em 0.78em" : "0.38em 0.6em",
                 borderRadius: 999,
                 backgroundColor: isActive
                   ? "rgba(248, 243, 232, 0.98)"
@@ -349,7 +360,7 @@ export const renderVoxTimelinePreset = ({
                 fontWeight: 700,
                 letterSpacing: "0.08em",
                 textTransform: "uppercase",
-                textAlign: "center",
+                textAlign: isVertical ? "left" : "center",
                 whiteSpace: "nowrap",
                 boxShadow: "0 1px 0 rgba(45, 33, 17, 0.05)",
                 opacity: labelOpacity,

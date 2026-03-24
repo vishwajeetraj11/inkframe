@@ -70,6 +70,9 @@ export const normalizeTextOverlays = (textOverlays: TextOverlay[]): TextOverlay[
         createdaleyTexture: normalizeCreatedaleyTexture(
           (overlay as Partial<TextOverlay>).createdaleyTexture,
         ),
+        syncMediaToTimelineEvents: Boolean(
+          (overlay as Partial<TextOverlay>).syncMediaToTimelineEvents,
+        ),
       };
     })
     .filter((overlay) => overlay.text.trim().length > 0);

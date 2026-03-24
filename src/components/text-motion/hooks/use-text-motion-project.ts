@@ -1,6 +1,7 @@
 "use client";
 
 import {
+  getFilenameFromContentDisposition,
   isExportDownloadPayload,
   triggerBrowserDownload,
 } from "@/lib/export/download";
@@ -204,9 +205,13 @@ export const useTextMotionProject = () => {
       } else {
         const blob = await response.blob();
         const url = URL.createObjectURL(blob);
+        const filename =
+          getFilenameFromContentDisposition(
+            response.headers.get("Content-Disposition"),
+          ) ?? `text-motion-${safeProject.aspect}.mp4`;
         triggerBrowserDownload({
           url,
-          filename: `text-motion-${safeProject.aspect}-${Date.now()}.mp4`,
+          filename,
         });
         URL.revokeObjectURL(url);
       }

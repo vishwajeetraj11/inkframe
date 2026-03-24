@@ -39,14 +39,7 @@ export const EditorApp = ({
     session.setSelectedTextId(null);
   };
 
-  const aspectLabel = (value: typeof session.activeAspect): string =>
-    value === "reel_9_16" ? "9:16" : "16:9";
-
   const workspaceStats = [
-    {
-      label: "Aspect",
-      value: aspectLabel(session.activeAspect),
-    },
     {
       label: "Timeline",
       value: `${(session.timelineDurationInFrames / 30).toFixed(2)}s`,
@@ -107,6 +100,7 @@ export const EditorApp = ({
               onSelectAudio={selectAudio}
               onAddText={handleAddText}
               onFilesSelected={session.onFilesSelected}
+              onAddRemotionSfx={session.onAddRemotionSfx}
               onRemoveAsset={session.onRemoveAsset}
             />
 
@@ -189,24 +183,6 @@ export const EditorApp = ({
                   session.setSelectedTextId(null);
                 }
               }}
-              onUpdateAudio={(trackId, patch) => {
-                session.dispatch({
-                  type: "update-audio-track",
-                  aspect: session.activeAspect,
-                  trackId,
-                  patch,
-                });
-              }}
-              onRemoveAudio={(trackId) => {
-                session.dispatch({
-                  type: "remove-audio-track",
-                  aspect: session.activeAspect,
-                  trackId,
-                });
-                if (session.selectedAudioId === trackId) {
-                  session.setSelectedAudioId(null);
-                }
-              }}
             />
           </div>
 
@@ -221,6 +197,7 @@ export const EditorApp = ({
               selectedClip={session.selectedClip}
               selectedTextOverlay={session.selectedTextOverlay}
               selectedAudioTrack={session.selectedAudioTrack}
+              assetNames={session.assetNames}
               isExporting={session.isExporting}
               activeMediaFootprintBytes={session.activeMediaFootprintBytes}
               onUpdateClip={(clipId, patch) => {
@@ -246,6 +223,16 @@ export const EditorApp = ({
                   trackId,
                   patch,
                 });
+              }}
+              onRemoveAudio={(trackId) => {
+                session.dispatch({
+                  type: "remove-audio-track",
+                  aspect: session.activeAspect,
+                  trackId,
+                });
+                if (session.selectedAudioId === trackId) {
+                  session.setSelectedAudioId(null);
+                }
               }}
             />
           </div>

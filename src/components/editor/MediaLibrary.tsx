@@ -1,5 +1,6 @@
 "use client";
 
+import { REMOTION_SFX_LIBRARY, type RemotionSfxId } from "@/lib/editor/remotion-sfx";
 import type { AssetKind } from "@/lib/editor/types";
 
 interface MediaLibraryAsset {
@@ -7,11 +8,13 @@ interface MediaLibraryAsset {
   kind: AssetKind;
   name: string;
   size: number;
+  externalUrl?: string;
 }
 
 interface MediaLibraryProps {
   assets: MediaLibraryAsset[];
   onFilesSelected: (files: FileList | null) => void;
+  onAddRemotionSfx: (effectId: RemotionSfxId) => void;
   onRemoveAsset: (assetId: string) => void;
   disabled?: boolean;
 }
@@ -37,6 +40,7 @@ const kindLabel: Record<AssetKind, string> = {
 export const MediaLibrary = ({
   assets,
   onFilesSelected,
+  onAddRemotionSfx,
   onRemoveAsset,
   disabled,
 }: MediaLibraryProps) => {
@@ -83,6 +87,37 @@ export const MediaLibrary = ({
         Upload images, video, and audio to populate the timeline and monitor.
       </p>
 
+      <div className="mb-4 rounded-2xl border border-white/8 bg-white/[0.03] p-3">
+        <div className="flex items-start justify-between gap-3">
+          <div>
+            <p className="app-eyebrow text-[10px] uppercase tracking-[0.18em] text-neutral-500">
+              Remotion SFX
+            </p>
+            <p className="mt-1 text-xs leading-5 text-neutral-400">
+              Drop in quick editorial sounds without uploading files.
+            </p>
+          </div>
+
+          <span className="rounded-full border border-white/10 bg-white/[0.04] px-2.5 py-1 text-[10px] uppercase tracking-[0.18em] text-neutral-400">
+            built-in
+          </span>
+        </div>
+
+        <div className="mt-3 flex flex-wrap gap-2">
+          {REMOTION_SFX_LIBRARY.map((effect) => (
+            <button
+              key={effect.id}
+              type="button"
+              disabled={disabled}
+              onClick={() => onAddRemotionSfx(effect.id)}
+              className="rounded-lg border border-amber-300/20 bg-amber-300/10 px-2.5 py-1 text-[9px] font-medium text-amber-100 transition hover:bg-amber-300/16 disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              {effect.label}
+            </button>
+          ))}
+        </div>
+      </div>
+
       <div className="max-h-72 space-y-2 overflow-y-auto pr-1">
         {assets.length === 0 ? (
           <div className="rounded-2xl border border-dashed border-white/8 bg-white/[0.03] px-4 py-5 text-sm text-neutral-400">
@@ -106,14 +141,33 @@ export const MediaLibrary = ({
                     type="button"
                     disabled={disabled}
                     onClick={() => onRemoveAsset(asset.assetId)}
-                    className="rounded-xl border border-rose-400/40 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.18em] text-rose-200 hover:bg-rose-500/12 disabled:cursor-not-allowed disabled:opacity-60"
+                    aria-label={`Delete ${asset.name}`}
+                    title={`Delete ${asset.name}`}
+                    className="inline-flex h-9 w-9 items-center justify-center rounded-xl border border-rose-400/35 text-rose-200 transition hover:bg-rose-500/12 disabled:cursor-not-allowed disabled:opacity-60"
                   >
-                    Remove
+                    <svg
+                      aria-hidden="true"
+                      viewBox="0 0 24 24"
+                      className="h-4 w-4"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="1.9"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    >
+                      <path d="M3 6h18" />
+                      <path d="M8 6V4.8c0-.66.54-1.2 1.2-1.2h5.6c.66 0 1.2.54 1.2 1.2V6" />
+                      <path d="M6.5 6l.9 12.1A2 2 0 0 0 9.39 20h5.22a2 2 0 0 0 1.99-1.9L17.5 6" />
+                      <path d="M10 10.2v5.6" />
+                      <path d="M14 10.2v5.6" />
+                    </svg>
                   </button>
                 </div>
               </div>
 
-              <p className="app-data mt-2 text-xs text-neutral-500">{bytesToLabel(asset.size)}</p>
+              <p className="app-data mt-2 text-xs text-neutral-500">
+                {asset.externalUrl ? "Remotion SFX" : bytesToLabel(asset.size)}
+              </p>
             </div>
           ))
         )}

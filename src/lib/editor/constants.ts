@@ -53,6 +53,7 @@ export const PRESET_MIN_DURATIONS_FRAMES: Record<TextOverlayStylePreset, number>
   "vox-explainer": 1,
   "vox-typography": 1,
   "world-map-focus": 1,
+  "film-frame-gallery": 1,
   "editorial-bar-chart": 1,
   "createdaley-opener": Math.round(FPS * 4.5),
   "news-clipping": FPS * 5 + FPS * 3, // animation + hold

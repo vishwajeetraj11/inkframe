@@ -3,6 +3,7 @@ export { renderCreatedaleyOpenerPreset } from "./createdaley-opener";
 export { renderEditorialBarChartPreset } from "./editorial-bar-chart";
 export { renderEditorialSeatArcPreset } from "./editorial-seat-arc";
 export { renderEditorialStatRingPreset } from "./editorial-stat-ring";
+export { renderFilmFrameGalleryPreset } from "./film-frame-gallery";
 export { renderNewsClippingPreset } from "./news-clipping";
 export { renderRegionalMapFocusPreset } from "./regional-map-focus";
 export { renderVoxExplainerPreset } from "./vox-explainer";

@@ -1,6 +1,14 @@
 "use client";
 
 import { FPS } from "@/lib/editor/constants";
+import { parseCreatedaleyOpenerText } from "@/lib/editor/createdaley-opener";
+import {
+  formatEditorialStatRingValue,
+  parseEditorialStatRingText,
+} from "@/lib/editor/editorial-stat-ring";
+import { parseFilmFrameGalleryText } from "@/lib/editor/film-frame-gallery";
+import { parseChartCardText } from "@/lib/editor/parsers/chart-card";
+import { parseRegionalMapFocusText } from "@/lib/editor/regional-map-focus";
 import {
   buildRenderTrack,
   getTransitionBetween,
@@ -8,7 +16,6 @@ import {
 } from "@/lib/editor/timeline";
 import {
   TEXT_OVERLAY_STYLE_PRESET_LABELS,
-  type AudioTrack,
   type Clip,
   type TextOverlay,
   type VersionTimeline,
@@ -19,7 +26,6 @@ import {
   buildTicks,
   formatSeconds,
   framesToSeconds,
-  getAudioBlockClassName,
   getClipBlockClassName,
   getTextBlockClassName,
   getTickStepInSeconds,
@@ -27,12 +33,12 @@ import {
   packLaneRows,
   parseNumber,
   secondsToFrames,
-  truncateLabel,
 } from "./timeline/timeline-utils";
 import { TimelineClipTrack } from "./timeline/TimelineClipTrack";
 import { TimelineTextTrack } from "./timeline/TimelineTextTrack";
 import { TimelineAudioTrack } from "./timeline/TimelineAudioTrack";
 import { TimelineGuides } from "./timeline/TimelineGuides";
+import { parseVoxTimelineText } from "@/lib/editor/vox-timeline";
 
 interface TimelineProps {
   version: VersionTimeline;
@@ -52,11 +58,128 @@ interface TimelineProps {
   onAddText: () => void;
   onUpdateText: (textId: string, patch: Partial<Omit<TextOverlay, "id">>) => void;
   onRemoveText: (textId: string) => void;
-  onUpdateAudio: (audioId: string, patch: Partial<Omit<AudioTrack, "id" | "assetId">>) => void;
-  onRemoveAudio: (audioId: string) => void;
 }
 
 type ClipTrackEntry = ReturnType<typeof buildRenderTrack>["entries"][number];
+
+const DeleteIcon = () => (
+  <svg
+    aria-hidden="true"
+    viewBox="0 0 20 20"
+    fill="none"
+    style={{ width: 14, height: 14 }}
+  >
+    <path
+      d="M5.75 6.5v7.25m4.25-7.25v7.25m4.25-7.25v7.25M4.5 4.25h11m-8.5 0 .5-1.25h5l.5 1.25m-8.5 0L5 16.5h10L15.25 4.25"
+      stroke="currentColor"
+      strokeWidth="1.5"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    />
+  </svg>
+);
+
+const stripOverlayMarkup = (value: string): string =>
+  value.replace(/\[\[/g, "").replace(/\]\]/g, "").replace(/\s+/g, " ").trim();
+
+const truncateOverlayCopy = (value: string, limit: number = 120): string => {
+  const normalized = stripOverlayMarkup(value);
+  if (normalized.length <= limit) {
+    return normalized;
+  }
+
+  return `${normalized.slice(0, limit - 1).trimEnd()}…`;
+};
+
+const getWorldMapSummary = (text: string): { title: string; detail: string } => {
+  const lines = text
+    .split("\n")
+    .map((line) => line.trim())
+    .filter((line) => line.length > 0);
+  const headline = stripOverlayMarkup(lines[0] ?? "World Map Focus");
+  const subhead = lines.find((line, index) =>
+    index > 0 && !line.toLowerCase().startsWith("country:"),
+  );
+  const countryLine = lines.find((line) => line.toLowerCase().startsWith("country:"));
+  const country = countryLine ? countryLine.split(":").slice(1).join(":").trim() : "";
+
+  return {
+    title: headline || "World Map Focus",
+    detail: [country, subhead ? truncateOverlayCopy(subhead, 90) : ""]
+      .filter((part) => part.length > 0)
+      .join(" • "),
+  };
+};
+
+const getOverlaySummary = (
+  overlay: TextOverlay,
+): { title: string; detail: string } => {
+  switch (overlay.stylePreset) {
+    case "chart-card":
+    case "editorial-seat-arc": {
+      const parsed = parseChartCardText(overlay.text, { useFallbackRows: false });
+      return {
+        title: stripOverlayMarkup(parsed.headline) || TEXT_OVERLAY_STYLE_PRESET_LABELS[overlay.stylePreset],
+        detail: `${parsed.rows.length} data row${parsed.rows.length === 1 ? "" : "s"}${parsed.subhead ? ` • ${truncateOverlayCopy(parsed.subhead, 82)}` : ""}`,
+      };
+    }
+    case "editorial-stat-ring": {
+      const parsed = parseEditorialStatRingText(overlay.text);
+      return {
+        title: stripOverlayMarkup(parsed.headline) || "Stat Ring Card",
+        detail: `${formatEditorialStatRingValue(parsed.value, parsed.suffix)} • ${truncateOverlayCopy(parsed.subhead, 82)}`,
+      };
+    }
+    case "regional-map-focus": {
+      const parsed = parseRegionalMapFocusText(overlay.text);
+      const geography = [parsed.primaryCountry, parsed.secondaryCountry, parsed.focusMode]
+        .filter((part) => part.trim().length > 0)
+        .join(" • ");
+      return {
+        title: stripOverlayMarkup(parsed.headline) || "Regional Map Focus",
+        detail: geography || truncateOverlayCopy(parsed.subhead, 82),
+      };
+    }
+    case "film-frame-gallery": {
+      const parsed = parseFilmFrameGalleryText(overlay.text);
+      const metadata = [parsed.location, parsed.year]
+        .filter((part) => part.trim().length > 0)
+        .join(" • ");
+      return {
+        title: stripOverlayMarkup(parsed.headline) || "Film Frame Gallery",
+        detail: metadata || truncateOverlayCopy(parsed.subhead, 82),
+      };
+    }
+    case "world-map-focus":
+      return getWorldMapSummary(overlay.text);
+    case "createdaley-opener": {
+      const parsed = parseCreatedaleyOpenerText(overlay.text);
+      return {
+        title: stripOverlayMarkup(parsed.wordmark) || "Dictionary Animation",
+        detail: `${parsed.partOfSpeech} • ${truncateOverlayCopy(parsed.definition, 82)}`,
+      };
+    }
+    case "vox-timeline":
+    case "vox-timeline-ribbon":
+    case "vox-timeline-ledger": {
+      const parsed = parseVoxTimelineText(overlay.text);
+      return {
+        title: stripOverlayMarkup(parsed.headline) || TEXT_OVERLAY_STYLE_PRESET_LABELS[overlay.stylePreset],
+        detail: `${parsed.events.length} event${parsed.events.length === 1 ? "" : "s"} • ${parsed.kicker}`,
+      };
+    }
+    default: {
+      const lines = overlay.text
+        .split("\n")
+        .map((line) => line.trim())
+        .filter((line) => line.length > 0);
+      return {
+        title: stripOverlayMarkup(lines[0] ?? TEXT_OVERLAY_STYLE_PRESET_LABELS[overlay.stylePreset]),
+        detail: truncateOverlayCopy(lines[1] ?? "", 82),
+      };
+    }
+  }
+};
 
 export const Timeline = ({
   version,
@@ -76,8 +199,6 @@ export const Timeline = ({
   onAddText,
   onUpdateText,
   onRemoveText,
-  onUpdateAudio,
-  onRemoveAudio,
 }: TimelineProps) => {
   const clipTrack = buildRenderTrack(version);
   const totalFrames = getVersionRenderDurationInFrames(version);
@@ -293,9 +414,11 @@ export const Timeline = ({
                         type="button"
                         disabled={disabled}
                         onClick={() => onRemoveClip(clip.id)}
-                        className="rounded border border-rose-500/70 px-2 py-1 text-xs font-semibold text-rose-200"
+                        aria-label={`Delete ${assetNames[clip.assetId] ?? `clip ${index + 1}`}`}
+                        title="Delete clip"
+                        className="inline-flex h-8 w-8 items-center justify-center rounded border border-rose-500/55 text-rose-200 transition hover:bg-rose-500/10 disabled:opacity-40"
                       >
-                        Delete
+                        <DeleteIcon />
                       </button>
                     </div>
                   </div>
@@ -355,193 +478,102 @@ export const Timeline = ({
           {version.textOverlays.length === 0 ? (
             <p className="text-xs text-neutral-400">No text overlays added.</p>
           ) : (
-            version.textOverlays.map((overlay) => (
-              <div
-                key={overlay.id}
-                role="button"
-                tabIndex={0}
-                onClick={() => onSelectText(overlay.id)}
-                onKeyDown={(event) =>
-                  activateOnEnterOrSpace(event, () => onSelectText(overlay.id))
-                }
-                className={`w-full rounded-lg border px-3 py-2 text-left ${
-                  selectedTextId === overlay.id
-                    ? "border-cyan-300 bg-cyan-300/10"
-                    : "border-neutral-700 bg-neutral-800/60"
-                }`}
-              >
-                <div className="flex items-center justify-between gap-3">
-                  <p className="max-w-[calc(100%-5rem)] whitespace-pre-wrap break-words text-sm leading-snug font-medium text-neutral-100">
-                    {overlay.text}
-                  </p>
-                  <button
-                    type="button"
-                    disabled={disabled}
-                    onClick={(event) => {
-                      event.stopPropagation();
-                      onRemoveText(overlay.id);
-                    }}
-                    className="rounded border border-rose-500/70 px-2 py-0.5 text-xs font-semibold text-rose-200"
-                  >
-                    Delete
-                  </button>
+            version.textOverlays.map((overlay) => {
+              const summary = getOverlaySummary(overlay);
+
+              return (
+                <div
+                  key={overlay.id}
+                  role="button"
+                  tabIndex={0}
+                  onClick={() => onSelectText(overlay.id)}
+                  onKeyDown={(event) =>
+                    activateOnEnterOrSpace(event, () => onSelectText(overlay.id))
+                  }
+                  className={`w-full rounded-lg border px-3 py-2 text-left ${
+                    selectedTextId === overlay.id
+                      ? "border-cyan-300 bg-cyan-300/10"
+                      : "border-neutral-700 bg-neutral-800/60"
+                  }`}
+                >
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      <span className="inline-flex rounded-full border border-white/10 bg-white/[0.04] px-2.5 py-1 text-[10px] uppercase tracking-[0.18em] text-neutral-400">
+                        {TEXT_OVERLAY_STYLE_PRESET_LABELS[overlay.stylePreset]}
+                      </span>
+                      <p className="mt-2 text-sm font-medium leading-snug text-neutral-100">
+                        {summary.title}
+                      </p>
+                      {summary.detail ? (
+                        <p className="mt-1 text-xs leading-5 text-neutral-400">
+                          {summary.detail}
+                        </p>
+                      ) : null}
+                    </div>
+
+                    <button
+                      type="button"
+                      disabled={disabled}
+                      onClick={(event) => {
+                        event.stopPropagation();
+                        onRemoveText(overlay.id);
+                      }}
+                      aria-label="Delete text overlay"
+                      title="Delete text overlay"
+                      className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded border border-rose-500/55 text-rose-200 transition hover:bg-rose-500/10 disabled:opacity-40"
+                    >
+                      <DeleteIcon />
+                    </button>
+                  </div>
+
+                  <div className="mt-3 grid grid-cols-2 gap-2 text-xs text-neutral-200">
+                    <label className="space-y-1">
+                      <span className="block text-neutral-400">Start (s)</span>
+                      <input
+                        type="number"
+                        min={0}
+                        step={0.1}
+                        disabled={disabled}
+                        value={framesToSeconds(overlay.startFrame)}
+                        onChange={(event) => {
+                          const seconds = parseNumber(
+                            event.currentTarget.value,
+                            framesToSeconds(overlay.startFrame),
+                          );
+
+                          onUpdateText(overlay.id, {
+                            startFrame: Math.max(0, secondsToFrames(seconds)),
+                          });
+                        }}
+                        className="w-full rounded border border-neutral-600 bg-neutral-900 px-2 py-1"
+                      />
+                    </label>
+
+                    <label className="space-y-1">
+                      <span className="block text-neutral-400">End (s)</span>
+                      <input
+                        type="number"
+                        min={0.1}
+                        step={0.1}
+                        disabled={disabled}
+                        value={framesToSeconds(overlay.endFrame)}
+                        onChange={(event) => {
+                          const seconds = parseNumber(
+                            event.currentTarget.value,
+                            framesToSeconds(overlay.endFrame),
+                          );
+
+                          onUpdateText(overlay.id, {
+                            endFrame: Math.max(1, secondsToFrames(seconds)),
+                          });
+                        }}
+                        className="w-full rounded border border-neutral-600 bg-neutral-900 px-2 py-1"
+                      />
+                    </label>
+                  </div>
                 </div>
-
-                <div className="mt-2 grid grid-cols-2 gap-2 text-xs text-neutral-200">
-                  <label className="space-y-1">
-                    <span className="block text-neutral-400">Start (s)</span>
-                    <input
-                      type="number"
-                      min={0}
-                      step={0.1}
-                      disabled={disabled}
-                      value={framesToSeconds(overlay.startFrame)}
-                      onChange={(event) => {
-                        const seconds = parseNumber(
-                          event.currentTarget.value,
-                          framesToSeconds(overlay.startFrame),
-                        );
-
-                        onUpdateText(overlay.id, {
-                          startFrame: Math.max(0, secondsToFrames(seconds)),
-                        });
-                      }}
-                      className="w-full rounded border border-neutral-600 bg-neutral-900 px-2 py-1"
-                    />
-                  </label>
-
-                  <label className="space-y-1">
-                    <span className="block text-neutral-400">End (s)</span>
-                    <input
-                      type="number"
-                      min={0.1}
-                      step={0.1}
-                      disabled={disabled}
-                      value={framesToSeconds(overlay.endFrame)}
-                      onChange={(event) => {
-                        const seconds = parseNumber(
-                          event.currentTarget.value,
-                          framesToSeconds(overlay.endFrame),
-                        );
-
-                        onUpdateText(overlay.id, {
-                          endFrame: Math.max(1, secondsToFrames(seconds)),
-                        });
-                      }}
-                      className="w-full rounded border border-neutral-600 bg-neutral-900 px-2 py-1"
-                    />
-                  </label>
-                </div>
-              </div>
-            ))
-          )}
-        </div>
-      </div>
-
-      <div className="space-y-3 rounded-[22px] border border-white/8 bg-white/[0.04] p-3">
-        <h3 className="text-sm font-semibold text-neutral-200">Audio Tracks</h3>
-
-        <div className="space-y-2">
-          {version.audioTracks.length === 0 ? (
-            <p className="text-xs text-neutral-400">Upload audio files to add tracks.</p>
-          ) : (
-            version.audioTracks.map((track) => (
-              <div
-                key={track.id}
-                role="button"
-                tabIndex={0}
-                onClick={() => onSelectAudio(track.id)}
-                onKeyDown={(event) =>
-                  activateOnEnterOrSpace(event, () => onSelectAudio(track.id))
-                }
-                className={`w-full rounded-lg border px-3 py-2 text-left ${
-                  selectedAudioId === track.id
-                    ? "border-cyan-300 bg-cyan-300/10"
-                    : "border-neutral-700 bg-neutral-800/60"
-                }`}
-              >
-                <div className="flex items-center justify-between gap-3">
-                  <p className="truncate text-sm font-medium text-neutral-100">
-                    {assetNames[track.assetId] ?? track.assetId}
-                  </p>
-                  <button
-                    type="button"
-                    disabled={disabled}
-                    onClick={(event) => {
-                      event.stopPropagation();
-                      onRemoveAudio(track.id);
-                    }}
-                    className="rounded border border-rose-500/70 px-2 py-0.5 text-xs font-semibold text-rose-200"
-                  >
-                    Delete
-                  </button>
-                </div>
-
-                <div className="mt-2 grid grid-cols-3 gap-2 text-xs text-neutral-200">
-                  <label className="space-y-1">
-                    <span className="block text-neutral-400">Start (s)</span>
-                    <input
-                      type="number"
-                      min={0}
-                      step={0.1}
-                      disabled={disabled}
-                      value={framesToSeconds(track.startFrame)}
-                      onChange={(event) => {
-                        const seconds = parseNumber(
-                          event.currentTarget.value,
-                          framesToSeconds(track.startFrame),
-                        );
-
-                        onUpdateAudio(track.id, {
-                          startFrame: Math.max(0, secondsToFrames(seconds)),
-                        });
-                      }}
-                      className="w-full rounded border border-neutral-600 bg-neutral-900 px-2 py-1"
-                    />
-                  </label>
-
-                  <label className="space-y-1">
-                    <span className="block text-neutral-400">End (s)</span>
-                    <input
-                      type="number"
-                      min={0.1}
-                      step={0.1}
-                      disabled={disabled}
-                      value={framesToSeconds(track.endFrame)}
-                      onChange={(event) => {
-                        const seconds = parseNumber(
-                          event.currentTarget.value,
-                          framesToSeconds(track.endFrame),
-                        );
-
-                        onUpdateAudio(track.id, {
-                          endFrame: Math.max(1, secondsToFrames(seconds)),
-                        });
-                      }}
-                      className="w-full rounded border border-neutral-600 bg-neutral-900 px-2 py-1"
-                    />
-                  </label>
-
-                  <label className="space-y-1">
-                    <span className="block text-neutral-400">Volume</span>
-                    <input
-                      type="range"
-                      min={0}
-                      max={1}
-                      step={0.05}
-                      disabled={disabled}
-                      value={track.volume}
-                      onChange={(event) => {
-                        onUpdateAudio(track.id, {
-                          volume: Number.parseFloat(event.currentTarget.value),
-                        });
-                      }}
-                      className="w-full"
-                    />
-                  </label>
-                </div>
-              </div>
-            ))
+              );
+            })
           )}
         </div>
       </div>

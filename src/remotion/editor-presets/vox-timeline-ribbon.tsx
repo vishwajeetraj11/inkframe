@@ -16,6 +16,8 @@ export const renderVoxTimelineRibbonPreset = ({
   animation,
   aspect,
   hasMediaClips,
+  activeMediaClipIndex,
+  activeMediaClipStartFrame,
 }: PresetRendererProps) => {
   const { kicker, headline, events } = parseVoxTimelineText(overlay.text);
   const isVertical = aspect === "reel_9_16";
@@ -24,14 +26,21 @@ export const renderVoxTimelineRibbonPreset = ({
   const outroFrames = Math.min(18, Math.max(10, Math.round(safeDuration * 0.1)));
   const eventWindow = Math.max(1, safeDuration - introFrames - outroFrames);
   const segmentFrames = eventWindow / Math.max(1, events.length);
-  const activeIndex = Math.min(
+  const timedActiveIndex = Math.min(
     events.length - 1,
     Math.max(0, Math.floor(Math.max(0, frame - introFrames) / Math.max(1, segmentFrames))),
   );
+  const activeIndex =
+    hasMediaClips && activeMediaClipIndex !== undefined
+      ? Math.min(events.length - 1, Math.max(0, activeMediaClipIndex))
+      : timedActiveIndex;
   const activeEvent = events[activeIndex] ?? events[0];
   const activeProgress =
     events.length <= 1 ? 0.5 : activeIndex / Math.max(1, events.length - 1);
-  const activeCardStart = introFrames + segmentFrames * activeIndex;
+  const activeCardStart =
+    hasMediaClips && activeMediaClipStartFrame !== undefined
+      ? Math.max(introFrames, activeMediaClipStartFrame)
+      : introFrames + segmentFrames * activeIndex;
   const entry = spring({
     frame,
     fps: 30,
@@ -402,7 +411,7 @@ export const renderVoxTimelineRibbonPreset = ({
                 style={{
                   position: "absolute",
                   left: "50%",
-                  bottom: isVertical ? 24 : 22,
+                  bottom: isVertical ? 28 : 22,
                   transform: "translateX(-50%)",
                   whiteSpace: "nowrap",
                   padding: "0.26em 0.58em",

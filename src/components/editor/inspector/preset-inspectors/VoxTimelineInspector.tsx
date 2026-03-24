@@ -6,6 +6,7 @@ interface VoxTimelineInspectorProps {
   data: ReturnType<typeof getEditableVoxTimelineData>;
   disabled?: boolean;
   overlay: TextOverlay;
+  onUpdateOverlay: (patch: Partial<Omit<TextOverlay, "id">>) => void;
   onUpdateText: (
     updater: (
       current: ReturnType<typeof getEditableVoxTimelineData>,
@@ -17,6 +18,7 @@ export const VoxTimelineInspector = ({
   data,
   disabled,
   overlay,
+  onUpdateOverlay,
   onUpdateText,
 }: VoxTimelineInspectorProps) => {
   const presetLabel = TEXT_OVERLAY_STYLE_PRESET_LABELS[overlay.stylePreset];
@@ -31,6 +33,28 @@ export const VoxTimelineInspector = ({
           Pair 3 to 6 chronological events with uploaded image clips arranged in order.
         </p>
       </div>
+
+      <label className="flex items-start justify-between gap-3 rounded-xl border border-white/10 bg-white/[0.03] px-3 py-3 text-xs text-neutral-200">
+        <div className="space-y-1">
+          <div className="font-medium text-neutral-100">Switch media with events</div>
+          <p className="text-[11px] leading-5 text-neutral-400">
+            Use uploaded clips as an ordered stack and cut to the next clip whenever
+            the timeline advances to a new event.
+          </p>
+        </div>
+
+        <input
+          type="checkbox"
+          disabled={disabled}
+          checked={Boolean(overlay.syncMediaToTimelineEvents)}
+          onChange={(event) => {
+            onUpdateOverlay({
+              syncMediaToTimelineEvents: event.currentTarget.checked,
+            });
+          }}
+          className="mt-1 h-4 w-4 accent-cyan-300"
+        />
+      </label>
 
       <LabeledControl className="block space-y-1 text-xs text-neutral-200" label="Kicker">
         <input
