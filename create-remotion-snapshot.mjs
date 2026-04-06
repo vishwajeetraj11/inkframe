@@ -44,7 +44,12 @@ const mkdirIfMissing = async (sandbox, dirPath) => {
   try {
     await sandbox.mkDir(dirPath);
   } catch (error) {
-    const message = error instanceof Error ? error.message : String(error);
+    const message =
+      error instanceof Error
+        ? error.message
+        : typeof error === "object" && error !== null
+          ? JSON.stringify(error)
+          : String(error);
 
     if (message.includes("File exists")) {
       return;
