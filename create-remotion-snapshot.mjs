@@ -1,5 +1,4 @@
 import path from "node:path";
-import { readdirSync, statSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { put } from "@vercel/blob";
 import { bundle } from "@remotion/bundler";
@@ -66,20 +65,9 @@ const run = async () => {
     },
   });
 
-  const preMkDirTree = async (localDir, sandboxDir) => {
-    for (const entry of readdirSync(localDir, { withFileTypes: true })) {
-      if (entry.isDirectory()) {
-        const sandboxSubDir = `${sandboxDir}/${entry.name}`;
-        await sandbox.mkDir(sandboxSubDir);
-        await preMkDirTree(path.join(localDir, entry.name), sandboxSubDir);
-      }
-    }
-  };
-
   try {
     console.log("[create-remotion-snapshot] Uploading bundle to sandbox...");
     await sandbox.mkDir(sandboxBundleDir);
-    await preMkDirTree(path.join(cwd, buildDir), sandboxBundleDir);
     await addBundleToSandbox({
       sandbox,
       bundleDir: buildDir,
