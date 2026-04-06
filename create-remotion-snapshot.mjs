@@ -65,10 +65,11 @@ const uploadBundleToSandbox = async (sandbox) => {
   const bundleDirs = new Set();
 
   for (const file of bundleFiles) {
-    const dir = path.dirname(file.path);
+    let dir = path.dirname(file.path);
 
-    if (dir && dir !== ".") {
+    while (dir && dir !== ".") {
       bundleDirs.add(dir);
+      dir = path.dirname(dir);
     }
   }
 
