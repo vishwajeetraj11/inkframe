@@ -1,6 +1,9 @@
 "use client";
 
-import { REMOTION_SFX_LIBRARY, type RemotionSfxId } from "@/lib/editor/remotion-sfx";
+import {
+  REMOTION_SFX_LIBRARY,
+  type RemotionSfxId,
+} from "@/lib/editor/remotion-sfx";
 import type { AssetKind } from "@/lib/editor/types";
 
 interface MediaLibraryAsset {
@@ -90,27 +93,27 @@ export const MediaLibrary = ({
       <div className="mb-4 rounded-2xl border border-white/8 bg-white/[0.03] p-3">
         <div className="flex items-start justify-between gap-3">
           <div>
-            <p className="app-eyebrow text-[10px] uppercase tracking-[0.18em] text-neutral-500">
+            <p className="app-eyebrow text-[9px] uppercase tracking-[0.16em] text-neutral-500">
               Remotion SFX
             </p>
-            <p className="mt-1 text-xs leading-5 text-neutral-400">
+            <p className="mt-1 text-[11px] leading-4 text-neutral-400">
               Drop in quick editorial sounds without uploading files.
             </p>
           </div>
 
-          <span className="rounded-full border border-white/10 bg-white/[0.04] px-2.5 py-1 text-[10px] uppercase tracking-[0.18em] text-neutral-400">
+          <span className="rounded-full border border-white/10 bg-white/[0.04] px-2.5 py-0.5 text-[9px] uppercase tracking-[0.16em] text-neutral-400">
             built-in
           </span>
         </div>
 
-        <div className="mt-3 flex flex-wrap gap-2">
+        <div className="mt-3 flex flex-wrap gap-1.5">
           {REMOTION_SFX_LIBRARY.map((effect) => (
             <button
               key={effect.id}
               type="button"
               disabled={disabled}
               onClick={() => onAddRemotionSfx(effect.id)}
-              className="rounded-lg border border-amber-300/20 bg-amber-300/10 px-2.5 py-1 text-[9px] font-medium text-amber-100 transition hover:bg-amber-300/16 disabled:cursor-not-allowed disabled:opacity-60"
+              className="rounded-md border border-amber-300/20 bg-amber-300/10 px-1.5 py-0.5 text-[7px] font-medium text-amber-100 transition hover:bg-amber-300/16 disabled:cursor-not-allowed disabled:opacity-60"
             >
               {effect.label}
             </button>

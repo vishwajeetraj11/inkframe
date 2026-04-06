@@ -1,4 +1,4 @@
-# Ephemeral Video Editor
+# Inkframe
 
 A Next.js + Remotion app for building short-form video timelines, AI-assisted caption scenes, and text-motion compositions without persisting user media after export.
 
@@ -15,11 +15,29 @@ A Next.js + Remotion app for building short-form video timelines, AI-assisted ca
 - `/editor`: timeline editor with asset library, preview, inspector, and AI chat drawer.
 - `/text-motion`: AI text-motion editor and Remotion preview.
 
+## Presets
+
+Available `stylePreset` values (registered in `src/lib/editor/types.ts`):
+
+| Preset | Description |
+|---|---|
+| `vox-timeline` | Vox-style annotated timeline |
+| `vox-timeline-ribbon` | Ribbon variant of vox-timeline |
+| `vox-timeline-ledger` | Ledger variant of vox-timeline |
+| `world-map-focus` | World map with animated focus point |
+| `regional-map-focus` | Regional map with animated focus point |
+| `film-frame-gallery` | Animated film-frame photo gallery |
+| `editorial-bar-chart` | Editorial animated bar chart |
+| `editorial-stat-ring` | Editorial animated stat ring |
+| `editorial-seat-arc` | Editorial seat arc diagram |
+| `createdaley-opener` | Craig Daley-style documentary opener |
+| `chart-card` | Data chart card overlay |
+| `news-clipping` | Newspaper clipping style overlay |
+
 ## Architecture
 
 - `src/lib/editor`
   - Editor domain logic, reducers, schema validation, template catalog, and structured preset parsers.
-  - `timeline.ts` is now a public facade over `domain/` modules.
   - `templates/` is the typed editor preset catalog.
   - `parsers/` contains structured overlay parsers such as chart-card, stat-ring, and createdaley-opener.
 - `src/lib/text-motion`
@@ -32,14 +50,14 @@ A Next.js + Remotion app for building short-form video timelines, AI-assisted ca
   - Route-free orchestration for export, generation, temp-dir lifecycle, and chat context handling.
 - `src/remotion`
   - Remotion compositions for the editor and text-motion experiences.
-  - `editor-presets/types.ts` defines preset renderer contracts for ongoing renderer decomposition.
+  - `editor-presets/` holds one renderer file per preset; `EditorComposition.tsx` routes to them by `stylePreset`.
 
-Additional notes are in [docs/architecture.md](/Users/vishwajeetraj/Documents/react/editor/docs/architecture.md).
+Additional notes are in [docs/architecture.md](./docs/architecture.md).
 
 ## Commands
 
 - `npm run dev`: start the Next.js app locally.
-- `npm run build`: production build.
+- `npm run build`: production build + create Remotion snapshot.
 - `npm run lint`: ESLint checks.
 - `npm run typecheck`: TypeScript checks.
 - `npm run test:run`: run Vitest once.
@@ -51,11 +69,17 @@ The current safety net covers:
 
 - editor template catalog lookup
 - editor timeline sanitization and render-track behavior
-- AI editor action parsing
+- AI editor action parsing and session application
 - text-motion project sanitization
 - chat-service context parsing
 - route validation for export endpoints
+- export filename generation
+- film-frame-gallery data helpers
 - inspector routing for split sub-inspectors
+- regional-map-focus helpers
+- vox-timeline data helpers
+- remotion SFX helpers
+- default editor composition props
 
 ## Runtime and data handling
 
@@ -73,6 +97,6 @@ Vercel-hosted exports additionally require:
 
 - `new_READ_WRITE_TOKEN`
 
-On Vercel, the build now creates a Remotion sandbox snapshot and stores the snapshot ID in Vercel Blob. Runtime exports restore that snapshot, render, and upload the result to Blob for download. Large editor exports that POST more than about 4.5 MB of source media to a function still need a direct-upload/blob-backed asset flow.
+On Vercel, the build creates a Remotion sandbox snapshot and stores the snapshot ID in Vercel Blob. Runtime exports restore that snapshot, render, and upload the result to Blob for download. Large editor exports that POST more than about 4.5 MB of source media to a function still need a direct-upload/blob-backed asset flow.
 
 Optional local artifacts and generated media are kept under the workspace `artifacts/` directory when present.
