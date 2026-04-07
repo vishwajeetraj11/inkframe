@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { ClarityInit } from "@/components/analytics/ClarityInit";
 import {
   Barlow_Condensed,
   Cormorant_Garamond,
@@ -53,11 +54,14 @@ export default function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const clarityId = process.env.NEXT_PUBLIC_CLARITY_ID?.trim();
+
   return (
     <html lang="en">
       <body
         className={`${plusJakartaSans.variable} ${sora.variable} ${ibmPlexMono.variable} ${sourceSerif4.variable} ${cormorantGaramond.variable} ${barlowCondensed.variable} antialiased`}
       >
+        {clarityId ? <ClarityInit projectId={clarityId} /> : null}
         {children}
       </body>
     </html>

@@ -52,7 +52,7 @@ Available `stylePreset` values (registered in `src/lib/editor/types.ts`):
   - Remotion compositions for the editor and text-motion experiences.
   - `editor-presets/` holds one renderer file per preset; `EditorComposition.tsx` routes to them by `stylePreset`.
 
-Additional notes are in [docs/architecture.md](./docs/architecture.md).
+Additional notes are in [docs/architecture.md](./docs/architecture.md). If you want a guided onboarding path, see [docs/remotion-30-day-learning-plan.md](./docs/remotion-30-day-learning-plan.md).
 
 ## Commands
 
