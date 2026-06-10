@@ -163,6 +163,36 @@ export const TEMPLATE_DEFINITIONS: TemplateDefinition[] = [
       "Oct 27, 2022\nElon Musk Completes $44 Billion Deal to Own Twitter\nThe world's richest man closed his blockbuster purchase.",
     accentClass: "text-orange-300",
   },
+  {
+    id: "vox-pull-quote",
+    stylePreset: "vox-pull-quote",
+    name: "Vox Pull Quote",
+    description:
+      "Explainer-style pull quote on a dark card with word-by-word reveal, yellow highlighter sweep, and attribution line. Wrap the key phrase in [[double brackets]].",
+    sampleText:
+      "THE ARGUMENT\nWe didn't just redraw the map — we redrew [[who gets to belong]].\n— Dr. Lena Hartmann, Historian",
+    accentClass: "text-yellow-300",
+  },
+  {
+    id: "harris-marker",
+    stylePreset: "harris-marker",
+    name: "Marker Headline",
+    description:
+      "Documentary headline stack with hard line cuts, a hand-drawn red marker underline, and a scribbled circle around a [[bracketed]] word.",
+    sampleText:
+      "WHY MAPS LIE\nEVERY MAP\nYOU'VE EVER SEEN\nIS [[WRONG]]",
+    accentClass: "text-red-400",
+  },
+  {
+    id: "harris-location",
+    stylePreset: "harris-location",
+    name: "Location Stamp",
+    description:
+      "Field-footage location lower third: typewriter place name, mono coordinates, and a red archive stamp.",
+    sampleText:
+      "SVALBARD, NORWAY\n78.2232 N, 15.6267 E\nARCHIVE / 1993",
+    accentClass: "text-red-300",
+  },
 ];
 
 export type TemplateDefinitionId = (typeof TEMPLATE_DEFINITIONS)[number]["id"];

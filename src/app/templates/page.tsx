@@ -49,7 +49,7 @@ export default async function TemplatesPage() {
   });
 
   return (
-    <main className="min-h-screen bg-[radial-gradient(circle_at_20%_20%,_#334155,_#020617_65%)] px-6 py-8 text-neutral-100">
+    <main className="min-h-screen bg-[#0f0d0a] px-6 py-8 text-neutral-100">
       <div className="mx-auto w-full max-w-6xl">
         <header className="mb-6 rounded-2xl border border-neutral-700/70 bg-neutral-900/65 p-6">
           <p className="text-xs font-semibold uppercase tracking-[0.18em] text-cyan-300">
@@ -66,7 +66,7 @@ export default async function TemplatesPage() {
           <div className="mt-4 flex flex-wrap gap-3">
             <Link
               href="/editor"
-              className="inline-flex items-center rounded-lg bg-emerald-300 px-4 py-2 text-sm font-semibold text-neutral-950"
+              className="inline-flex items-center rounded-lg bg-cyan-300 px-4 py-2 text-sm font-semibold text-neutral-950"
             >
               Open Editor
             </Link>

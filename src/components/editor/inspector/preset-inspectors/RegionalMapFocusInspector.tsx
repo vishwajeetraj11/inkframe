@@ -31,7 +31,7 @@ export const RegionalMapFocusInspector = ({
   const presetLabel = TEXT_OVERLAY_STYLE_PRESET_LABELS[overlay.stylePreset];
 
   return (
-    <div className="space-y-5 rounded-[22px] border border-white/10 bg-[linear-gradient(180deg,rgba(23,26,34,0.92),rgba(16,18,26,0.82))] p-4">
+    <div className="space-y-5 rounded-[22px] border border-white/10 bg-[linear-gradient(180deg,rgba(31,28,22,0.92),rgba(24,22,17,0.82))] p-4">
       <div className="flex items-start justify-between gap-3">
         <div>
           <p className="app-eyebrow text-[11px] uppercase tracking-[0.22em] text-cyan-200/85">

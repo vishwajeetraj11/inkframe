@@ -106,7 +106,7 @@ export const TextMotionToolbar = ({
           type="button"
           onClick={onExport}
           disabled={isGenerating || isExporting}
-          className="rounded-lg bg-emerald-300 px-3 py-2 text-sm font-semibold text-slate-950 disabled:opacity-60"
+          className="rounded-lg bg-cyan-300 px-3 py-2 text-sm font-semibold text-slate-950 disabled:opacity-60"
         >
           {isExporting ? "Rendering..." : "Export MP4"}
         </button>

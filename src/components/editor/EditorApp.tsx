@@ -69,7 +69,7 @@ export const EditorApp = ({
   };
 
   return (
-    <div className="min-h-screen bg-[radial-gradient(circle_at_top,#23324b_0%,#0c1322_42%,#060914_100%)] px-3 py-3 text-neutral-100 md:px-4 lg:px-5">
+    <div className="min-h-screen bg-[#0f0d0a] px-3 py-3 text-neutral-100 md:px-4 lg:px-5">
       <div className="mx-auto flex min-h-[calc(100vh-1.5rem)] w-full max-w-[1480px] flex-col gap-4">
         <EditorHeader
           activeAspect={session.activeAspect}

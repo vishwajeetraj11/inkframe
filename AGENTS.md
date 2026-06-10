@@ -1,6 +1,6 @@
-# CLAUDE.md
+# AGENTS.md
 
-This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+This file provides guidance to Codex (Codex.ai/code) when working with code in this repository.
 
 ## Commands
 
@@ -20,7 +20,7 @@ npx vitest run test/inspector.test.tsx
 
 Tests live flat in `test/` (jsdom environment, setup in `test/setup.ts`). The `@/` import alias maps to `src/` in both `tsconfig.json` and `vitest.config.ts`.
 
-> `AGENTS.md` is a mirror of this file for other coding agents — keep both in sync when editing either.
+> `CLAUDE.md` is a mirror of this file for Claude Code — keep both in sync when editing either.
 
 ## Architecture
 

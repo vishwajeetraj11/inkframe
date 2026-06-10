@@ -18,7 +18,7 @@ export const TextMotionEditor = () => {
   );
 
   return (
-    <div className="min-h-screen bg-[radial-gradient(circle_at_top_left,_#172554,_#020617_65%)] px-4 py-6 text-slate-100 md:px-6">
+    <div className="min-h-screen bg-[#0f0d0a] px-4 py-6 text-slate-100 md:px-6">
       <div className="mx-auto grid w-full max-w-7xl gap-4 lg:grid-cols-[0.95fr_1.05fr]">
         <div className="space-y-4">
           <TextMotionToolbar

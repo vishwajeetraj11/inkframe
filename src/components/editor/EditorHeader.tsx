@@ -31,7 +31,7 @@ export const EditorHeader = ({
   onExport,
 }: EditorHeaderProps) => {
   return (
-    <header className="rounded-[26px] border border-white/10 bg-[linear-gradient(180deg,rgba(28,33,45,0.96),rgba(13,17,27,0.9))] px-4 py-4 backdrop-blur-md md:px-5">
+    <header className="rounded-[26px] border border-white/10 bg-[linear-gradient(180deg,rgba(33,30,24,0.96),rgba(19,17,13,0.9))] px-4 py-4 backdrop-blur-md md:px-5">
       <div className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
         <div className="min-w-0">
           <div className="flex flex-wrap items-center gap-2">
@@ -40,7 +40,7 @@ export const EditorHeader = ({
             </span>
           </div>
 
-          <h1 className="app-title mt-3 text-2xl font-semibold tracking-[-0.05em] text-white md:text-3xl">
+          <h1 className="app-title mt-3 text-2xl font-semibold uppercase tracking-[-0.01em] text-white md:text-3xl">
             Inkframe Video Studio
           </h1>
           <p className="mt-2 max-w-3xl text-sm leading-6 text-neutral-400">
@@ -60,7 +60,7 @@ export const EditorHeader = ({
             type="button"
             disabled={isExporting || !canExport}
             onClick={onExport}
-            className="rounded-xl bg-[linear-gradient(135deg,#67e8f9,#34d399)] px-4 py-2.5 text-sm font-semibold text-neutral-950 transition hover:bg-[linear-gradient(135deg,#73ebfb,#43deab)] disabled:cursor-not-allowed disabled:opacity-60"
+            className="rounded-xl bg-cyan-300 px-4 py-2.5 text-sm font-semibold text-neutral-950 transition hover:bg-cyan-400 disabled:cursor-not-allowed disabled:opacity-60"
           >
             {isExporting ? "Rendering..." : "Export MP4"}
           </button>

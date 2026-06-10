@@ -51,6 +51,9 @@ export const OVERLAY_STYLE_PRESET_LABEL: Record<TextOverlayStylePreset, string> 
   "createdaley-opener": "Dictionary Animation",
   "chart-card": "chart-card",
   "news-clipping": "news-clipping",
+  "vox-pull-quote": "vox-pull-quote",
+  "harris-marker": "harris-marker",
+  "harris-location": "harris-location",
 };
 
 export const NEWS_CRUMPLE_TEXTURE_SRC = staticFile("newsprint-crumple.svg");

@@ -34,6 +34,9 @@ export const TEXT_OVERLAY_STYLE_PRESETS = [
   "createdaley-opener",
   "chart-card",
   "news-clipping",
+  "vox-pull-quote",
+  "harris-marker",
+  "harris-location",
 ] as const;
 export type TextOverlayStylePreset = (typeof TEXT_OVERLAY_STYLE_PRESETS)[number];
 
@@ -102,6 +105,9 @@ export const TEXT_OVERLAY_STYLE_PRESET_LABELS: Record<TextOverlayStylePreset, st
   "createdaley-opener": "Dictionary Animation",
   "chart-card": "Pie Chart Card",
   "news-clipping": "News Clipping",
+  "vox-pull-quote": "Vox Pull Quote",
+  "harris-marker": "Marker Headline",
+  "harris-location": "Location Stamp",
 };
 
 export interface AssetRef {

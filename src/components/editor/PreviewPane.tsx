@@ -43,7 +43,9 @@ export const PreviewPane = ({
     computedDurationInFrames = 1;
   }
 
-  const safeDurationInFrames = toPositiveInt(computedDurationInFrames, 1);
+  // Remotion's seek bar divides by (durationInFrames - 1); a 1-frame duration
+  // would produce NaN widths, so the player needs at least 2 frames.
+  const safeDurationInFrames = Math.max(2, toPositiveInt(computedDurationInFrames, 1));
 
   const aspectRatioCandidate = safeWidth / safeHeight;
   const safeAspectRatio = Number.isFinite(aspectRatioCandidate) && aspectRatioCandidate > 0
@@ -66,7 +68,7 @@ export const PreviewPane = ({
   const stageMaxWidth = aspect === "reel_9_16" ? "340px" : "100%";
 
   return (
-    <section className="rounded-[28px] border border-white/10 bg-[linear-gradient(180deg,rgba(28,33,45,0.92),rgba(13,17,27,0.88))] p-4">
+    <section className="rounded-[28px] border border-white/10 bg-[linear-gradient(180deg,rgba(33,30,24,0.92),rgba(19,17,13,0.88))] p-4">
       <div className="mb-4 flex items-start justify-between gap-3">
         <div>
           <p className="app-eyebrow text-[10px] uppercase tracking-[0.22em] text-neutral-500">

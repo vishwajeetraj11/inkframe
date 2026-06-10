@@ -25,7 +25,7 @@ export const FilmFrameGalleryInspector = ({
   const presetLabel = TEXT_OVERLAY_STYLE_PRESET_LABELS[overlay.stylePreset];
 
   return (
-    <div className="space-y-5 rounded-[22px] border border-white/10 bg-[linear-gradient(180deg,rgba(22,22,26,0.94),rgba(9,9,12,0.88))] p-4">
+    <div className="space-y-5 rounded-[22px] border border-white/10 bg-[linear-gradient(180deg,rgba(26,24,19,0.94),rgba(11,10,8,0.88))] p-4">
       <div className="flex items-start justify-between gap-3">
         <div>
           <p className="app-eyebrow text-[11px] uppercase tracking-[0.22em] text-amber-100/85">

@@ -58,6 +58,9 @@ export const OVERLAY_DEFAULTS_BY_PRESET: Record<
   "chart-card": { x: 50, y: 38, fontSize: 68, color: "#121212", fontFamily: "serif", fontWeight: 700, fontStyle: "normal" },
   "news-clipping": { x: 50, y: 34, fontSize: 96, color: "#121212", fontFamily: "serif", fontWeight: 800, fontStyle: "normal" },
   "createdaley-opener": { x: 50, y: 46, fontSize: 96, color: "#202124", fontFamily: "serif", fontWeight: 600, fontStyle: "normal" },
+  "vox-pull-quote": { x: 50, y: 52, fontSize: 132, color: "#f8f6f1", fontFamily: "serif", fontWeight: 600, fontStyle: "normal" },
+  "harris-marker": { x: 50, y: 48, fontSize: 168, color: "#ffffff", fontFamily: "sans", fontWeight: 800, fontStyle: "normal" },
+  "harris-location": { x: 30, y: 78, fontSize: 96, color: "#ffffff", fontFamily: "sans", fontWeight: 700, fontStyle: "normal" },
 };
 
 const clamp = (value: number, min: number, max: number): number =>

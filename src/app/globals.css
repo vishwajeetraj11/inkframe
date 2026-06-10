@@ -1,21 +1,58 @@
 @import "tailwindcss";
 
 :root {
-  --background: #020617;
-  --foreground: #f8fafc;
-  --muted: #94a3b8;
-  --panel: rgba(15, 23, 42, 0.74);
-  --panel-border: rgba(148, 163, 184, 0.35);
-  --accent: #67e8f9;
+  --background: #0f0d0a;
+  --foreground: #f2ede3;
+  --muted: #948c7c;
+  --panel: rgba(20, 18, 14, 0.74);
+  --panel-border: rgba(148, 140, 124, 0.35);
+  --accent: #ff4f1f;
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
+
+  /* Warm-ink remap of the gray scales used across the app chrome. */
+  --color-neutral-50: #f2ede3;
+  --color-neutral-100: #e8e2d6;
+  --color-neutral-200: #d6cec0;
+  --color-neutral-300: #b5ac9b;
+  --color-neutral-400: #948c7c;
+  --color-neutral-500: #6e6759;
+  --color-neutral-600: #4a4439;
+  --color-neutral-700: #2f2b23;
+  --color-neutral-800: #211e18;
+  --color-neutral-900: #14120e;
+  --color-neutral-950: #0a0907;
+  --color-slate-50: #f2ede3;
+  --color-slate-100: #e8e2d6;
+  --color-slate-200: #d6cec0;
+  --color-slate-300: #b5ac9b;
+  --color-slate-400: #948c7c;
+  --color-slate-500: #6e6759;
+  --color-slate-600: #4a4439;
+  --color-slate-700: #2f2b23;
+  --color-slate-800: #211e18;
+  --color-slate-900: #14120e;
+  --color-slate-950: #0a0907;
+
+  /* Accent: cyan becomes the vermillion tally-light ramp. */
+  --color-cyan-50: #fff1eb;
+  --color-cyan-100: #ffd9cc;
+  --color-cyan-200: #ffb39c;
+  --color-cyan-300: #ff4f1f;
+  --color-cyan-400: #f04515;
+  --color-cyan-500: #d63a10;
+  --color-cyan-600: #b22f0d;
+  --color-cyan-700: #8c250b;
+  --color-cyan-800: #661b08;
+  --color-cyan-900: #401105;
+  --color-cyan-950: #2b0b03;
   --font-sans: var(--font-plus-jakarta-sans), "Plus Jakarta Sans", "Segoe UI", sans-serif;
   --font-mono: var(--font-ibm-plex-mono), "IBM Plex Mono", "SFMono-Regular", monospace;
   --font-serif: var(--font-source-serif-4), "Source Serif 4", Georgia, serif;
-  --font-display: var(--font-sora), "Sora", var(--font-sans);
+  --font-display: var(--font-barlow-condensed), "Barlow Condensed", var(--font-sans);
   --font-modern: var(--font-sora), "Sora", var(--font-sans);
   --font-condensed: var(--font-barlow-condensed), "Barlow Condensed", var(--font-sans);
   --font-impact: var(--font-barlow-condensed), "Barlow Condensed", var(--font-sans);
@@ -53,7 +90,7 @@ body {
 
 .app-title {
   font-family: var(--font-display);
-  letter-spacing: -0.05em;
+  letter-spacing: -0.01em;
 }
 
 .app-eyebrow,
@@ -69,41 +106,78 @@ body {
 }
 
 ::selection {
-  background: rgba(103, 232, 249, 0.3);
-  color: #f8fafc;
+  background: rgba(255, 79, 31, 0.35);
+  color: #f2ede3;
 }
 
-@keyframes landing-float {
-  0%,
-  100% {
-    transform: translateY(0px);
+@keyframes kinetic-rise {
+  from {
+    transform: translateY(112%);
   }
 
-  50% {
-    transform: translateY(-8px);
-  }
-}
-
-@keyframes landing-drift {
-  0%,
-  100% {
-    transform: translate3d(0, 0, 0) scale(1);
-  }
-
-  50% {
-    transform: translate3d(18px, -12px, 0) scale(1.06);
+  to {
+    transform: translateY(0);
   }
 }
 
-@keyframes landing-pulse {
-  0%,
-  100% {
-    opacity: 0.5;
-    transform: scale(1);
+@keyframes kinetic-cut {
+  from {
+    transform: translateY(56%);
+    opacity: 0;
   }
 
-  50% {
-    opacity: 0.95;
-    transform: scale(1.08);
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+@keyframes kinetic-fade-up {
+  from {
+    transform: translateY(14px);
+    opacity: 0;
+  }
+
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+@keyframes kinetic-blink {
+  0%,
+  49% {
+    opacity: 1;
+  }
+
+  50%,
+  100% {
+    opacity: 0;
+  }
+}
+
+@keyframes kinetic-marquee {
+  from {
+    transform: translateX(0);
+  }
+
+  to {
+    transform: translateX(-50%);
+  }
+}
+
+@keyframes kinetic-playhead {
+  from {
+    left: 0%;
+  }
+
+  to {
+    left: 100%;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  [style*="kinetic-"] {
+    animation: none !important;
   }
 }

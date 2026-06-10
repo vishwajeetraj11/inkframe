@@ -64,4 +64,7 @@ export const PRESET_MIN_DURATIONS_FRAMES: Record<TextOverlayStylePreset, number>
   "regional-map-focus": FPS * 7,
   "chart-card": 1,
   "editorial-seat-arc": 1,
+  "vox-pull-quote": FPS * 5,
+  "harris-marker": FPS * 4,
+  "harris-location": FPS * 3,
 };

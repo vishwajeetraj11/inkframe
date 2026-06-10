@@ -33,6 +33,9 @@ Available `stylePreset` values (registered in `src/lib/editor/types.ts`):
 | `createdaley-opener` | Craig Daley-style documentary opener |
 | `chart-card` | Data chart card overlay |
 | `news-clipping` | Newspaper clipping style overlay |
+| `vox-pull-quote` | Vox-style pull quote with yellow highlighter sweep |
+| `harris-marker` | Johnny Harris-style headline with hand-drawn marker underline/circle |
+| `harris-location` | Johnny Harris-style typewriter location stamp lower third |
 
 ## Architecture
 

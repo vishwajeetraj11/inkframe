@@ -3,6 +3,9 @@ import { renderPresetById } from "./preset-router";
 import {
   renderChartCardPreset,
   renderCreatedaleyOpenerPreset,
+  renderHarrisLocationPreset,
+  renderHarrisMarkerPreset,
+  renderVoxPullQuotePreset,
   renderEditorialBarChartPreset,
   renderEditorialSeatArcPreset,
   renderEditorialStatRingPreset,
@@ -51,6 +54,9 @@ const PRESET_RENDERERS = {
   "createdaley-opener": renderCreatedaleyOpenerPreset,
   "chart-card": renderChartCardPreset,
   "news-clipping": renderNewsClippingPreset,
+  "vox-pull-quote": renderVoxPullQuotePreset,
+  "harris-marker": renderHarrisMarkerPreset,
+  "harris-location": renderHarrisLocationPreset,
 } satisfies Partial<Record<keyof typeof OVERLAY_STYLE_PRESET_LABEL, (props: PresetRendererProps) => React.ReactNode>>;
 
 export const MotionTypographyLayer = ({

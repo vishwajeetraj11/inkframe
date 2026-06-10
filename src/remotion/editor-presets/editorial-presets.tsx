@@ -1,5 +1,8 @@
 export { renderChartCardPreset } from "./chart-card";
 export { renderCreatedaleyOpenerPreset } from "./createdaley-opener";
+export { renderHarrisLocationPreset } from "./harris-location";
+export { renderHarrisMarkerPreset } from "./harris-marker";
+export { renderVoxPullQuotePreset } from "./vox-pull-quote";
 export { renderEditorialBarChartPreset } from "./editorial-bar-chart";
 export { renderEditorialSeatArcPreset } from "./editorial-seat-arc";
 export { renderEditorialStatRingPreset } from "./editorial-stat-ring";

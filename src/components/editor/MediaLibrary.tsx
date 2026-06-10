@@ -48,7 +48,7 @@ export const MediaLibrary = ({
   disabled,
 }: MediaLibraryProps) => {
   return (
-    <section className="rounded-[26px] border border-white/10 bg-[linear-gradient(180deg,rgba(28,33,45,0.9),rgba(12,15,23,0.88))] p-4">
+    <section className="rounded-[26px] border border-white/10 bg-[linear-gradient(180deg,rgba(33,30,24,0.9),rgba(18,16,12,0.88))] p-4">
       <div className="mb-4 flex items-start justify-between gap-3">
         <div>
           <p className="app-eyebrow text-[10px] uppercase tracking-[0.22em] text-neutral-500">
