@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { AspectSwitcher } from "@/components/editor/AspectSwitcher";
 import type { AspectPreset } from "@/lib/editor/types";
 
@@ -18,9 +19,6 @@ interface EditorHeaderProps {
   onExport: () => void;
 }
 
-const aspectLabel = (value: AspectPreset): string =>
-  value === "reel_9_16" ? "9:16" : "16:9";
-
 export const EditorHeader = ({
   activeAspect,
   isExporting,
@@ -31,25 +29,50 @@ export const EditorHeader = ({
   onExport,
 }: EditorHeaderProps) => {
   return (
-    <header className="rounded-[26px] border border-white/10 bg-[linear-gradient(180deg,rgba(33,30,24,0.96),rgba(19,17,13,0.9))] px-4 py-4 backdrop-blur-md md:px-5">
-      <div className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
-        <div className="min-w-0">
-          <div className="flex flex-wrap items-center gap-2">
-            <span className="app-eyebrow rounded-full border border-white/10 bg-white/[0.05] px-3 py-1 text-[10px] uppercase tracking-[0.22em] text-cyan-200">
-              Inkframe Studio
-            </span>
+    <header className="relative z-20 border-b border-white/10 bg-[#0f0d0a]/95 px-3 backdrop-blur-xl md:px-4">
+      <div className="mx-auto flex min-h-16 w-full max-w-[1800px] flex-wrap items-center gap-3 py-2.5">
+        <Link
+          href="/"
+          className="group inline-flex min-h-11 items-center gap-3 pr-3 outline-none focus-visible:ring-2 focus-visible:ring-cyan-300"
+        >
+          <span className="h-2.5 w-2.5 bg-cyan-300 transition-transform duration-200 group-hover:rotate-45" />
+          <span className="app-title text-lg font-semibold uppercase tracking-[0.12em] text-neutral-50">
+            Inkframe
+          </span>
+        </Link>
+
+        <span aria-hidden="true" className="hidden h-7 w-px bg-white/10 sm:block" />
+
+        <nav aria-label="Studio" className="hidden items-center gap-1 lg:flex">
+          <span className="inline-flex min-h-10 items-center border-b border-cyan-300 px-3 text-xs font-semibold uppercase tracking-[0.14em] text-neutral-100">
+            Editor
+          </span>
+          <Link
+            href="/templates"
+            className="inline-flex min-h-10 items-center border-b border-transparent px-3 text-xs font-semibold uppercase tracking-[0.14em] text-neutral-400 transition hover:border-white/20 hover:text-neutral-100 focus-visible:ring-2 focus-visible:ring-cyan-300"
+          >
+            Templates
+          </Link>
+          <Link
+            href="/text-motion"
+            className="inline-flex min-h-10 items-center border-b border-transparent px-3 text-xs font-semibold uppercase tracking-[0.14em] text-neutral-400 transition hover:border-white/20 hover:text-neutral-100 focus-visible:ring-2 focus-visible:ring-cyan-300"
+          >
+            Text motion
+          </Link>
+        </nav>
+
+        <div className="ml-auto flex items-center gap-2 sm:gap-3">
+          <div className="hidden items-center gap-4 border-r border-white/10 pr-4 2xl:flex">
+            {workspaceStats.map((stat) => (
+              <span key={stat.label} className="flex items-baseline gap-1.5 whitespace-nowrap">
+                <span className="app-eyebrow text-[10px] uppercase tracking-[0.14em] text-neutral-400">
+                  {stat.label}
+                </span>
+                <span className="app-data text-xs text-neutral-100">{stat.value}</span>
+              </span>
+            ))}
           </div>
 
-          <h1 className="app-title mt-3 text-2xl font-semibold uppercase tracking-[-0.01em] text-white md:text-3xl">
-            Inkframe Video Studio
-          </h1>
-          <p className="mt-2 max-w-3xl text-sm leading-6 text-neutral-400">
-            Cut footage, manage overlays, preview Remotion output, and export without leaving
-            the same workspace.
-          </p>
-        </div>
-
-        <div className="flex flex-wrap items-center gap-3">
           <AspectSwitcher
             activeAspect={activeAspect}
             disabled={isExporting}
@@ -60,40 +83,21 @@ export const EditorHeader = ({
             type="button"
             disabled={isExporting || !canExport}
             onClick={onExport}
-            className="rounded-xl bg-cyan-300 px-4 py-2.5 text-sm font-semibold text-neutral-950 transition hover:bg-cyan-400 disabled:cursor-not-allowed disabled:opacity-60"
+            className="inline-flex min-h-11 items-center justify-center bg-cyan-300 px-4 text-sm font-semibold text-neutral-950 outline-none transition hover:bg-cyan-200 focus-visible:ring-2 focus-visible:ring-cyan-200 focus-visible:ring-offset-2 focus-visible:ring-offset-[#0f0d0a] disabled:cursor-not-allowed disabled:opacity-45"
           >
-            {isExporting ? "Rendering..." : "Export MP4"}
+            {isExporting ? "Rendering…" : "Export"}
           </button>
         </div>
       </div>
 
-      <div className="mt-4 flex flex-wrap gap-2">
-        {workspaceStats.map((stat) => (
-          <div
-            key={stat.label}
-            className="rounded-2xl border border-white/8 bg-white/[0.04] px-3 py-2"
-          >
-            <p className="app-eyebrow text-[10px] uppercase tracking-[0.18em] text-neutral-500">
-              {stat.label}
-            </p>
-            <p className="app-data mt-1 text-sm font-medium text-neutral-100">{stat.value}</p>
-          </div>
-        ))}
-
-        <div className="rounded-2xl border border-white/8 bg-white/[0.04] px-3 py-2">
-          <p className="app-eyebrow text-[10px] uppercase tracking-[0.18em] text-neutral-500">
-            Upload Caps
-          </p>
-          <p className="mt-1 text-sm text-neutral-300">
-            Video 100MB, image 10MB, audio 100MB
-          </p>
-        </div>
-      </div>
-
       {statusMessage ? (
-        <p className="mt-4 rounded-2xl border border-white/8 bg-white/[0.04] px-4 py-3 text-sm text-neutral-200">
+        <div
+          role="status"
+          aria-live="polite"
+          className="relative z-30 mb-2 w-full border border-white/10 bg-[#1b1813] px-4 py-3 text-sm text-neutral-100 shadow-2xl xl:absolute xl:left-1/2 xl:top-full xl:mb-0 xl:w-[min(92vw,680px)] xl:-translate-x-1/2"
+        >
           {statusMessage}
-        </p>
+        </div>
       ) : null}
     </header>
   );

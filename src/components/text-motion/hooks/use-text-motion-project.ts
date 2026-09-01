@@ -26,6 +26,11 @@ import {
   mergeTemplateProject,
 } from "./text-motion-project-helpers";
 
+export interface TextMotionActionResult {
+  ok: boolean;
+  message: string;
+}
+
 export const useTextMotionProject = () => {
   const [project, setProject] = useState<TextMotionProject>(() =>
     createDefaultTextMotionProject("reel_9_16"),
@@ -112,10 +117,16 @@ export const useTextMotionProject = () => {
     setStatusMessage(definition.statusMessage);
   };
 
-  const onGenerate = async (): Promise<void> => {
-    const nextPrompt = prompt.trim();
-    if (nextPrompt.length < 3 || isGenerating) {
-      return;
+  const onGenerate = async (
+    promptOverride?: string,
+    signal?: AbortSignal,
+  ): Promise<TextMotionActionResult> => {
+    const nextPrompt = (promptOverride ?? prompt).trim();
+    if (nextPrompt.length < 3) {
+      return { ok: false, message: "A prompt of at least 3 characters is required." };
+    }
+    if (isGenerating) {
+      return { ok: false, message: "Generation is already in progress." };
     }
 
     setIsGenerating(true);
@@ -132,6 +143,7 @@ export const useTextMotionProject = () => {
           aspect: safeProject.aspect,
           template: safeProject.template,
         }),
+        signal,
       });
 
       const payload = await response.json().catch(() => null);
@@ -155,17 +167,21 @@ export const useTextMotionProject = () => {
           template: safeProject.template,
         }),
       );
-      setStatusMessage("New text motion storyboard generated.");
+      const message = "New text motion storyboard generated.";
+      setStatusMessage(message);
+      return { ok: true, message };
     } catch (error) {
-      setStatusMessage(error instanceof Error ? error.message : "Generation failed.");
+      const message = error instanceof Error ? error.message : "Generation failed.";
+      setStatusMessage(message);
+      return { ok: false, message };
     } finally {
       setIsGenerating(false);
     }
   };
 
-  const onExport = async (): Promise<void> => {
+  const onExport = async (signal?: AbortSignal): Promise<TextMotionActionResult> => {
     if (isExporting) {
-      return;
+      return { ok: false, message: "Export is already in progress." };
     }
 
     setIsExporting(true);
@@ -178,6 +194,7 @@ export const useTextMotionProject = () => {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({ project: safeProject }),
+        signal,
       });
 
       if (!response.ok) {
@@ -216,9 +233,13 @@ export const useTextMotionProject = () => {
         URL.revokeObjectURL(url);
       }
 
-      setStatusMessage("Text motion video exported.");
+      const message = "Text motion video exported.";
+      setStatusMessage(message);
+      return { ok: true, message };
     } catch (error) {
-      setStatusMessage(error instanceof Error ? error.message : "Export failed.");
+      const message = error instanceof Error ? error.message : "Export failed.";
+      setStatusMessage(message);
+      return { ok: false, message };
     } finally {
       setIsExporting(false);
     }
@@ -271,6 +292,11 @@ export const useTextMotionProject = () => {
     }));
   };
 
+  const updatePrompt = (nextPrompt: string) => {
+    setPrompt(nextPrompt);
+    setStatusMessage(null);
+  };
+
   return {
     durationInFrames,
     imageAssetMap,
@@ -285,7 +311,7 @@ export const useTextMotionProject = () => {
     onUseImageInAllScenes,
     prompt,
     safeProject,
-    setPrompt,
+    setPrompt: updatePrompt,
     setProject,
     statusMessage,
     updateScene,

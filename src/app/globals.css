@@ -18,9 +18,9 @@
   --color-neutral-100: #e8e2d6;
   --color-neutral-200: #d6cec0;
   --color-neutral-300: #b5ac9b;
-  --color-neutral-400: #948c7c;
-  --color-neutral-500: #6e6759;
-  --color-neutral-600: #4a4439;
+  --color-neutral-400: #a79f91;
+  --color-neutral-500: #8f8779;
+  --color-neutral-600: #5b5448;
   --color-neutral-700: #2f2b23;
   --color-neutral-800: #211e18;
   --color-neutral-900: #14120e;
@@ -29,9 +29,9 @@
   --color-slate-100: #e8e2d6;
   --color-slate-200: #d6cec0;
   --color-slate-300: #b5ac9b;
-  --color-slate-400: #948c7c;
-  --color-slate-500: #6e6759;
-  --color-slate-600: #4a4439;
+  --color-slate-400: #a79f91;
+  --color-slate-500: #8f8779;
+  --color-slate-600: #5b5448;
   --color-slate-700: #2f2b23;
   --color-slate-800: #211e18;
   --color-slate-900: #14120e;
@@ -81,6 +81,11 @@ body {
 :where(button, input, textarea, select) {
   font: inherit;
   letter-spacing: inherit;
+}
+
+:where(a, button, input, textarea, select, summary):focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
 }
 
 :where(code, pre, kbd) {

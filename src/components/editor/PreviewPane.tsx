@@ -35,6 +35,8 @@ export const PreviewPane = ({
   const safeWidth = toPositiveInt(preset.width, 1080);
   const safeHeight = toPositiveInt(preset.height, 1920);
   const safeFps = toPositiveInt(preset.fps, 30);
+  const hasRenderableVisual =
+    version.clips.length > 0 || version.textOverlays.length > 0;
 
   let computedDurationInFrames = 1;
   try {
@@ -63,74 +65,93 @@ export const PreviewPane = ({
     }),
     [version, assetSources],
   );
-  const previewDurationSeconds = (safeDurationInFrames / safeFps).toFixed(2);
+  const previewDurationSeconds = hasRenderableVisual
+    ? (safeDurationInFrames / safeFps).toFixed(2)
+    : "0.00";
   const previewAspectLabel = aspect === "reel_9_16" ? "9:16" : "16:9";
-  const stageMaxWidth = aspect === "reel_9_16" ? "340px" : "100%";
+  const stageMaxWidth = aspect === "reel_9_16" ? "min(42vh, 360px)" : "min(78vw, 920px)";
 
   return (
-    <section className="rounded-[28px] border border-white/10 bg-[linear-gradient(180deg,rgba(33,30,24,0.92),rgba(19,17,13,0.88))] p-4">
-      <div className="mb-4 flex items-start justify-between gap-3">
-        <div>
-          <p className="app-eyebrow text-[10px] uppercase tracking-[0.22em] text-neutral-500">
-            Program Monitor
-          </p>
-          <h2 className="mt-2 text-lg font-semibold text-white">Preview Stage</h2>
-          <p className="mt-1 text-sm text-neutral-400">
-            Live Remotion player for the active aspect ratio.
-          </p>
+    <section className="flex h-full min-h-[420px] flex-col bg-[#0b0a08] xl:min-h-0">
+      <div className="flex min-h-12 items-center justify-between gap-3 border-b border-white/10 px-4 py-2">
+        <div className="flex items-center gap-3">
+          <span className="h-2 w-2 bg-cyan-300" />
+          <div>
+            <p className="app-eyebrow text-[9px] uppercase tracking-[0.18em] text-neutral-400">
+              Program monitor
+            </p>
+            <h2 className="sr-only">Preview stage</h2>
+          </div>
         </div>
 
-        <div className="flex flex-wrap justify-end gap-2">
-          <span className="rounded-full border border-white/10 bg-white/[0.05] px-3 py-1 text-[10px] uppercase tracking-[0.18em] text-neutral-400">
+        <div className="flex items-center gap-3">
+          <span className="app-data text-[10px] uppercase tracking-[0.08em] text-neutral-300">
             {previewAspectLabel}
           </span>
-          <span className="rounded-full border border-white/10 bg-white/[0.05] px-3 py-1 text-[10px] uppercase tracking-[0.18em] text-neutral-400">
+          <span className="app-data hidden text-[10px] uppercase tracking-[0.08em] text-neutral-400 sm:inline">
             {safeWidth}x{safeHeight}
           </span>
-          <span className="rounded-full border border-white/10 bg-white/[0.05] px-3 py-1 text-[10px] uppercase tracking-[0.18em] text-neutral-400">
+          <span className="app-data text-[10px] uppercase tracking-[0.08em] text-neutral-400">
             {previewDurationSeconds}s
           </span>
         </div>
       </div>
 
-      <div
-        className="mx-auto overflow-hidden rounded-[22px] border border-white/10 bg-black"
-        style={{
-          width: "100%",
-          maxWidth: stageMaxWidth,
-        }}
-      >
+      <div className="relative flex min-h-0 flex-1 items-center justify-center overflow-hidden bg-[radial-gradient(circle_at_center,rgba(242,237,227,0.055),transparent_64%)] p-5 md:p-8">
+        <div aria-hidden="true" className="pointer-events-none absolute inset-x-0 top-1/2 h-px bg-white/[0.035]" />
+        <div aria-hidden="true" className="pointer-events-none absolute inset-y-0 left-1/2 w-px bg-white/[0.035]" />
         <div
+          className="relative w-full overflow-hidden border border-white/15 bg-black shadow-[0_28px_80px_rgba(0,0,0,0.55)]"
           style={{
-            position: "relative",
             width: "100%",
-            paddingTop: safePaddingTopPercent,
+            maxWidth: stageMaxWidth,
           }}
         >
           <div
             style={{
-              position: "absolute",
-              inset: 0,
+              position: "relative",
+              width: "100%",
+              paddingTop: safePaddingTopPercent,
             }}
           >
-            <Player
-              key={`${safeWidth}x${safeHeight}@${safeFps}`}
-              component={EditorComposition}
-              inputProps={inputProps}
-              durationInFrames={safeDurationInFrames}
-              compositionWidth={safeWidth}
-              compositionHeight={safeHeight}
-              fps={safeFps}
-              acknowledgeRemotionLicense
+            <div
               style={{
-                width: "100%",
-                height: "100%",
-                backgroundColor: "black",
+                position: "absolute",
+                inset: 0,
               }}
-              controls
-              autoPlay={false}
-              loop
-            />
+            >
+              {hasRenderableVisual ? (
+                <Player
+                  key={`${safeWidth}x${safeHeight}@${safeFps}`}
+                  component={EditorComposition}
+                  inputProps={inputProps}
+                  durationInFrames={safeDurationInFrames}
+                  compositionWidth={safeWidth}
+                  compositionHeight={safeHeight}
+                  fps={safeFps}
+                  acknowledgeRemotionLicense
+                  style={{
+                    width: "100%",
+                    height: "100%",
+                    backgroundColor: "black",
+                  }}
+                  controls
+                  autoPlay={false}
+                  loop
+                />
+              ) : (
+                <div className="grid h-full place-items-center bg-[radial-gradient(circle_at_50%_38%,#263047,#111827_72%)] px-6 text-center">
+                  <div>
+                    <p className="app-panel-label text-sm font-semibold text-neutral-100">
+                      Your monitor is ready
+                    </p>
+                    <p className="mt-2 max-w-52 text-xs leading-relaxed text-neutral-300">
+                      Import footage in the source rail above, or add a text layer to begin.
+                    </p>
+                  </div>
+                </div>
+              )}
+            </div>
           </div>
         </div>
       </div>

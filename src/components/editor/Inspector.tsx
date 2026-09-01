@@ -31,28 +31,33 @@ export const Inspector = ({
   const activeKind = clip ? "Clip" : textOverlay ? "Text Overlay" : audioTrack ? "Audio Track" : null;
 
   return (
-    <section className="space-y-4 rounded-[28px] border border-white/10 bg-[linear-gradient(180deg,rgba(29,26,20,0.96),rgba(16,14,11,0.88))] p-5 backdrop-blur-md">
-      <div className="flex items-start justify-between gap-3">
+    <section className="space-y-4 bg-[#15120e] p-4">
+      <div className="flex items-center justify-between gap-3 border-b border-white/10 pb-3">
         <div>
-          <p className="app-eyebrow text-[10px] uppercase tracking-[0.22em] text-neutral-500">
-            Editor Sidebar
+          <p className="app-eyebrow text-[9px] uppercase tracking-[0.18em] text-neutral-400">
+            Properties
           </p>
-          <h2 className="app-panel-label mt-2 text-sm font-semibold uppercase tracking-wide text-neutral-200">
+          <h2 className="app-title mt-1 text-lg font-semibold uppercase text-neutral-50">
             Inspector
           </h2>
         </div>
 
         {activeKind ? (
-          <span className="rounded-full border border-white/10 bg-white/[0.05] px-3 py-1 text-[10px] uppercase tracking-[0.18em] text-neutral-400">
+          <span className="app-data border border-white/10 px-2 py-1 text-[9px] uppercase tracking-[0.08em] text-neutral-300">
             {activeKind}
           </span>
         ) : null}
       </div>
 
       {!clip && !textOverlay && !audioTrack ? (
-        <p className="rounded-2xl border border-dashed border-white/10 bg-white/[0.02] px-4 py-5 text-sm text-neutral-400">
-          Select a clip, text overlay, or audio track to edit details.
-        </p>
+        <div className="border border-dashed border-white/15 bg-white/[0.02] px-4 py-6">
+          <p className="app-title text-xl font-semibold uppercase text-neutral-100">
+            Nothing selected
+          </p>
+          <p className="mt-2 text-sm leading-6 text-neutral-400">
+            Select a clip, text overlay, or audio track in the timeline to reveal its controls here.
+          </p>
+        </div>
       ) : null}
 
       {clip ? (

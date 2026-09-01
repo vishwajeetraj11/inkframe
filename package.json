@@ -3,7 +3,10 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
+    "elah:css": "node scripts/build-elah-scoped-css.mjs",
+    "predev": "npm run elah:css",
     "dev": "next dev",
+    "prebuild": "npm run elah:css",
     "build": "next build && node create-remotion-snapshot.mjs",
     "start": "next start",
     "lint": "eslint",
@@ -14,6 +17,7 @@
   "dependencies": {
     "@ai-sdk/openai": "^3.0.30",
     "@ai-sdk/react": "^3.0.99",
+    "@elah/editor": "0.4.1",
     "@microsoft/clarity": "^1.0.2",
     "@remotion/bundler": "4.0.438",
     "@remotion/google-fonts": "4.0.438",
@@ -27,6 +31,7 @@
     "@vercel/sandbox": "^1.9.0",
     "ai": "^6.0.97",
     "d3-geo": "^3.1.1",
+    "lucide-react": "^1.39.0",
     "nanoid": "^5.1.6",
     "next": "16.1.6",
     "react": "19.2.3",

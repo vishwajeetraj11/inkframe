@@ -17,7 +17,11 @@ export const AspectSwitcher = ({
   disabled,
 }: AspectSwitcherProps) => {
   return (
-    <div className="flex gap-2 rounded-xl border border-neutral-700/60 bg-neutral-900/50 p-1">
+    <div
+      className="flex min-h-11 items-center border border-white/10 bg-[#17140f] p-1"
+      role="group"
+      aria-label="Canvas aspect ratio"
+    >
       {aspects.map((aspect) => {
         const preset = ASPECT_PRESETS[aspect];
         const isActive = aspect === activeAspect;
@@ -26,15 +30,18 @@ export const AspectSwitcher = ({
           <button
             key={aspect}
             type="button"
+            aria-label={`Use ${preset.label} canvas`}
+            aria-pressed={isActive}
             disabled={disabled}
             onClick={() => onChange(aspect)}
-            className={`rounded-lg px-4 py-2 text-sm font-semibold transition ${
+            className={`min-h-11 px-3 text-xs font-semibold transition outline-none focus-visible:ring-2 focus-visible:ring-cyan-300 sm:px-4 ${
               isActive
-                ? "bg-cyan-300 text-neutral-950"
-                : "text-neutral-200 hover:bg-neutral-800"
+                ? "bg-neutral-100 text-neutral-950"
+                : "text-neutral-300 hover:bg-white/[0.06] hover:text-neutral-50"
             } ${disabled ? "opacity-60" : ""}`}
           >
-            {preset.label}
+            <span className="hidden sm:inline">{preset.label}</span>
+            <span className="sm:hidden">{aspect === "reel_9_16" ? "9:16" : "16:9"}</span>
           </button>
         );
       })}

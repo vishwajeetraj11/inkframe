@@ -21,15 +21,9 @@ import {
   type VersionTimeline,
 } from "@/lib/editor/types";
 import {
-  MIN_BLOCK_WIDTH_PERCENT,
-  activateOnEnterOrSpace,
   buildTicks,
   formatSeconds,
   framesToSeconds,
-  getClipBlockClassName,
-  getTextBlockClassName,
-  getTickStepInSeconds,
-  getTimelineBlockStyle,
   packLaneRows,
   parseNumber,
   secondsToFrames,
@@ -59,8 +53,6 @@ interface TimelineProps {
   onUpdateText: (textId: string, patch: Partial<Omit<TextOverlay, "id">>) => void;
   onRemoveText: (textId: string) => void;
 }
-
-type ClipTrackEntry = ReturnType<typeof buildRenderTrack>["entries"][number];
 
 const DeleteIcon = () => (
   <svg
@@ -221,38 +213,38 @@ export const Timeline = ({
     version.audioTracks.length > 0;
 
   return (
-    <section className="space-y-4 rounded-[28px] border border-white/10 bg-[linear-gradient(180deg,rgba(33,30,24,0.92),rgba(19,17,13,0.88))] p-4">
-      <div className="flex items-start justify-between gap-3">
-        <div>
-          <p className="app-eyebrow text-[10px] uppercase tracking-[0.22em] text-neutral-500">
-            Sequence Dock
-          </p>
-          <h2 className="mt-2 text-lg font-semibold text-white">
-            Timeline
-          </h2>
-          <p className="mt-1 text-sm text-neutral-400">
-            Visual lanes mirror the actual render order and overlaps.
-          </p>
+    <section className="h-full min-h-[300px] overflow-y-auto bg-[#11100c] xl:min-h-0">
+      <div className="flex min-h-14 items-center justify-between gap-3 border-b border-white/10 px-4 py-2.5">
+        <div className="flex items-center gap-3">
+          <span className="h-2 w-2 bg-cyan-300" />
+          <div>
+            <p className="app-eyebrow text-[9px] uppercase tracking-[0.18em] text-neutral-400">
+              Sequence / 30 fps
+            </p>
+            <h2 className="app-title mt-0.5 text-lg font-semibold uppercase text-neutral-50">
+              Timeline
+            </h2>
+          </div>
         </div>
 
-        <div className="rounded-full border border-white/10 bg-white/[0.05] px-3 py-1 text-[10px] font-medium uppercase tracking-[0.18em] text-neutral-400">
+        <div className="app-data border border-white/10 px-3 py-1.5 text-[10px] uppercase tracking-[0.08em] text-neutral-300">
           {totalSeconds}
         </div>
       </div>
 
-      <div className="rounded-[24px] border border-white/10 bg-[#0a0907]/80 p-3">
+      <div className="border-b border-white/10 bg-[#0a0907]/80 p-3">
         {!hasTimelineItems ? (
-          <div className="rounded-2xl border border-dashed border-white/8 bg-white/[0.03] px-3 py-6 text-sm text-neutral-400">
-            Upload media or add overlays to build the timeline.
+          <div className="flex min-h-28 items-center justify-center border border-dashed border-white/12 bg-white/[0.02] px-3 py-6 text-center text-sm text-neutral-400">
+            Import footage or add a text layer to begin the sequence.
           </div>
         ) : (
           <div className="space-y-3">
-            <div className="flex flex-wrap items-center gap-2 text-[11px] uppercase tracking-[0.18em] text-neutral-500">
+            <div className="flex flex-wrap items-center gap-3 text-[10px] uppercase tracking-[0.12em] text-neutral-400">
               <span>{clipTrack.entries.length} clips</span>
               <span>{version.textOverlays.length} text layers</span>
               <span>{version.audioTracks.length} audio layers</span>
               <span>{version.transitions.length} transitions</span>
-              <span className="text-neutral-600">Scroll for long sequences</span>
+              <span className="text-neutral-500">Scroll horizontally for long sequences</span>
             </div>
 
             <div className="overflow-x-auto pb-1">
@@ -311,6 +303,15 @@ export const Timeline = ({
         )}
       </div>
 
+      <details className="group border-b border-white/10">
+        <summary className="flex min-h-12 cursor-pointer list-none items-center justify-between gap-4 px-4 text-xs font-semibold uppercase tracking-[0.12em] text-neutral-300 outline-none transition hover:bg-white/[0.03] hover:text-neutral-50 focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-cyan-300">
+          Fine timing &amp; transitions
+          <span aria-hidden="true" className="text-lg text-cyan-300 transition group-open:rotate-45">
+            +
+          </span>
+        </summary>
+
+        <div className="grid gap-4 border-t border-white/10 p-4 xl:grid-cols-2">
       <div className="space-y-3">
         {version.clips.length === 0 ? (
           <div className="rounded-2xl border border-dashed border-white/8 bg-white/[0.03] px-3 py-4 text-sm text-neutral-400">
@@ -327,26 +328,24 @@ export const Timeline = ({
             return (
               <div key={clip.id} className="space-y-2">
                 <div
-                  role="button"
-                  tabIndex={0}
-                  onClick={() => onSelectClip(clip.id)}
-                  onKeyDown={(event) =>
-                    activateOnEnterOrSpace(event, () => onSelectClip(clip.id))
-                  }
-                  className={`w-full rounded-lg border px-3 py-2 text-left ${
+                  className={`w-full border px-3 py-2 text-left ${
                     selectedClipId === clip.id
                       ? "border-cyan-300 bg-cyan-300/10"
                       : "border-neutral-700 bg-neutral-800/60"
                   }`}
                 >
-                  <div className="flex items-center justify-between gap-3">
+                  <button
+                    type="button"
+                    onClick={() => onSelectClip(clip.id)}
+                    className="flex min-h-11 w-full items-center justify-between gap-3 text-left outline-none focus-visible:ring-2 focus-visible:ring-cyan-300"
+                  >
                     <p className="truncate text-sm font-medium text-neutral-100">
                       {assetNames[clip.assetId] ?? clip.assetId}
                     </p>
-                    <span className="rounded bg-neutral-700 px-2 py-0.5 text-xs text-neutral-200">
+                    <span className="bg-neutral-700 px-2 py-1 text-xs text-neutral-200">
                       {clip.kind}
                     </span>
-                  </div>
+                  </button>
 
                   <div className="mt-2 grid grid-cols-2 gap-2 text-xs text-neutral-200 md:grid-cols-4">
                     <label className="space-y-1">
@@ -369,7 +368,7 @@ export const Timeline = ({
                             trimEndFrame: clip.trimStartFrame + nextDuration,
                           });
                         }}
-                        className="w-full rounded border border-neutral-600 bg-neutral-900 px-2 py-1"
+                        className="min-h-11 w-full border border-neutral-600 bg-neutral-900 px-2 py-2 outline-none focus-visible:ring-2 focus-visible:ring-cyan-300"
                       />
                     </label>
 
@@ -395,7 +394,7 @@ export const Timeline = ({
                       type="button"
                       disabled={disabled || index === 0}
                       onClick={() => onMoveClip(clip.id, -1)}
-                      className="rounded border border-neutral-600 px-2 py-1 text-xs font-semibold text-neutral-200 disabled:opacity-40"
+                      className="min-h-11 border border-neutral-600 px-2 py-2 text-xs font-semibold text-neutral-200 outline-none focus-visible:ring-2 focus-visible:ring-cyan-300 disabled:opacity-40"
                     >
                       Move Up
                     </button>
@@ -405,7 +404,7 @@ export const Timeline = ({
                         type="button"
                         disabled={disabled || index === version.clips.length - 1}
                         onClick={() => onMoveClip(clip.id, 1)}
-                        className="flex-1 rounded border border-neutral-600 px-2 py-1 text-xs font-semibold text-neutral-200 disabled:opacity-40"
+                        className="min-h-11 flex-1 border border-neutral-600 px-2 py-2 text-xs font-semibold text-neutral-200 outline-none focus-visible:ring-2 focus-visible:ring-cyan-300 disabled:opacity-40"
                       >
                         Move Down
                       </button>
@@ -416,7 +415,7 @@ export const Timeline = ({
                         onClick={() => onRemoveClip(clip.id)}
                         aria-label={`Delete ${assetNames[clip.assetId] ?? `clip ${index + 1}`}`}
                         title="Delete clip"
-                        className="inline-flex h-8 w-8 items-center justify-center rounded border border-rose-500/55 text-rose-200 transition hover:bg-rose-500/10 disabled:opacity-40"
+                        className="inline-flex h-11 w-11 items-center justify-center border border-rose-500/55 text-rose-200 outline-none transition hover:bg-rose-500/10 focus-visible:ring-2 focus-visible:ring-cyan-300 disabled:opacity-40"
                       >
                         <DeleteIcon />
                       </button>
@@ -450,7 +449,7 @@ export const Timeline = ({
                             secondsToFrames(seconds),
                           );
                         }}
-                        className="w-24 rounded border border-neutral-600 bg-neutral-900 px-2 py-1"
+                        className="min-h-11 w-24 border border-neutral-600 bg-neutral-900 px-2 py-2 outline-none focus-visible:ring-2 focus-visible:ring-cyan-300"
                       />
                     </label>
                   </div>
@@ -461,14 +460,14 @@ export const Timeline = ({
         )}
       </div>
 
-      <div className="space-y-3 rounded-[22px] border border-white/8 bg-white/[0.04] p-3">
+      <div className="space-y-3 border border-white/8 bg-white/[0.03] p-3">
         <div className="flex items-center justify-between">
           <h3 className="text-sm font-semibold text-neutral-200">Text Overlays</h3>
           <button
             type="button"
             disabled={disabled}
             onClick={onAddText}
-            className="rounded border border-neutral-600 px-2 py-1 text-xs font-semibold text-neutral-100"
+            className="min-h-11 border border-neutral-600 px-3 py-2 text-xs font-semibold text-neutral-100 outline-none focus-visible:ring-2 focus-visible:ring-cyan-300"
           >
             Add Text
           </button>
@@ -484,21 +483,19 @@ export const Timeline = ({
               return (
                 <div
                   key={overlay.id}
-                  role="button"
-                  tabIndex={0}
-                  onClick={() => onSelectText(overlay.id)}
-                  onKeyDown={(event) =>
-                    activateOnEnterOrSpace(event, () => onSelectText(overlay.id))
-                  }
-                  className={`w-full rounded-lg border px-3 py-2 text-left ${
+                  className={`w-full border px-3 py-2 text-left ${
                     selectedTextId === overlay.id
                       ? "border-cyan-300 bg-cyan-300/10"
                       : "border-neutral-700 bg-neutral-800/60"
                   }`}
                 >
                   <div className="flex items-start justify-between gap-3">
-                    <div className="min-w-0">
-                      <span className="inline-flex rounded-full border border-white/10 bg-white/[0.04] px-2.5 py-1 text-[10px] uppercase tracking-[0.18em] text-neutral-400">
+                    <button
+                      type="button"
+                      onClick={() => onSelectText(overlay.id)}
+                      className="min-h-11 min-w-0 flex-1 text-left outline-none focus-visible:ring-2 focus-visible:ring-cyan-300"
+                    >
+                      <span className="inline-flex border border-white/10 bg-white/[0.04] px-2.5 py-1 text-[10px] uppercase tracking-[0.18em] text-neutral-300">
                         {TEXT_OVERLAY_STYLE_PRESET_LABELS[overlay.stylePreset]}
                       </span>
                       <p className="mt-2 text-sm font-medium leading-snug text-neutral-100">
@@ -509,7 +506,7 @@ export const Timeline = ({
                           {summary.detail}
                         </p>
                       ) : null}
-                    </div>
+                    </button>
 
                     <button
                       type="button"
@@ -520,7 +517,7 @@ export const Timeline = ({
                       }}
                       aria-label="Delete text overlay"
                       title="Delete text overlay"
-                      className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded border border-rose-500/55 text-rose-200 transition hover:bg-rose-500/10 disabled:opacity-40"
+                      className="inline-flex h-11 w-11 shrink-0 items-center justify-center border border-rose-500/55 text-rose-200 outline-none transition hover:bg-rose-500/10 focus-visible:ring-2 focus-visible:ring-cyan-300 disabled:opacity-40"
                     >
                       <DeleteIcon />
                     </button>
@@ -545,7 +542,7 @@ export const Timeline = ({
                             startFrame: Math.max(0, secondsToFrames(seconds)),
                           });
                         }}
-                        className="w-full rounded border border-neutral-600 bg-neutral-900 px-2 py-1"
+                        className="min-h-11 w-full border border-neutral-600 bg-neutral-900 px-2 py-2 outline-none focus-visible:ring-2 focus-visible:ring-cyan-300"
                       />
                     </label>
 
@@ -567,7 +564,7 @@ export const Timeline = ({
                             endFrame: Math.max(1, secondsToFrames(seconds)),
                           });
                         }}
-                        className="w-full rounded border border-neutral-600 bg-neutral-900 px-2 py-1"
+                        className="min-h-11 w-full border border-neutral-600 bg-neutral-900 px-2 py-2 outline-none focus-visible:ring-2 focus-visible:ring-cyan-300"
                       />
                     </label>
                   </div>
@@ -577,6 +574,8 @@ export const Timeline = ({
           )}
         </div>
       </div>
+        </div>
+      </details>
     </section>
   );
 };

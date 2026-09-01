@@ -1,4 +1,5 @@
 import type { TextMotionImageAsset, TextMotionScene } from "@/lib/text-motion/types";
+import { Plus } from "lucide-react";
 import { TextMotionSceneCard } from "./TextMotionSceneCard";
 
 interface TextMotionSceneListProps {
@@ -18,22 +19,32 @@ export const TextMotionSceneList = ({
   onDeleteScene,
   scenes,
 }: TextMotionSceneListProps) => {
+  const totalFrames = scenes.reduce((sum, scene) => sum + scene.durationInFrames, 0);
+
   return (
-    <div className="space-y-3 rounded-2xl border border-slate-700/70 bg-slate-900/65 p-4">
-      <div className="flex items-center justify-between">
-        <h2 className="app-panel-label text-sm font-semibold uppercase tracking-wide text-slate-300">
-          Scenes
-        </h2>
+    <section aria-labelledby="storyboard-heading">
+      <div className="flex items-end justify-between gap-4 border-y border-[#f2ede3]/15 py-4">
+        <div>
+          <p className="app-eyebrow text-[10px] uppercase tracking-[0.22em] text-[#ff4f1f]">Sequence</p>
+          <h2 id="storyboard-heading" className="app-title mt-1 text-[clamp(1.9rem,4vw,3rem)] font-semibold uppercase leading-none tracking-[-0.02em]">
+            Storyboard
+          </h2>
+          <p className="app-data mt-2 text-[10px] uppercase tracking-[0.12em] text-[#f2ede3]/38">
+            {scenes.length} scenes · {(totalFrames / 30).toFixed(1)} seconds · drag-free linear edit
+          </p>
+        </div>
         <button
           type="button"
+          aria-label="Add scene"
           onClick={onAddScene}
-          className="rounded-md border border-slate-600 px-2 py-1 text-xs font-semibold text-slate-200"
+          className="flex min-h-12 min-w-12 shrink-0 items-center justify-center gap-2 border border-[#f2ede3]/25 px-3 text-xs font-bold uppercase tracking-[0.08em] text-[#f2ede3] hover:border-[#ff4f1f] hover:bg-[#ff4f1f] hover:text-[#0f0d0a] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#ff4f1f] focus-visible:ring-offset-2 focus-visible:ring-offset-[#0f0d0a] sm:px-4"
         >
-          Add Scene
+          <Plus aria-hidden="true" className="h-4 w-4" />
+          <span className="hidden sm:inline">Add scene</span>
         </button>
       </div>
 
-      <div className="max-h-[30rem] space-y-3 overflow-y-auto pr-1">
+      <div className="divide-y divide-[#f2ede3]/15 border-b border-[#f2ede3]/15">
         {scenes.map((scene, index) => (
           <TextMotionSceneCard
             key={scene.id}
@@ -46,6 +57,6 @@ export const TextMotionSceneList = ({
           />
         ))}
       </div>
-    </div>
+    </section>
   );
 };

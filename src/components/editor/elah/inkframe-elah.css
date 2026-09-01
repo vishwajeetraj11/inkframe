@@ -1,0 +1,58 @@
+.inkframe-elah {
+  --elah-bg: #0a0907;
+  --elah-bg-secondary: #0f0d0a;
+  --elah-bg-panel: #17140f;
+  --elah-bg-card: #1b1813;
+  --elah-bg-elevated: #242019;
+  --elah-bg-highest: #302a21;
+  --elah-border: rgba(242, 237, 227, 0.14);
+  --elah-border-subtle: rgba(242, 237, 227, 0.08);
+  --elah-outline: #ff4f1f;
+  --elah-text: #f2ede3;
+  --elah-text-muted: #a79f91;
+  --elah-accent: #ff4f1f;
+  --elah-accent-hover: #ff6b42;
+  --elah-accent-dim: #ff8b69;
+  --elah-accent-glow: rgba(255, 79, 31, 0.3);
+  --elah-accent-soft: rgba(255, 79, 31, 0.12);
+  --elah-accent-text: #190b06;
+  --elah-playhead: #ff4f1f;
+  --elah-tick-color: #51493d;
+  --elah-tick-label: #948c7c;
+  --elah-selection-border: #ff4f1f;
+  --elah-selection-glow: rgba(255, 79, 31, 0.38);
+  --elah-font-ui: var(--font-plus-jakarta-sans), sans-serif;
+  --elah-font-mono: var(--font-ibm-plex-mono), monospace;
+  --elah-radius-sm: 0px;
+  --elah-radius-md: 0px;
+  color: var(--elah-text);
+}
+
+.inkframe-elah [data-clip-type="video"] {
+  --elah-clip-video-top: #5e3d2d;
+  --elah-clip-video-mid: #4b3024;
+  --elah-clip-video-bottom: #35251e;
+  --elah-clip-video-accent: #ff8b69;
+}
+
+.inkframe-elah [data-clip-type="text"] {
+  --elah-clip-text-top: #d64318;
+  --elah-clip-text-mid: #a83212;
+  --elah-clip-text-bottom: #66220f;
+  --elah-clip-text-accent: #ff7a52;
+}
+
+.inkframe-elah [data-clip-type="image"] {
+  --elah-clip-image-top: #b89d62;
+  --elah-clip-image-mid: #8a7449;
+  --elah-clip-image-bottom: #594c34;
+  --elah-clip-image-accent: #e9d49b;
+}
+
+.inkframe-elah [data-clip-type="audio"] {
+  --elah-clip-audio-top: #7f6938;
+  --elah-clip-audio-mid: #5c4c2d;
+  --elah-clip-audio-bottom: #342e21;
+  --elah-clip-audio-accent: #d8bd78;
+  --elah-effect-waveform: #d8bd78;
+}

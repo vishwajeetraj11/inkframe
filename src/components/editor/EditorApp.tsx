@@ -3,11 +3,12 @@
 import { AIChatDrawer } from "@/components/editor/AIChatDrawer";
 import { EditorHeader } from "@/components/editor/EditorHeader";
 import { EditorSidebar } from "@/components/editor/EditorSidebar";
-import { EditorMainContent } from "@/components/editor/EditorMainContent";
 import { EditorRightSidebar } from "@/components/editor/EditorRightSidebar";
 import { PreviewPane } from "@/components/editor/PreviewPane";
+import { ElahTimelineDock } from "@/components/editor/elah";
 import { createDefaultTextOverlay } from "@/lib/editor/defaults";
 import { nanoid } from "nanoid";
+import { useEditorWebMcp } from "./hooks/use-editor-webmcp";
 import { useEditorSession } from "./hooks/use-editor-session";
 
 interface EditorAppProps {
@@ -39,6 +40,28 @@ export const EditorApp = ({
     session.setSelectedTextId(null);
   };
 
+  useEditorWebMcp({
+    history: session.history,
+    dispatch: session.dispatch,
+    undo: session.undo,
+    redo: session.redo,
+    assets: session.assetList,
+    selectClip: (clipId) => selectClip(clipId),
+    selectText: (overlayId) => selectText(overlayId),
+    selectAudio: (trackId) => selectAudio(trackId),
+    addRemotionSfx: session.onAddRemotionSfx,
+    applyAIEditorActions: session.onApplyEditorActions,
+    requestExport: (signal) => session.onExport(signal),
+    removeAsset: session.onRemoveAsset,
+    requestMediaPicker: () => {
+      const input = document.getElementById("media-upload");
+      if (!(input instanceof HTMLInputElement) || input.disabled) {
+        throw new Error("Media picker is unavailable while the editor is busy.");
+      }
+      input.click();
+    },
+  });
+
   const workspaceStats = [
     {
       label: "Timeline",
@@ -69,175 +92,98 @@ export const EditorApp = ({
   };
 
   return (
-    <div className="min-h-screen bg-[#0f0d0a] px-3 py-3 text-neutral-100 md:px-4 lg:px-5">
-      <div className="mx-auto flex min-h-[calc(100vh-1.5rem)] w-full max-w-[1480px] flex-col gap-4">
-        <EditorHeader
-          activeAspect={session.activeAspect}
-          isExporting={session.isExporting}
-          statusMessage={session.statusMessage}
-          workspaceStats={workspaceStats}
-          canExport={canExport}
-          onSwitchAspect={session.switchAspect}
-          onExport={() => {
-            void session.onExport();
-          }}
-        />
+    <div className="min-h-screen bg-[#0f0d0a] text-neutral-100 xl:h-screen xl:overflow-hidden">
+      <EditorHeader
+        activeAspect={session.activeAspect}
+        isExporting={session.isExporting}
+        statusMessage={session.statusMessage}
+        workspaceStats={workspaceStats}
+        canExport={canExport}
+        onSwitchAspect={session.switchAspect}
+        onExport={() => {
+          void session.onExport();
+        }}
+      />
 
-        <main className="grid min-h-0 flex-1 gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(360px,540px)] xl:grid-cols-[minmax(0,1fr)_minmax(380px,560px)]">
-          <div className="min-w-0 space-y-4 lg:max-w-[860px]">
-            <EditorSidebar
-              clips={session.activeVersion.clips}
-              textOverlays={session.activeVersion.textOverlays}
-              audioTracks={session.activeVersion.audioTracks}
-              selectedClipId={session.selectedClipId}
-              selectedTextId={session.selectedTextId}
-              selectedAudioId={session.selectedAudioId}
-              isExporting={session.isExporting}
-              assetNames={session.assetNames}
-              assets={session.assetList}
-              onSelectClip={selectClip}
-              onSelectText={selectText}
-              onSelectAudio={selectAudio}
-              onAddText={handleAddText}
-              onFilesSelected={session.onFilesSelected}
-              onAddRemotionSfx={session.onAddRemotionSfx}
-              onRemoveAsset={session.onRemoveAsset}
-            />
+      <main className="mx-auto grid w-full max-w-[1800px] xl:h-[calc(100dvh-65px)] xl:grid-cols-[280px_minmax(0,1fr)_340px] xl:grid-rows-[minmax(390px,1fr)_minmax(270px,37vh)]">
+        <div className="order-1 min-h-0 xl:order-none xl:col-start-1 xl:row-start-1">
+          <EditorSidebar
+            isExporting={session.isExporting}
+            assets={session.assetList}
+            onAddText={handleAddText}
+            onFilesSelected={session.onFilesSelected}
+            onAddRemotionSfx={session.onAddRemotionSfx}
+            onRemoveAsset={session.onRemoveAsset}
+          />
+        </div>
 
-            <EditorMainContent
-              aspect={session.activeAspect}
-              version={session.activeVersion}
-              assetNames={session.assetNames}
-              previewAssetSources={session.previewAssetSources}
-              selectedClipId={session.selectedClipId}
-              selectedTextId={session.selectedTextId}
-              selectedAudioId={session.selectedAudioId}
-              isExporting={session.isExporting}
-              onSelectClip={selectClip}
-              onSelectText={selectText}
-              onSelectAudio={selectAudio}
-              onAddText={handleAddText}
-              showPreview={false}
-              onUpdateClip={(clipId, patch) => {
-                session.dispatch({
-                  type: "update-clip",
-                  aspect: session.activeAspect,
-                  clipId,
-                  patch,
-                });
-              }}
-              onMoveClip={(clipId, offset) => {
-                session.dispatch({
-                  type: "move-clip",
-                  aspect: session.activeAspect,
-                  clipId,
-                  offset,
-                });
-              }}
-              onRemoveClip={(clipId) => {
-                session.dispatch({
-                  type: "remove-clip",
-                  aspect: session.activeAspect,
-                  clipId,
-                });
-                if (session.selectedClipId === clipId) {
-                  session.setSelectedClipId(null);
-                }
-              }}
-              onSetTransition={(fromClipId, toClipId, durationInFrames) => {
-                session.dispatch({
-                  type: "set-transition",
-                  aspect: session.activeAspect,
-                  transition: {
-                    id: `${fromClipId}-${toClipId}`,
-                    type: "crossfade",
-                    fromClipId,
-                    toClipId,
-                    durationInFrames,
-                  },
-                });
-              }}
-              onRemoveTransition={(fromClipId, toClipId) => {
-                session.dispatch({
-                  type: "remove-transition",
-                  aspect: session.activeAspect,
-                  fromClipId,
-                  toClipId,
-                });
-              }}
-              onUpdateText={(overlayId, patch) => {
-                session.dispatch({
-                  type: "update-text-overlay",
-                  aspect: session.activeAspect,
-                  overlayId,
-                  patch,
-                });
-              }}
-              onRemoveText={(overlayId) => {
-                session.dispatch({
-                  type: "remove-text-overlay",
-                  aspect: session.activeAspect,
-                  overlayId,
-                });
-                if (session.selectedTextId === overlayId) {
-                  session.setSelectedTextId(null);
-                }
-              }}
-            />
-          </div>
+        <div className="order-2 min-w-0 border-b border-white/10 xl:order-none xl:col-start-2 xl:row-start-1">
+          <PreviewPane
+            aspect={session.activeAspect}
+            version={session.activeVersion}
+            assetSources={session.previewAssetSources}
+          />
+        </div>
 
-          <div className="space-y-4 lg:w-full lg:max-w-[560px] lg:justify-self-end">
-            <PreviewPane
-              aspect={session.activeAspect}
-              version={session.activeVersion}
-              assetSources={session.previewAssetSources}
-            />
+        <div className="order-4 min-h-0 xl:order-none xl:col-start-3 xl:row-start-1">
+          <EditorRightSidebar
+            selectedClip={session.selectedClip}
+            selectedTextOverlay={session.selectedTextOverlay}
+            selectedAudioTrack={session.selectedAudioTrack}
+            assetNames={session.assetNames}
+            isExporting={session.isExporting}
+            onUpdateClip={(clipId, patch) => {
+              session.dispatch({ type: "update-clip", aspect: session.activeAspect, clipId, patch });
+            }}
+            onUpdateText={(overlayId, patch) => {
+              session.dispatch({
+                type: "update-text-overlay",
+                aspect: session.activeAspect,
+                overlayId,
+                patch,
+              });
+            }}
+            onUpdateAudio={(trackId, patch) => {
+              session.dispatch({
+                type: "update-audio-track",
+                aspect: session.activeAspect,
+                trackId,
+                patch,
+              });
+            }}
+            onRemoveAudio={(trackId) => {
+              session.dispatch({
+                type: "remove-audio-track",
+                aspect: session.activeAspect,
+                trackId,
+              });
+              if (session.selectedAudioId === trackId) session.setSelectedAudioId(null);
+            }}
+          />
+        </div>
 
-            <EditorRightSidebar
-              selectedClip={session.selectedClip}
-              selectedTextOverlay={session.selectedTextOverlay}
-              selectedAudioTrack={session.selectedAudioTrack}
-              assetNames={session.assetNames}
-              isExporting={session.isExporting}
-              activeMediaFootprintBytes={session.activeMediaFootprintBytes}
-              onUpdateClip={(clipId, patch) => {
-                session.dispatch({
-                  type: "update-clip",
-                  aspect: session.activeAspect,
-                  clipId,
-                  patch,
-                });
-              }}
-              onUpdateText={(overlayId, patch) => {
-                session.dispatch({
-                  type: "update-text-overlay",
-                  aspect: session.activeAspect,
-                  overlayId,
-                  patch,
-                });
-              }}
-              onUpdateAudio={(trackId, patch) => {
-                session.dispatch({
-                  type: "update-audio-track",
-                  aspect: session.activeAspect,
-                  trackId,
-                  patch,
-                });
-              }}
-              onRemoveAudio={(trackId) => {
-                session.dispatch({
-                  type: "remove-audio-track",
-                  aspect: session.activeAspect,
-                  trackId,
-                });
-                if (session.selectedAudioId === trackId) {
-                  session.setSelectedAudioId(null);
-                }
-              }}
-            />
-          </div>
-        </main>
-      </div>
+        <div className="order-3 min-h-[360px] min-w-0 border-b border-white/10 xl:order-none xl:col-span-3 xl:col-start-1 xl:row-start-2 xl:min-h-0 xl:border-b-0 xl:border-t">
+          <ElahTimelineDock
+            version={session.activeVersion}
+            assets={session.assetList}
+            assetSources={session.previewAssetSources}
+            canUndo={session.canUndo}
+            canRedo={session.canRedo}
+            onUndo={session.undo}
+            onRedo={session.redo}
+            onSelectClip={selectClip}
+            onSelectText={selectText}
+            onSelectAudio={selectAudio}
+            onVersionChange={(version) => {
+              session.dispatch({
+                type: "replace-version",
+                aspect: session.activeAspect,
+                version,
+              });
+            }}
+          />
+        </div>
+      </main>
 
       {enableAIChat ? (
         <AIChatDrawer

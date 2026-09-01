@@ -11,14 +11,16 @@ import {
   createDefaultAudioTrack,
   createDefaultClip,
   createDefaultTextOverlay,
-  createInitialProjectSession,
 } from "@/lib/editor/defaults";
 import {
   getFilenameFromContentDisposition,
   isExportDownloadPayload,
   triggerBrowserDownload,
 } from "@/lib/export/download";
-import { editorReducer } from "@/lib/editor/reducer";
+import {
+  createInitialEditorHistory,
+  editorHistoryReducer,
+} from "@/lib/editor/history";
 import { getRemotionSfxById, type RemotionSfxId } from "@/lib/editor/remotion-sfx";
 import { isSupportedImageMimeType, assetKindFromMimeType } from "@/lib/editor/schema";
 import { getTemplateDefinition } from "@/lib/editor/templates";
@@ -52,7 +54,12 @@ export const useEditorSession = ({
   isVercelDeployment?: boolean;
 } = {}) => {
   const searchParams = useSearchParams();
-  const [project, dispatch] = useReducer(editorReducer, undefined, createInitialProjectSession);
+  const [history, dispatch] = useReducer(
+    editorHistoryReducer,
+    undefined,
+    createInitialEditorHistory,
+  );
+  const project = history.present;
   const [assets, setAssets] = useState<Record<string, LocalAsset>>({});
   const [selectedClipId, setSelectedClipId] = useState<string | null>(null);
   const [selectedTextId, setSelectedTextId] = useState<string | null>(null);
@@ -399,7 +406,10 @@ export const useEditorSession = ({
     setStatusMessage(rejectedMessages.length > 0 ? rejectedMessages.join(" ") : null);
   };
 
-  const onAddRemotionSfx = (effectId: RemotionSfxId): void => {
+  const onAddRemotionSfx = (
+    effectId: RemotionSfxId,
+    targetAspect: AspectPreset = activeAspect,
+  ): void => {
     if (isExporting) {
       return;
     }
@@ -428,7 +438,7 @@ export const useEditorSession = ({
 
     dispatch({
       type: "add-audio-track",
-      aspect: activeAspect,
+      aspect: targetAspect,
       track: {
         ...createDefaultAudioTrack(trackId, assetId),
         endFrame: effect.defaultDurationInFrames,
@@ -442,7 +452,7 @@ export const useEditorSession = ({
     setStatusMessage(`Added ${effect.label} from Remotion SFX.`);
   };
 
-  const onExport = async (): Promise<ExportActionResult> => {
+  const onExport = async (signal?: AbortSignal): Promise<ExportActionResult> => {
     const currentProject = projectRef.current;
     const currentAssets = assetsRef.current;
     const currentAspect = currentProject.activeVersion;
@@ -513,6 +523,7 @@ export const useEditorSession = ({
       const response = await fetch("/api/export", {
         method: "POST",
         body: formData,
+        signal,
       });
 
       if (!response.ok) {
@@ -616,6 +627,9 @@ export const useEditorSession = ({
       return next;
     });
 
+    // Deleted browser assets cannot be reconstructed by project-only history.
+    dispatch({ type: "history/clear" });
+
     if (
       selectedClipId &&
       currentProject.versions[currentProject.activeVersion].clips.some(
@@ -693,13 +707,19 @@ export const useEditorSession = ({
     dispatch({ type: "switch-aspect", aspect });
   };
 
+  const undo = () => dispatch({ type: "history/undo" });
+  const redo = () => dispatch({ type: "history/redo" });
+
   return {
+    history,
     activeAspect,
     activeVersion,
     assetList,
     assetNames,
     editorChatContext,
     isExporting,
+    canRedo: history.future.length > 0,
+    canUndo: history.past.length > 0,
     onApplyEditorActions,
     onAddRemotionSfx,
     onExport,
@@ -707,6 +727,7 @@ export const useEditorSession = ({
     onRemoveAsset,
     previewAssetSources,
     remainingFrames,
+    redo,
     selectedAudioId,
     selectedAudioTrack,
     selectedClip,
@@ -719,6 +740,7 @@ export const useEditorSession = ({
     statusMessage,
     switchAspect,
     timelineDurationInFrames,
+    undo,
     dispatch,
     activeMediaFootprintBytes: assetList.reduce((sum, asset) => sum + asset.size, 0),
   };

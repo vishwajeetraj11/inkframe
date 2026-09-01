@@ -1,11 +1,5 @@
 import { FPS } from "../constants";
-import type {
-  Clip,
-  CreatedaleyOpenerTexture,
-  TextOverlayFontFamily,
-  TextOverlayFontStyle,
-  TextOverlayStylePreset,
-} from "../types";
+import type { Clip } from "../types";
 import {
   TEXT_OVERLAY_FONT_FAMILIES,
   TEXT_OVERLAY_FONT_STYLES,

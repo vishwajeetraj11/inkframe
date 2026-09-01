@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { ClarityInit } from "@/components/analytics/ClarityInit";
+import { InkframeWebMcp } from "@/components/webmcp/InkframeWebMcp";
 import {
   Barlow_Condensed,
   Cormorant_Garamond,
@@ -62,6 +63,7 @@ export default function RootLayout({
         className={`${plusJakartaSans.variable} ${sora.variable} ${ibmPlexMono.variable} ${sourceSerif4.variable} ${cormorantGaramond.variable} ${barlowCondensed.variable} antialiased`}
       >
         {clarityId ? <ClarityInit projectId={clarityId} /> : null}
+        <InkframeWebMcp />
         {children}
       </body>
     </html>

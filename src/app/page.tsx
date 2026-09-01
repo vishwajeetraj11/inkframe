@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
+import { TEMPLATE_DEFINITIONS } from "@/lib/editor/templates";
 
 const INK = "#0F0D0A";
 const BONE = "#F2EDE3";
@@ -13,20 +14,7 @@ const EXPO_OUT = "cubic-bezier(0.16, 1, 0.3, 1)";
 
 const CYCLE_WORDS = ["FRAME.", "CUT.", "BEAT.", "EXPORT."] as const;
 
-const PRESETS = [
-  "vox-timeline",
-  "world-map-focus",
-  "editorial-stat-ring",
-  "news-clipping",
-  "editorial-seat-arc",
-  "film-frame-gallery",
-  "chart-card",
-  "createdaley-opener",
-  "editorial-bar-chart",
-  "regional-map-focus",
-  "vox-timeline-ribbon",
-  "vox-timeline-ledger",
-] as const;
+const PRESETS = TEMPLATE_DEFINITIONS.map((template) => template.id);
 
 const MODES = [
   {
@@ -57,7 +45,7 @@ const MODES = [
     reveal: "steal the start",
     description:
       "Editorial presets — annotated timelines, maps, stat rings — preloaded straight into the editor.",
-    meta: "12 presets · one click",
+    meta: `${TEMPLATE_DEFINITIONS.length} presets · one click`,
   },
 ] as const;
 
@@ -298,7 +286,7 @@ export default function Home() {
 
       <div className="relative mx-auto flex w-full max-w-6xl flex-1 flex-col px-5 sm:px-8">
         <header
-          className="flex items-center justify-between border-b py-5"
+          className="flex flex-col items-start gap-4 border-b py-5 sm:flex-row sm:items-center sm:justify-between"
           style={{ borderColor: `${BONE}1f` }}
         >
           <span className="flex items-center gap-3">
@@ -314,13 +302,13 @@ export default function Home() {
             </span>
           </span>
 
-          <span className="flex items-center gap-5 sm:gap-7">
-            <nav aria-label="Primary" className="flex items-center gap-4 sm:gap-6">
+          <span className="flex w-full items-center sm:w-auto sm:gap-7">
+            <nav aria-label="Primary" className="flex w-full items-center justify-between gap-2 sm:w-auto sm:justify-start sm:gap-6">
               {MODES.map((mode) => (
                 <Link
                   key={mode.href}
                   href={mode.href}
-                  className="font-condensed text-xs font-medium uppercase tracking-[0.22em] transition-colors duration-200 hover:text-[#FF4F1F] focus-visible:text-[#FF4F1F]"
+                  className="font-condensed inline-flex min-h-12 items-center text-xs font-medium uppercase tracking-[0.18em] transition-colors duration-200 hover:text-[#FF4F1F] focus-visible:text-[#FF4F1F] sm:tracking-[0.22em]"
                   style={{ color: `${BONE}b3` }}
                 >
                   {mode.navLabel}

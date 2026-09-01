@@ -73,31 +73,6 @@ interface TextOverlayInspectorProps {
   overlay: TextOverlay;
 }
 
-interface InspectorRendererProps {
-  overlay: TextOverlay;
-  disabled?: boolean;
-  onUpdateText: (overlayId: string, patch: Partial<Omit<TextOverlay, "id">>) => void;
-  chartCardData: ReturnType<typeof getEditableChartCardData> | null;
-  editorialStatRingData: ReturnType<typeof getEditableEditorialStatRingData> | null;
-  worldMapFocusData: ReturnType<typeof getEditableWorldMapFocusData> | null;
-  regionalMapFocusData: ReturnType<typeof getEditableRegionalMapFocusData> | null;
-  filmFrameGalleryData: ReturnType<typeof getEditableFilmFrameGalleryData> | null;
-  createdaleyOpenerData: ReturnType<typeof getEditableCreatedaleyOpenerData> | null;
-  voxTimelineData: ReturnType<typeof getEditableVoxTimelineData> | null;
-  updateChartCard: (updater: (current: ReturnType<typeof getEditableChartCardData>) => ReturnType<typeof getEditableChartCardData>) => void;
-  updateCreatedaleyOpener: (updater: (current: ReturnType<typeof getEditableCreatedaleyOpenerData>) => ReturnType<typeof getEditableCreatedaleyOpenerData>) => void;
-  updateEditorialStatRing: (updater: (current: ReturnType<typeof getEditableEditorialStatRingData>) => ReturnType<typeof getEditableEditorialStatRingData>) => void;
-  updateWorldMapFocus: (updater: (current: ReturnType<typeof getEditableWorldMapFocusData>) => ReturnType<typeof getEditableWorldMapFocusData>) => void;
-  updateRegionalMapFocus: (updater: (current: ReturnType<typeof getEditableRegionalMapFocusData>) => ReturnType<typeof getEditableRegionalMapFocusData>) => void;
-  updateFilmFrameGallery: (updater: (current: ReturnType<typeof getEditableFilmFrameGalleryData>) => ReturnType<typeof getEditableFilmFrameGalleryData>) => void;
-  updateVoxTimeline: (updater: (current: ReturnType<typeof getEditableVoxTimelineData>) => ReturnType<typeof getEditableVoxTimelineData>) => void;
-  selectedCountryName?: string;
-  countryOptions: string[];
-  selectedRegionalPrimaryCountryName?: string;
-  selectedRegionalSecondaryCountryName: string;
-  regionalCountryOptions: string[];
-}
-
 const renderPresetInspector = (props: {
   createdaleyOpenerData: ReturnType<typeof getEditableCreatedaleyOpenerData> | null;
   editorialStatRingData: ReturnType<typeof getEditableEditorialStatRingData> | null;

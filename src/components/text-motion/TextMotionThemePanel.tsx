@@ -9,52 +9,41 @@ export const TextMotionThemePanel = ({
   theme,
   onChange,
 }: TextMotionThemePanelProps) => {
+  const colors = [
+    { key: "backgroundFrom", label: "Start", value: theme.backgroundFrom },
+    { key: "backgroundTo", label: "End", value: theme.backgroundTo },
+    { key: "textColor", label: "Type", value: theme.textColor },
+    { key: "accentColor", label: "Accent", value: theme.accentColor },
+  ] as const;
+
   return (
-    <div className="space-y-2 rounded-xl border border-slate-700/70 bg-slate-950/50 p-3">
-      <p className="app-panel-label text-xs font-semibold uppercase tracking-wide text-slate-300">
-        Theme
-      </p>
-      <div className="grid grid-cols-2 gap-2 text-xs">
-        <label className="space-y-1">
-          <span className="text-slate-400">Background From</span>
-          <input
-            type="color"
-            value={theme.backgroundFrom}
-            onChange={(event) => onChange({ backgroundFrom: event.currentTarget.value })}
-            className="h-9 w-full rounded border border-slate-700 bg-slate-900"
-          />
-        </label>
-
-        <label className="space-y-1">
-          <span className="text-slate-400">Background To</span>
-          <input
-            type="color"
-            value={theme.backgroundTo}
-            onChange={(event) => onChange({ backgroundTo: event.currentTarget.value })}
-            className="h-9 w-full rounded border border-slate-700 bg-slate-900"
-          />
-        </label>
-
-        <label className="space-y-1">
-          <span className="text-slate-400">Text Color</span>
-          <input
-            type="color"
-            value={theme.textColor}
-            onChange={(event) => onChange({ textColor: event.currentTarget.value })}
-            className="h-9 w-full rounded border border-slate-700 bg-slate-900"
-          />
-        </label>
-
-        <label className="space-y-1">
-          <span className="text-slate-400">Accent Color</span>
-          <input
-            type="color"
-            value={theme.accentColor}
-            onChange={(event) => onChange({ accentColor: event.currentTarget.value })}
-            className="h-9 w-full rounded border border-slate-700 bg-slate-900"
-          />
-        </label>
+    <section aria-labelledby="motion-palette-heading" className="py-5 xl:pr-6">
+      <div>
+        <h3 id="motion-palette-heading" className="app-eyebrow text-[10px] uppercase tracking-[0.2em] text-[#f2ede3]/45">
+          Frame palette
+        </h3>
+        <p className="mt-1 text-xs text-[#f2ede3]/48">Color updates appear in the monitor instantly.</p>
       </div>
-    </div>
+      <div className="mt-4 grid grid-cols-2 gap-x-5 gap-y-3 sm:grid-cols-4 xl:grid-cols-2 2xl:grid-cols-4">
+        {colors.map((color) => (
+          <label key={color.key} className="group flex min-h-11 cursor-pointer items-center gap-2">
+            <span className="relative h-9 w-9 shrink-0 overflow-hidden border border-[#f2ede3]/20 group-focus-within:ring-2 group-focus-within:ring-[#ff4f1f]">
+              <span className="absolute inset-1" style={{ backgroundColor: color.value }} aria-hidden="true" />
+              <input
+                type="color"
+                value={color.value}
+                aria-label={`${color.label} color`}
+                onChange={(event) => onChange({ [color.key]: event.currentTarget.value })}
+                className="absolute inset-0 h-full w-full cursor-pointer opacity-0"
+              />
+            </span>
+            <span className="min-w-0">
+              <span className="block text-xs font-medium text-[#f2ede3]/72">{color.label}</span>
+              <span className="app-data block truncate text-[9px] uppercase text-[#f2ede3]/35">{color.value}</span>
+            </span>
+          </label>
+        ))}
+      </div>
+    </section>
   );
 };

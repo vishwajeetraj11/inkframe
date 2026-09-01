@@ -105,6 +105,7 @@ export const packLaneRows = <T,>(
     }
 
     rows[targetRow].push(item);
+    rowEndFrames[targetRow] = endFrame;
   }
 
   return rows;

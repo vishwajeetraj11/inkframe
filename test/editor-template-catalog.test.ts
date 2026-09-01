@@ -2,7 +2,6 @@ import { describe, expect, it } from "vitest";
 import {
   getTemplateDefinition,
   TEMPLATE_DEFINITIONS,
-  TEMPLATE_DEFINITION_MAP,
 } from "@/lib/editor/templates";
 
 describe("editor template catalog", () => {
