@@ -9,6 +9,7 @@ import {
   type SandboxWriteFile,
 } from "@/server/render-service";
 import {
+  buildEditorExportFilenameForRequest,
   getNextEditorExportFilename,
   LOCAL_EDITOR_EXPORT_DIR,
 } from "@/server/export-filenames";
@@ -31,7 +32,9 @@ export const exportEditorProject = async ({
     const useVercelSandbox = shouldUseVercelSandboxRender();
     const activeVersion = project.versions[project.activeVersion];
     const usedAssetIds = collectUsedAssetIds(activeVersion);
-    const exportFilename = await getNextEditorExportFilename(project);
+    const exportFilename = useVercelSandbox
+      ? buildEditorExportFilenameForRequest(project, requestId)
+      : await getNextEditorExportFilename(project);
 
     const assetsDir = path.join(requestDir, "assets");
     const outputPath = path.join(requestDir, `${requestId}-${exportFilename}`);

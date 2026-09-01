@@ -27,6 +27,18 @@ export const buildEditorExportFilenamePrefix = (
   return `${project.activeVersion}-${templateSlug}`;
 };
 
+export const buildEditorExportFilenameForRequest = (
+  project: ExportProjectInput,
+  requestId: string,
+): string => {
+  const safeRequestId = requestId.replace(/[^a-zA-Z0-9_-]/g, "").slice(0, 64);
+  if (!safeRequestId) {
+    throw new Error("A valid export request ID is required.");
+  }
+
+  return `${buildEditorExportFilenamePrefix(project)}-${safeRequestId}.mp4`;
+};
+
 export const getNextAvailableMp4Filename = async ({
   directory,
   prefix,

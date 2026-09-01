@@ -1,6 +1,7 @@
 import { getFilenameFromContentDisposition } from "@/lib/export/download";
 import type { ExportProjectInput } from "@/lib/editor/schema";
 import {
+  buildEditorExportFilenameForRequest,
   buildEditorExportFilenamePrefix,
   getNextAvailableMp4Filename,
 } from "@/server/export-filenames";
@@ -61,6 +62,15 @@ describe("editor export filenames", () => {
     expect(buildEditorExportFilenamePrefix(createEditorExportProject())).toBe(
       "widescreen_16_9-regional-map-focus",
     );
+  });
+
+  it("builds a request-scoped filename without touching persistent storage", () => {
+    expect(
+      buildEditorExportFilenameForRequest(
+        createEditorExportProject(),
+        "request-abc_123",
+      ),
+    ).toBe("widescreen_16_9-regional-map-focus-request-abc_123.mp4");
   });
 
   it("increments the next available export number from the filesystem", async () => {
