@@ -26,6 +26,16 @@ export interface EditorWebMcpBridge {
   requestMediaPicker: () => void;
 }
 
+export const startEditorWebMcpExport = (
+  requestExport: () => Promise<{ ok: boolean; message: string }>,
+): { ok: boolean; message: string } => {
+  void requestExport().catch(() => undefined);
+  return {
+    ok: true,
+    message: "Export started. The MP4 download will begin when rendering completes.",
+  };
+};
+
 const createTools: WebMcpToolFactory<EditorWebMcpBridge> = (getCurrent) =>
   createEditorWebMcpTools({
     getState: () => getCurrent().history,
@@ -52,7 +62,10 @@ const createTools: WebMcpToolFactory<EditorWebMcpBridge> = (getCurrent) =>
       if (signal.aborted) throw signal.reason;
       return result;
     },
-    requestExport: (signal) => getCurrent().requestExport(signal),
+    requestExport: () =>
+      startEditorWebMcpExport(() =>
+        getCurrent().requestExport(new AbortController().signal),
+      ),
     removeAsset: (assetId, signal) => {
       if (signal.aborted) throw signal.reason;
       flushSync(() => getCurrent().removeAsset(assetId));
