@@ -29,7 +29,7 @@ export const EditorRightSidebar = ({
   return (
     <aside
       aria-label="Inspector"
-      className="h-full min-h-0 overflow-y-auto border-t border-white/10 bg-[#15120e] xl:border-l xl:border-t-0"
+      className="editor-inspector h-full min-h-0 overflow-y-auto border-t border-white/10 bg-[#15120e] xl:border-l xl:border-t-0"
     >
       <Inspector
         clip={selectedClip}

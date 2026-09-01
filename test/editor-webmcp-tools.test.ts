@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { createInitialEditorHistory } from "@/lib/editor/history";
 import { editorReducer } from "@/lib/editor/reducer";
 import { createDefaultAudioTrack, createDefaultClip } from "@/lib/editor/defaults";
@@ -18,7 +18,7 @@ const setup = () => {
   const callbacks = {
     addRemotionSfx: async () => undefined,
     applyAIEditorActions: async () => ({ ok: true, message: "Applied" }),
-    requestExport: async () => ({ ok: true, message: "Exported" }),
+    requestExport: vi.fn(async () => ({ ok: true, message: "Exported" })),
     removeAsset: async () => ({ ok: true, message: "Removed" }),
     requestMediaPicker: async () => undefined,
   };
@@ -135,5 +135,15 @@ describe("editor WebMCP tools", () => {
     await expect(tools.find((tool) => tool.name === "editor_remove_asset")!.execute({ assetId: "video-1" }, executeOptions)).rejects.toThrow();
     expect(JSON.parse(await tools.find((tool) => tool.name === "editor_request_export")!.execute({ confirmed: true }, executeOptions))).toMatchObject({ ok: true, message: "Exported" });
     expect(JSON.parse(await tools.find((tool) => tool.name === "editor_remove_asset")!.execute({ assetId: "video-1", confirmed: true }, executeOptions))).toMatchObject({ ok: true, message: "Removed" });
+  });
+
+  it("supports WebMCP hosts that omit execution options", async () => {
+    const { tools, callbacks } = setup();
+    const response = await tools
+      .find((tool) => tool.name === "editor_request_export")!
+      .execute({ confirmed: true });
+
+    expect(callbacks.requestExport).toHaveBeenCalledWith(expect.any(AbortSignal));
+    expect(JSON.parse(response)).toMatchObject({ ok: true, message: "Exported" });
   });
 });

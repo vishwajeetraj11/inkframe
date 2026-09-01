@@ -16,6 +16,9 @@ const CYCLE_WORDS = ["FRAME.", "CUT.", "BEAT.", "EXPORT."] as const;
 
 const PRESETS = TEMPLATE_DEFINITIONS.map((template) => template.id);
 
+const JUDGE_PROMPT =
+  "Open the Inkframe editor. Create a 9-second Reel with three editorial text scenes about why browser agents should use structured tools instead of clicking through interfaces. Use three different visual presets, inspect the resulting timeline, then ask me before exporting the MP4.";
+
 const MODES = [
   {
     index: "01",
@@ -269,6 +272,106 @@ function ModeRow({ mode, delay }: { mode: (typeof MODES)[number]; delay: number 
   );
 }
 
+function AgentProofSection() {
+  const [copyStatus, setCopyStatus] = useState<"idle" | "copied" | "failed">("idle");
+
+  const copyPrompt = async () => {
+    try {
+      await navigator.clipboard.writeText(JUDGE_PROMPT);
+      setCopyStatus("copied");
+    } catch {
+      setCopyStatus("failed");
+    }
+  };
+
+  return (
+    <section
+      aria-labelledby="agent-proof-title"
+      className="border-y py-10 sm:py-14"
+      style={{ borderColor: `${BONE}24` }}
+    >
+      <div className="grid gap-10 lg:grid-cols-[minmax(0,0.85fr)_minmax(28rem,1.15fr)] lg:gap-16">
+        <div>
+          <p
+            className="app-data flex items-center gap-3 text-[11px] uppercase tracking-[0.2em]"
+            style={{ color: `${BONE}70` }}
+          >
+            <span className="block h-2 w-2" style={{ background: VERMILLION }} />
+            WebMCP · live agent control
+          </p>
+          <h2
+            id="agent-proof-title"
+            className="font-condensed mt-5 max-w-xl text-[clamp(2.6rem,5.4vw,5rem)] font-semibold uppercase leading-[0.92]"
+          >
+            Prompt the cut.
+            <br />
+            Inspect every edit.
+            <br />
+            <span style={{ color: VERMILLION }}>Approve the render.</span>
+          </h2>
+          <p className="mt-6 max-w-lg text-sm leading-6 sm:text-base" style={{ color: `${BONE}a6` }}>
+            Inkframe exposes real editing actions to browser agents. The agent builds in the
+            same visible timeline you use; you keep creative control and explicitly confirm
+            export before Remotion renders the MP4.
+          </p>
+        </div>
+
+        <div className="self-end">
+          <div className="border-t" style={{ borderColor: `${BONE}38` }}>
+            {["Compose with typed tools", "Review in the shared timeline", "Confirm the MP4 export"].map(
+              (label, index) => (
+                <div
+                  key={label}
+                  className="grid grid-cols-[2.5rem_1fr_auto] items-center gap-3 border-b py-3.5"
+                  style={{ borderColor: `${BONE}26` }}
+                >
+                  <span className="app-data text-[11px]" style={{ color: `${BONE}59` }}>
+                    0{index + 1}
+                  </span>
+                  <span className="font-condensed text-sm font-medium uppercase tracking-[0.12em] sm:text-base">
+                    {label}
+                  </span>
+                  <span className="app-data text-[10px] uppercase" style={{ color: index === 2 ? VERMILLION : `${BONE}59` }}>
+                    {index === 2 ? "human" : "agent"}
+                  </span>
+                </div>
+              ),
+            )}
+          </div>
+
+          <blockquote
+            className="app-data mt-6 border-l-2 py-1 pl-5 text-xs leading-6 sm:text-sm"
+            style={{ borderColor: VERMILLION, color: `${BONE}b8` }}
+          >
+            “{JUDGE_PROMPT}”
+          </blockquote>
+
+          <div className="mt-6 flex flex-wrap items-center gap-4">
+            <Link
+              href="/editor"
+              className="font-condensed inline-flex min-h-11 items-center bg-[#F2EDE3] px-5 text-sm font-semibold uppercase tracking-[0.16em] transition-colors hover:bg-[#FF4F1F] focus-visible:bg-[#FF4F1F]"
+              style={{ color: INK }}
+            >
+              Run the agent flow →
+            </Link>
+            <button
+              type="button"
+              onClick={() => void copyPrompt()}
+              className="app-data min-h-11 border px-4 text-[11px] uppercase tracking-[0.14em] transition-colors hover:border-[#FF4F1F] hover:text-[#FF4F1F] focus-visible:border-[#FF4F1F] focus-visible:text-[#FF4F1F]"
+              style={{ borderColor: `${BONE}45`, color: BONE }}
+            >
+              {copyStatus === "copied" ? "Prompt copied" : "Copy judge prompt"}
+            </button>
+            <span className="app-data text-[10px] uppercase" role="status" style={{ color: `${BONE}59` }}>
+              {copyStatus === "failed" ? "Copy unavailable — select the prompt above" : "25 editor tools · strict schemas"}
+            </span>
+          </div>
+        </div>
+      </div>
+    </section>
+  );
+}
+
 export default function Home() {
   return (
     <main
@@ -402,7 +505,9 @@ export default function Home() {
           </div>
         </section>
 
-        <nav aria-label="Studio modes" className="pb-4">
+        <AgentProofSection />
+
+        <nav aria-label="Studio modes" className="pt-10 pb-4 sm:pt-14">
           {MODES.map((mode, index) => (
             <ModeRow key={mode.href} mode={mode} delay={0.65 + index * 0.08} />
           ))}

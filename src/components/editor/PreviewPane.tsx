@@ -69,10 +69,10 @@ export const PreviewPane = ({
     ? (safeDurationInFrames / safeFps).toFixed(2)
     : "0.00";
   const previewAspectLabel = aspect === "reel_9_16" ? "9:16" : "16:9";
-  const stageMaxWidth = aspect === "reel_9_16" ? "min(42vh, 360px)" : "min(78vw, 920px)";
+  const stageMaxWidth = aspect === "reel_9_16" ? "min(30vh, 280px)" : "min(72vw, 860px)";
 
   return (
-    <section className="flex h-full min-h-[420px] flex-col bg-[#0b0a08] xl:min-h-0">
+    <section className="flex h-full min-h-[320px] flex-col bg-[#0b0a08] xl:min-h-0">
       <div className="flex min-h-12 items-center justify-between gap-3 border-b border-white/10 px-4 py-2">
         <div className="flex items-center gap-3">
           <span className="h-2 w-2 bg-cyan-300" />
@@ -97,11 +97,11 @@ export const PreviewPane = ({
         </div>
       </div>
 
-      <div className="relative flex min-h-0 flex-1 items-center justify-center overflow-hidden bg-[radial-gradient(circle_at_center,rgba(242,237,227,0.055),transparent_64%)] p-5 md:p-8">
+      <div className="relative flex min-h-0 flex-1 items-center justify-center overflow-hidden bg-[radial-gradient(circle_at_center,rgba(242,237,227,0.055),transparent_64%)] p-3 md:p-5">
         <div aria-hidden="true" className="pointer-events-none absolute inset-x-0 top-1/2 h-px bg-white/[0.035]" />
         <div aria-hidden="true" className="pointer-events-none absolute inset-y-0 left-1/2 w-px bg-white/[0.035]" />
         <div
-          className="relative w-full overflow-hidden border border-white/15 bg-black shadow-[0_28px_80px_rgba(0,0,0,0.55)]"
+          className="relative w-full overflow-hidden border border-white/15 bg-black shadow-[0_20px_56px_rgba(0,0,0,0.48)]"
           style={{
             width: "100%",
             maxWidth: stageMaxWidth,

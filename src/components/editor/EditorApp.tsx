@@ -5,9 +5,11 @@ import { EditorHeader } from "@/components/editor/EditorHeader";
 import { EditorSidebar } from "@/components/editor/EditorSidebar";
 import { EditorRightSidebar } from "@/components/editor/EditorRightSidebar";
 import { PreviewPane } from "@/components/editor/PreviewPane";
+import { TimelineResizeHandle } from "@/components/editor/TimelineResizeHandle";
 import { ElahTimelineDock } from "@/components/editor/elah";
 import { createDefaultTextOverlay } from "@/lib/editor/defaults";
 import { nanoid } from "nanoid";
+import { useState, type CSSProperties } from "react";
 import { useEditorWebMcp } from "./hooks/use-editor-webmcp";
 import { useEditorSession } from "./hooks/use-editor-session";
 
@@ -16,11 +18,16 @@ interface EditorAppProps {
   isVercelDeployment: boolean;
 }
 
+const DEFAULT_TIMELINE_HEIGHT = 188;
+const MIN_TIMELINE_HEIGHT = 140;
+const MAX_TIMELINE_HEIGHT = 360;
+
 export const EditorApp = ({
   enableAIChat,
   isVercelDeployment,
 }: EditorAppProps) => {
   const session = useEditorSession({ isVercelDeployment });
+  const [timelineHeight, setTimelineHeight] = useState(DEFAULT_TIMELINE_HEIGHT);
 
   const selectClip = (clipId: string | null) => {
     session.setSelectedClipId(clipId);
@@ -105,12 +112,14 @@ export const EditorApp = ({
         }}
       />
 
-      <main className="mx-auto grid w-full max-w-[1800px] xl:h-[calc(100dvh-65px)] xl:grid-cols-[280px_minmax(0,1fr)_340px] xl:grid-rows-[minmax(390px,1fr)_minmax(270px,37vh)]">
+      <main
+        className="mx-auto grid w-full max-w-[1800px] xl:h-[calc(100dvh-54px)] xl:grid-cols-[264px_minmax(0,1fr)_320px] xl:grid-rows-[minmax(0,1fr)_var(--timeline-height)]"
+        style={{ "--timeline-height": `${timelineHeight}px` } as CSSProperties}
+      >
         <div className="order-1 min-h-0 xl:order-none xl:col-start-1 xl:row-start-1">
           <EditorSidebar
             isExporting={session.isExporting}
             assets={session.assetList}
-            onAddText={handleAddText}
             onFilesSelected={session.onFilesSelected}
             onAddRemotionSfx={session.onAddRemotionSfx}
             onRemoveAsset={session.onRemoveAsset}
@@ -162,7 +171,14 @@ export const EditorApp = ({
           />
         </div>
 
-        <div className="order-3 min-h-[360px] min-w-0 border-b border-white/10 xl:order-none xl:col-span-3 xl:col-start-1 xl:row-start-2 xl:min-h-0 xl:border-b-0 xl:border-t">
+        <div className="relative order-3 min-h-[240px] min-w-0 border-b border-white/10 xl:order-none xl:col-span-3 xl:col-start-1 xl:row-start-2 xl:min-h-0 xl:border-b-0 xl:border-t">
+          <TimelineResizeHandle
+            height={timelineHeight}
+            minHeight={MIN_TIMELINE_HEIGHT}
+            maxHeight={MAX_TIMELINE_HEIGHT}
+            defaultHeight={DEFAULT_TIMELINE_HEIGHT}
+            onHeightChange={setTimelineHeight}
+          />
           <ElahTimelineDock
             version={session.activeVersion}
             assets={session.assetList}
@@ -171,6 +187,7 @@ export const EditorApp = ({
             canRedo={session.canRedo}
             onUndo={session.undo}
             onRedo={session.redo}
+            onAddTrack={handleAddText}
             onSelectClip={selectClip}
             onSelectText={selectText}
             onSelectAudio={selectAudio}

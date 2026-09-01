@@ -63,6 +63,12 @@ describe("Text Motion WebMCP tools", () => {
       .toContain("zoom-spin");
   });
 
+  it("supports WebMCP hosts that omit execution options", async () => {
+    const { tools } = makeTools();
+    const result = await tool(tools, "text_motion_get_project_summary").execute({});
+    expect(JSON.parse(result as string).ok).toBe(true);
+  });
+
   it("rejects unknown input keys, invalid values, and missing confirmations", async () => {
     const { tools } = makeTools();
     const updateTheme = tool(tools, "text_motion_update_theme");

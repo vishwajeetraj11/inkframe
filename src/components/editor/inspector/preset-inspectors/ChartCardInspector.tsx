@@ -82,7 +82,7 @@ export const ChartCardInspector = ({
               subhead: event.currentTarget.value,
             }));
           }}
-          className="min-h-16 w-full rounded border border-neutral-600 bg-neutral-900 px-2 py-1"
+          className="min-h-13 w-full rounded border border-neutral-600 bg-neutral-900 px-2 py-1"
         />
       </LabeledControl>
 

@@ -39,9 +39,9 @@ import {
 } from "./utils";
 
 const INSPECTOR_INPUT_CLASS =
-  "w-full rounded-xl border border-white/10 bg-neutral-950/70 px-3 py-2.5 text-sm text-neutral-100 outline-none transition focus:border-cyan-300/35 focus:ring-2 focus:ring-cyan-300/12";
+  "min-h-9 w-full rounded-lg border border-white/10 bg-neutral-950/70 px-2.5 py-1.5 text-xs text-neutral-100 outline-none transition focus:border-cyan-300/35 focus:ring-2 focus:ring-cyan-300/12";
 const INSPECTOR_COLOR_INPUT_CLASS =
-  "h-11 w-full rounded-xl border border-white/10 bg-neutral-950/70 p-1 outline-none transition focus:border-cyan-300/35 focus:ring-2 focus:ring-cyan-300/12";
+  "h-9 w-full rounded-lg border border-white/10 bg-neutral-950/70 p-1 outline-none transition focus:border-cyan-300/35 focus:ring-2 focus:ring-cyan-300/12";
 
 /**
  * Factory for creating preset-specific update handlers
@@ -219,7 +219,7 @@ const renderPresetInspector = (props: {
             text: event.currentTarget.value,
           });
         }}
-        className={`${INSPECTOR_INPUT_CLASS} min-h-16`}
+        className={`${INSPECTOR_INPUT_CLASS} min-h-12`}
       />
     </LabeledControl>
   );
@@ -364,15 +364,15 @@ export const TextOverlayInspector = ({
       {hasDedicatedInspector ? (
         <section className="space-y-3">
           <div>
-            <p className="app-eyebrow text-[10px] uppercase tracking-[0.22em] text-neutral-500">
+            <p className="app-eyebrow text-[9px] uppercase tracking-[0.22em] text-neutral-500">
               Placement
             </p>
-            <p className="mt-1 text-[11px] text-neutral-500">
+            <p className="mt-1 text-[10px] text-neutral-500">
               Fine-tune where this preset sits on the canvas.
             </p>
           </div>
 
-          <div className="grid grid-cols-2 gap-3 text-xs text-neutral-200">
+          <div className="grid grid-cols-2 gap-3 text-[11px] text-neutral-200">
             <LabeledControl label="X (%)">
               <input
                 type="number"
@@ -409,18 +409,18 @@ export const TextOverlayInspector = ({
           </div>
         </section>
       ) : (
-        <div className="grid gap-5 xl:grid-cols-2">
+        <div className="editor-inspector-layout">
           <section className="space-y-3">
             <div>
-              <p className="app-eyebrow text-[10px] uppercase tracking-[0.22em] text-neutral-500">
+              <p className="app-eyebrow text-[9px] uppercase tracking-[0.22em] text-neutral-500">
                 Placement
               </p>
-              <p className="mt-1 text-[11px] text-neutral-500">
+              <p className="mt-1 text-[10px] text-neutral-500">
                 Position the overlay on the canvas and tune scale.
               </p>
             </div>
 
-            <div className="grid grid-cols-2 gap-3 text-xs text-neutral-200">
+            <div className="grid grid-cols-2 gap-3 text-[11px] text-neutral-200">
               <LabeledControl label="X (%)">
                 <input
                   type="number"
@@ -490,15 +490,15 @@ export const TextOverlayInspector = ({
 
           <section className="space-y-3">
             <div>
-              <p className="app-eyebrow text-[10px] uppercase tracking-[0.22em] text-neutral-500">
+              <p className="app-eyebrow text-[9px] uppercase tracking-[0.22em] text-neutral-500">
                 Typography
               </p>
-              <p className="mt-1 text-[11px] text-neutral-500">
+              <p className="mt-1 text-[10px] text-neutral-500">
                 Control the family, weight, style, and active preset.
               </p>
             </div>
 
-            <div className="grid grid-cols-2 gap-3 text-xs text-neutral-200">
+            <div className="grid grid-cols-2 gap-3 text-[11px] text-neutral-200">
               <LabeledControl label="Font Family">
                 <select
                   disabled={disabled}

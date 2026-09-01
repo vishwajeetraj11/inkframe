@@ -1,5 +1,8 @@
 import { z } from "zod";
-import type { WebMcpTool } from "@/lib/webmcp/types";
+import {
+  getWebMCPExecuteSignal,
+  type WebMcpTool,
+} from "@/lib/webmcp/types";
 import {
   TEMPLATE_DEFINITIONS,
   getTemplateDefinition,
@@ -83,12 +86,13 @@ const tool = <T extends z.ZodType>(
   inputSchema: z.toJSONSchema(schema),
   annotations: { readOnlyHint: readOnly, untrustedContentHint: false },
   execute: async (input, options) => {
-    if (options.signal.aborted) {
-      throw options.signal.reason ?? new DOMException("Tool call aborted", "AbortError");
+    const signal = getWebMCPExecuteSignal(options);
+    if (signal.aborted) {
+      throw signal.reason ?? new DOMException("Tool call aborted", "AbortError");
     }
-    const result = await execute(schema.parse(input), options.signal);
-    if (options.signal.aborted) {
-      throw options.signal.reason ?? new DOMException("Tool call aborted", "AbortError");
+    const result = await execute(schema.parse(input), signal);
+    if (signal.aborted) {
+      throw signal.reason ?? new DOMException("Tool call aborted", "AbortError");
     }
     return result;
   },

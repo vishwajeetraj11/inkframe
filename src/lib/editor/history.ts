@@ -57,7 +57,8 @@ export const editorHistoryReducer = (
   const next = editorReducer(state.present, action);
   if (next === state.present) return state;
 
-  // Switching canvas format is navigation, not an editable project mutation.
+  // Switching canvas format is navigation. A blank target may be initialized
+  // from the current timeline, but the switch itself should not create an undo step.
   if (action.type === "switch-aspect") {
     return { ...state, present: next };
   }

@@ -56,4 +56,10 @@ describe("Inkframe WebMCP tools", () => {
     ).rejects.toThrow();
     expect(navigate).not.toHaveBeenCalled();
   });
+
+  it("supports WebMCP hosts that omit execution options", async () => {
+    const { tools } = setup();
+    const result = await tools[0].execute({});
+    expect(JSON.parse(result).ok).toBe(true);
+  });
 });

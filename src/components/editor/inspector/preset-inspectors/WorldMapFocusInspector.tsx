@@ -2,7 +2,7 @@ import { LabeledControl } from "@/components/editor/controls/LabeledControl";
 import type { getEditableWorldMapFocusData } from "../utils";
 
 const MAP_INPUT_CLASS =
-  "w-full rounded-xl border border-white/10 bg-neutral-950/70 px-3 py-2.5 text-sm text-neutral-100 outline-none transition focus:border-cyan-300/35 focus:ring-2 focus:ring-cyan-300/12";
+  "min-h-9 w-full rounded-lg border border-white/10 bg-neutral-950/70 px-2.5 py-1.5 text-sm text-neutral-100 outline-none transition focus:border-cyan-300/35 focus:ring-2 focus:ring-cyan-300/12";
 
 interface WorldMapFocusInspectorProps {
   countryOptions: string[];
@@ -24,7 +24,7 @@ export const WorldMapFocusInspector = ({
   onUpdateText,
 }: WorldMapFocusInspectorProps) => {
   return (
-    <div className="space-y-4 rounded-[22px] border border-white/10 bg-[linear-gradient(180deg,rgba(31,28,22,0.92),rgba(24,22,17,0.82))] p-4">
+    <div className="space-y-3 rounded-2xl border border-white/10 bg-[linear-gradient(180deg,rgba(31,28,22,0.92),rgba(24,22,17,0.82))] p-3">
       <div>
         <p className="app-eyebrow text-[11px] uppercase tracking-[0.22em] text-cyan-200/85">
           World Map Focus
@@ -59,7 +59,7 @@ export const WorldMapFocusInspector = ({
               subhead: event.currentTarget.value,
             }));
           }}
-          className={`${MAP_INPUT_CLASS} min-h-24 resize-y`}
+          className={`${MAP_INPUT_CLASS} min-h-13 resize-y`}
         />
       </LabeledControl>
 

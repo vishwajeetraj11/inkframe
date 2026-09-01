@@ -18,7 +18,7 @@ export const AspectSwitcher = ({
 }: AspectSwitcherProps) => {
   return (
     <div
-      className="flex min-h-11 items-center border border-white/10 bg-[#17140f] p-1"
+      className="flex min-h-10 items-center border border-white/10 bg-[#17140f] p-0.5"
       role="group"
       aria-label="Canvas aspect ratio"
     >
@@ -34,7 +34,7 @@ export const AspectSwitcher = ({
             aria-pressed={isActive}
             disabled={disabled}
             onClick={() => onChange(aspect)}
-            className={`min-h-11 px-3 text-xs font-semibold transition outline-none focus-visible:ring-2 focus-visible:ring-cyan-300 sm:px-4 ${
+            className={`min-h-9 px-2.5 text-[10px] font-semibold transition outline-none focus-visible:ring-2 focus-visible:ring-cyan-300 sm:px-3 ${
               isActive
                 ? "bg-neutral-100 text-neutral-950"
                 : "text-neutral-300 hover:bg-white/[0.06] hover:text-neutral-50"

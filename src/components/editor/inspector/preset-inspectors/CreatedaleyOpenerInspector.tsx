@@ -110,7 +110,7 @@ export const CreatedaleyOpenerInspector = ({
               definition: event.currentTarget.value,
             }));
           }}
-          className="min-h-20 w-full rounded border border-neutral-600 bg-neutral-900 px-2 py-1"
+          className="min-h-13 w-full rounded border border-neutral-600 bg-neutral-900 px-2 py-1"
         />
       </LabeledControl>
     </div>

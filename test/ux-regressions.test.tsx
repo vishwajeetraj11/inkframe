@@ -1,8 +1,10 @@
 import { readFile } from "node:fs/promises";
 import path from "node:path";
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import { AspectSwitcher } from "@/components/editor/AspectSwitcher";
+import { EditorSidebar } from "@/components/editor/EditorSidebar";
+import { TimelineResizeHandle } from "@/components/editor/TimelineResizeHandle";
 import { TextMotionSceneList } from "@/components/text-motion/TextMotionSceneList";
 
 describe("UX regressions", () => {
@@ -35,6 +37,60 @@ describe("UX regressions", () => {
     );
 
     expect(screen.getByRole("button", { name: "Add scene" })).toBeEnabled();
+  });
+
+  it("does not duplicate text creation in the source rail", () => {
+    render(
+      <EditorSidebar
+        isExporting={false}
+        assets={[]}
+        onFilesSelected={vi.fn()}
+        onAddRemotionSfx={vi.fn()}
+        onRemoveAsset={vi.fn()}
+      />,
+    );
+
+    expect(screen.queryByRole("button", { name: /text layer/i })).not.toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Templates" }).parentElement).toHaveClass(
+      "lg:hidden",
+    );
+  });
+
+  it("lets keyboard users resize and reset the timeline", () => {
+    const onHeightChange = vi.fn();
+    render(
+      <TimelineResizeHandle
+        height={188}
+        minHeight={140}
+        maxHeight={360}
+        defaultHeight={188}
+        onHeightChange={onHeightChange}
+      />,
+    );
+
+    const separator = screen.getByRole("separator", { name: "Resize timeline" });
+    expect(separator).toHaveAttribute("aria-valuenow", "188");
+
+    fireEvent.keyDown(separator, { key: "ArrowUp" });
+    expect(onHeightChange).toHaveBeenLastCalledWith(204);
+    fireEvent.keyDown(separator, { key: "ArrowDown" });
+    expect(onHeightChange).toHaveBeenLastCalledWith(172);
+    fireEvent.keyDown(separator, { key: "Home" });
+    expect(onHeightChange).toHaveBeenLastCalledWith(140);
+    fireEvent.keyDown(separator, { key: "End" });
+    expect(onHeightChange).toHaveBeenLastCalledWith(360);
+    fireEvent.doubleClick(separator);
+    expect(onHeightChange).toHaveBeenLastCalledWith(188);
+
+    Object.assign(separator, {
+      setPointerCapture: vi.fn(),
+      hasPointerCapture: vi.fn(() => true),
+      releasePointerCapture: vi.fn(),
+    });
+    fireEvent.pointerDown(separator, { button: 0, clientY: 500, pointerId: 1 });
+    fireEvent.pointerMove(separator, { clientY: 400, pointerId: 1 });
+    expect(onHeightChange).toHaveBeenLastCalledWith(288);
+    fireEvent.pointerUp(separator, { pointerId: 1 });
   });
 
   it("keeps Elah utility selectors inside the timeline boundary", async () => {

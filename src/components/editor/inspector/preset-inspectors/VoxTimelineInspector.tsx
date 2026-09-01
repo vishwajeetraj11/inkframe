@@ -81,7 +81,7 @@ export const VoxTimelineInspector = ({
               headline: event.currentTarget.value,
             }));
           }}
-          className="min-h-16 w-full rounded border border-neutral-600 bg-neutral-900 px-2 py-1"
+          className="min-h-13 w-full rounded border border-neutral-600 bg-neutral-900 px-2 py-1"
         />
       </LabeledControl>
 
@@ -116,7 +116,7 @@ export const VoxTimelineInspector = ({
             key={`${overlay.id}-vox-timeline-event-${index}`}
             className="space-y-2 rounded border border-neutral-700/70 bg-neutral-950/60 p-2"
           >
-            <div className="grid grid-cols-[120px_minmax(0,1fr)_auto] gap-2">
+            <div className="grid grid-cols-[76px_minmax(0,1fr)_44px] gap-2">
               <input
                 type="text"
                 disabled={disabled}
@@ -156,15 +156,17 @@ export const VoxTimelineInspector = ({
               <button
                 type="button"
                 disabled={disabled || data.events.length <= 3}
+                aria-label={`Remove event ${index + 1}`}
+                title="Remove event"
                 onClick={() => {
                   onUpdateText((current) => ({
                     ...current,
                     events: current.events.filter((_, currentIndex) => currentIndex !== index),
                   }));
                 }}
-                className="rounded border border-neutral-600 px-2 py-1 text-[11px] font-medium text-neutral-200 disabled:opacity-40"
+                className="inline-flex w-11 items-center justify-center rounded border border-neutral-600 text-lg font-medium text-neutral-200 disabled:opacity-40"
               >
-                Remove
+                <span aria-hidden="true">×</span>
               </button>
             </div>
 
@@ -181,7 +183,7 @@ export const VoxTimelineInspector = ({
                   ),
                 }));
               }}
-              className="min-h-16 w-full rounded border border-neutral-600 bg-neutral-900 px-2 py-1 text-xs text-neutral-200"
+              className="min-h-13 w-full rounded border border-neutral-600 bg-neutral-900 px-2 py-1 text-xs text-neutral-200"
               placeholder="Caption"
             />
 

@@ -17,7 +17,7 @@ import type {
 } from "./types";
 
 const ELah_SCHEMA_VERSION = 1;
-const ELah_TRACK_HEIGHT = 64;
+const ELah_TRACK_HEIGHT = 40;
 const VIDEO_TRACK_ID = "inkframe-video";
 
 export type ElahAdapterDiagnosticCode =

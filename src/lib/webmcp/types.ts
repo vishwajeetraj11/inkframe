@@ -7,8 +7,17 @@ export interface WebMCPToolAnnotations {
 }
 
 export interface WebMCPExecuteOptions {
-  signal: AbortSignal;
+  signal?: AbortSignal;
 }
+
+/**
+ * Some WebMCP preview hosts invoke tools without an execution context. Keep
+ * cancellation support when supplied, while remaining compatible with those
+ * callers.
+ */
+export const getWebMCPExecuteSignal = (
+  options?: WebMCPExecuteOptions,
+): AbortSignal => options?.signal ?? new AbortController().signal;
 
 export interface WebMCPTool<Input = unknown> {
   name: string;
@@ -16,7 +25,7 @@ export interface WebMCPTool<Input = unknown> {
   description: string;
   inputSchema: WebMCPInputSchema;
   annotations?: WebMCPToolAnnotations;
-  execute: (input: Input, options: WebMCPExecuteOptions) => string | Promise<string>;
+  execute: (input: Input, options?: WebMCPExecuteOptions) => string | Promise<string>;
 }
 
 /** Conventional casing alias for consumers that prefer `Mcp` in type names. */

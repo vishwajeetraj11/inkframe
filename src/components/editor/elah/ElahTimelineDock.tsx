@@ -29,6 +29,7 @@ interface ElahTimelineDockProps {
   canRedo: boolean;
   onUndo: () => void;
   onRedo: () => void;
+  onAddTrack: () => void;
 }
 
 const SelectionBridge = ({
@@ -70,7 +71,7 @@ const ElahHistoryControls = ({
         type="button"
         disabled={!canUndo}
         onClick={onUndo}
-        className="min-h-10 px-3 text-[10px] font-semibold uppercase tracking-[0.12em] text-neutral-300 outline-none transition hover:bg-white/[0.05] hover:text-neutral-50 focus-visible:ring-2 focus-visible:ring-cyan-300 disabled:opacity-35"
+        className="min-h-10 px-2.5 text-[9px] font-semibold uppercase tracking-[0.12em] text-neutral-300 outline-none transition hover:bg-white/[0.05] hover:text-neutral-50 focus-visible:ring-2 focus-visible:ring-cyan-300 disabled:opacity-35"
       >
         Undo
       </button>
@@ -78,7 +79,7 @@ const ElahHistoryControls = ({
         type="button"
         disabled={!canRedo}
         onClick={onRedo}
-        className="min-h-10 px-3 text-[10px] font-semibold uppercase tracking-[0.12em] text-neutral-300 outline-none transition hover:bg-white/[0.05] hover:text-neutral-50 focus-visible:ring-2 focus-visible:ring-cyan-300 disabled:opacity-35"
+        className="min-h-10 px-2.5 text-[9px] font-semibold uppercase tracking-[0.12em] text-neutral-300 outline-none transition hover:bg-white/[0.05] hover:text-neutral-50 focus-visible:ring-2 focus-visible:ring-cyan-300 disabled:opacity-35"
       >
         Redo
       </button>
@@ -98,6 +99,7 @@ export const ElahTimelineDock = ({
   canRedo,
   onUndo,
   onRedo,
+  onAddTrack,
 }: ElahTimelineDockProps) => {
   const capabilities = useMemo(() => detectElahBrowserCapabilities(), []);
   const versionSignature = useMemo(() => JSON.stringify(version), [version]);
@@ -162,7 +164,7 @@ export const ElahTimelineDock = ({
 
   return (
     <ElahEditorProvider
-      className="inkframe-elah flex h-full min-h-[360px] flex-col xl:min-h-0"
+      className="inkframe-elah flex h-full min-h-[240px] flex-col xl:min-h-0"
       project={projectForProvider}
       onProjectChange={handleProjectChange}
     >
@@ -175,9 +177,16 @@ export const ElahTimelineDock = ({
       <div className="flex min-h-12 items-center justify-between border-b border-white/10 px-3">
         <div className="flex items-center gap-2">
           <span className="h-2 w-2 bg-cyan-300" />
-          <span className="app-eyebrow text-[10px] uppercase tracking-[0.16em] text-neutral-300">
+          <span className="app-eyebrow text-[9px] uppercase tracking-[0.16em] text-neutral-300">
             Elah interactive timeline
           </span>
+          <button
+            type="button"
+            onClick={onAddTrack}
+            className="ml-2 min-h-10 border-l border-white/10 px-3 text-[9px] font-semibold uppercase tracking-[0.12em] text-neutral-200 outline-none transition hover:bg-white/[0.05] hover:text-white focus-visible:ring-2 focus-visible:ring-cyan-300 disabled:opacity-35"
+          >
+            + Track
+          </button>
         </div>
         <ElahHistoryControls
           canUndo={canUndo}

@@ -71,15 +71,48 @@ const withUpdatedVersion = (
   };
 };
 
+const hasTimelineContent = (version: VersionTimeline): boolean =>
+  version.clips.length > 0 ||
+  version.textOverlays.length > 0 ||
+  version.audioTracks.length > 0 ||
+  version.transitions.length > 0;
+
+const copyTimelineToAspect = (
+  version: VersionTimeline,
+  aspect: AspectPreset,
+): VersionTimeline => ({
+  aspect,
+  clips: version.clips.map((clip) => ({ ...clip })),
+  textOverlays: version.textOverlays.map((overlay) => ({ ...overlay })),
+  audioTracks: version.audioTracks.map((track) => ({ ...track })),
+  transitions: version.transitions.map((transition) => ({ ...transition })),
+});
+
 export const editorReducer = (
   state: ProjectSession,
   action: EditorAction,
 ): ProjectSession => {
   switch (action.type) {
     case "switch-aspect": {
+      if (action.aspect === state.activeVersion) {
+        return state;
+      }
+
+      const targetVersion = state.versions[action.aspect];
+      const shouldInitializeTarget = !hasTimelineContent(targetVersion);
+
       return {
         ...state,
         activeVersion: action.aspect,
+        versions: shouldInitializeTarget
+          ? {
+              ...state.versions,
+              [action.aspect]: copyTimelineToAspect(
+                state.versions[state.activeVersion],
+                action.aspect,
+              ),
+            }
+          : state.versions,
       };
     }
     case "replace-version": {

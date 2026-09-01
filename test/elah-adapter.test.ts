@@ -122,6 +122,7 @@ describe("Inkframe ↔ Elah timeline adapter", () => {
       stage: { width: 1920, height: 1080 },
       version: 1,
     });
+    expect(projected.project.tracks.every((track) => track.height === 40)).toBe(true);
     expect(nativeClips.map((clip) => clip.type)).toEqual([
       "video",
       "image",

@@ -1,6 +1,38 @@
 # Inkframe
 
-A Next.js + Remotion app for building short-form video timelines, AI-assisted caption scenes, and text-motion compositions without persisting user media after export.
+**An agent-native motion studio: prompt an editable video timeline, inspect every change, and explicitly approve the final MP4 render.**
+
+[Live app](https://inkframe-eta.vercel.app/) · [Open the editor](https://inkframe-eta.vercel.app/editor) · [WebMCP tool reference](./docs/webmcp.md)
+
+Inkframe combines Next.js, Remotion, Elah, and WebMCP to make short-form video creation a shared human-agent workflow. A browser agent can inspect the current project, compose structured scenes, adjust timeline items, switch aspect ratios, add sound effects, and request export through typed tools. The same edits stay visible and editable in the human interface.
+
+## The WebMCP moment
+
+Most browser agents must reverse-engineer a video editor by inspecting the DOM and clicking controls. Inkframe gives the agent the editor's real actions instead:
+
+1. **Compose:** the agent creates or edits scenes through strict, state-aware WebMCP tools.
+2. **Review:** every result appears in the same Elah timeline and Remotion preview the person uses.
+3. **Confirm:** destructive actions, generation, navigation, and MP4 export require explicit confirmation.
+4. **Deliver:** Remotion renders the active 9:16 or 16:9 composition and starts the download.
+
+### Try the judge flow
+
+Open the [live editor](https://inkframe-eta.vercel.app/editor) in ChatGPT's in-app browser and ask:
+
+> Create a 9-second Reel with three editorial text scenes about why browser agents should use structured tools instead of clicking through interfaces. Use three different visual presets, inspect the resulting timeline, then ask me before exporting the MP4.
+
+This demonstrates a complete agent-native task rather than a tool-discovery-only proof: project inspection → structured composition → visible human review → confirmed render.
+
+## WebMCP implementation
+
+- Route-aware catalogs expose site, editor, and Text Motion workflows only while their pages are active.
+- Strict Zod inputs are converted to standards-compatible JSON Schema.
+- Tool handlers read current React state at invocation time instead of capturing stale snapshots.
+- File contents and object URLs never cross the structured tool boundary; native pickers preserve browser security.
+- Tool outputs are bounded and sanitized, and registrations are cleaned up on unmount.
+- WebMCP hosts that omit an execution context remain supported while supplied abort signals still cancel work.
+
+All WebMCP integration work was added on September 1, 2026, during the challenge submission period. The underlying video editor predates the challenge; the agent tool surface, route-aware registration, live state bridge, tests, and judge workflow are the challenge extension.
 
 ## What the app includes
 
@@ -83,6 +115,9 @@ The current safety net covers:
 - vox-timeline data helpers
 - remotion SFX helpers
 - default editor composition props
+- route-aware WebMCP registration and cleanup
+- editor, Text Motion, and site-wide WebMCP contracts
+- browser-host compatibility for tool calls with or without cancellation context
 
 ## Runtime and data handling
 

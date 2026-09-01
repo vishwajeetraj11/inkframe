@@ -1,5 +1,9 @@
 import { z } from "zod";
-import type { WebMcpTool, WebMCPExecuteOptions } from "@/lib/webmcp/types";
+import {
+  getWebMCPExecuteSignal,
+  type WebMcpTool,
+  type WebMCPExecuteOptions,
+} from "@/lib/webmcp/types";
 import { aiEditorActionsSchema, type AIEditorActions } from "../ai-actions";
 import { MAX_DURATION_FRAMES } from "../constants";
 import { createDefaultTextOverlay } from "../defaults";
@@ -136,7 +140,13 @@ const defineTool = <T extends z.ZodType>({ name, title, description, schema, rea
 }): WebMcpTool => ({
   name, title, description, inputSchema: z.toJSONSchema(schema),
   annotations: { readOnlyHint: readOnly, untrustedContentHint: readOnly },
-  execute: async (input, options: WebMCPExecuteOptions) => { throwIfAborted(options.signal); const output = await execute(schema.parse(input), options.signal); throwIfAborted(options.signal); return output; },
+  execute: async (input, options?: WebMCPExecuteOptions) => {
+    const signal = getWebMCPExecuteSignal(options);
+    throwIfAborted(signal);
+    const output = await execute(schema.parse(input), signal);
+    throwIfAborted(signal);
+    return output;
+  },
 });
 
 export const createEditorWebMcpTools = (context: EditorWebMcpToolContext): WebMcpTool[] => {

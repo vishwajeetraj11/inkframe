@@ -1,6 +1,9 @@
 import { nanoid } from "nanoid";
 import { z } from "zod";
-import type { WebMcpTool } from "@/lib/webmcp/types";
+import {
+  getWebMCPExecuteSignal,
+  type WebMcpTool,
+} from "@/lib/webmcp/types";
 import {
   MAX_SCENE_DURATION_FRAMES,
   MAX_TEXT_MOTION_SCENE_COUNT,
@@ -92,9 +95,10 @@ const tool = <T extends z.ZodType>(
   description,
   inputSchema: z.toJSONSchema(inputSchema),
   execute: async (input, options) => {
-    assertNotAborted(options.signal);
-    const result = await execute(inputSchema.parse(input), options.signal);
-    assertNotAborted(options.signal);
+    const signal = getWebMCPExecuteSignal(options);
+    assertNotAborted(signal);
+    const result = await execute(inputSchema.parse(input), signal);
+    assertNotAborted(signal);
     return result;
   },
   annotations: {

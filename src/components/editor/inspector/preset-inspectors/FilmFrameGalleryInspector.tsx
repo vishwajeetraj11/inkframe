@@ -3,7 +3,7 @@ import { TEXT_OVERLAY_STYLE_PRESET_LABELS, type TextOverlay } from "@/lib/editor
 import type { getEditableFilmFrameGalleryData } from "../utils";
 
 const FILM_INPUT_CLASS =
-  "w-full rounded-xl border border-white/10 bg-neutral-950/70 px-3 py-2.5 text-sm text-neutral-100 outline-none transition focus:border-cyan-300/35 focus:ring-2 focus:ring-cyan-300/12";
+  "min-h-9 w-full rounded-lg border border-white/10 bg-neutral-950/70 px-2.5 py-1.5 text-sm text-neutral-100 outline-none transition focus:border-cyan-300/35 focus:ring-2 focus:ring-cyan-300/12";
 
 interface FilmFrameGalleryInspectorProps {
   data: ReturnType<typeof getEditableFilmFrameGalleryData>;
@@ -25,7 +25,7 @@ export const FilmFrameGalleryInspector = ({
   const presetLabel = TEXT_OVERLAY_STYLE_PRESET_LABELS[overlay.stylePreset];
 
   return (
-    <div className="space-y-5 rounded-[22px] border border-white/10 bg-[linear-gradient(180deg,rgba(26,24,19,0.94),rgba(11,10,8,0.88))] p-4">
+    <div className="space-y-3 rounded-2xl border border-white/10 bg-[linear-gradient(180deg,rgba(26,24,19,0.94),rgba(11,10,8,0.88))] p-3">
       <div className="flex items-start justify-between gap-3">
         <div>
           <p className="app-eyebrow text-[11px] uppercase tracking-[0.22em] text-amber-100/85">
@@ -73,7 +73,7 @@ export const FilmFrameGalleryInspector = ({
                 subhead: event.currentTarget.value,
               }));
             }}
-            className={`${FILM_INPUT_CLASS} min-h-24 resize-y`}
+            className={`${FILM_INPUT_CLASS} min-h-13 resize-y`}
           />
         </LabeledControl>
       </section>

@@ -45,7 +45,7 @@ export const MediaLibrary = ({
   const inputRef = useRef<HTMLInputElement>(null);
 
   return (
-    <section className="p-4">
+    <section className="p-3">
       <input
         ref={inputRef}
         id="media-upload"
@@ -64,50 +64,49 @@ export const MediaLibrary = ({
         type="button"
         disabled={disabled}
         onClick={() => inputRef.current?.click()}
-        className="group flex min-h-28 w-full flex-col items-start justify-between border border-dashed border-white/20 bg-white/[0.025] p-4 text-left outline-none transition hover:border-cyan-300/70 hover:bg-cyan-300/[0.04] focus-visible:ring-2 focus-visible:ring-cyan-300 disabled:cursor-not-allowed disabled:opacity-50"
+        className="group flex min-h-20 w-full items-center gap-3 border border-dashed border-white/20 bg-white/[0.025] p-3 text-left outline-none transition hover:border-cyan-300/70 hover:bg-cyan-300/[0.04] focus-visible:ring-2 focus-visible:ring-cyan-300 disabled:cursor-not-allowed disabled:opacity-50"
       >
-        <span className="flex w-full items-center justify-between gap-4">
-          <span className="app-title text-xl font-semibold uppercase text-neutral-50">
+        <span className="min-w-0 flex-1">
+          <span className="app-title block text-sm font-semibold uppercase text-neutral-50">
             Import footage
           </span>
-          <span
-            aria-hidden="true"
-            className="inline-flex h-10 w-10 items-center justify-center border border-white/15 text-xl text-cyan-300 transition group-hover:border-cyan-300"
-          >
-            +
+          <span className="mt-0.5 block text-[10px] leading-4 text-neutral-300">
+            Video, stills, or audio stay local.
           </span>
         </span>
-        <span className="max-w-[25ch] text-xs leading-5 text-neutral-300">
-          Video, stills, or audio. Files stay local until export.
+        <span
+          aria-hidden="true"
+          className="inline-flex h-11 w-11 shrink-0 items-center justify-center border border-white/15 text-lg text-cyan-300 transition group-hover:border-cyan-300"
+        >
+          +
         </span>
       </button>
 
-      <div className="mt-5">
+      <div className="mt-4">
         <div className="flex items-center justify-between border-b border-white/10 pb-2">
-          <h3 className="app-eyebrow text-[10px] font-semibold uppercase tracking-[0.16em] text-neutral-300">
+          <h3 className="app-eyebrow text-[9px] font-semibold uppercase tracking-[0.16em] text-neutral-300">
             Project media
           </h3>
-          <span className="app-data text-[10px] text-neutral-400">{assets.length}</span>
+          <span className="app-data text-[9px] text-neutral-400">{assets.length}</span>
         </div>
 
         {assets.length === 0 ? (
-          <div className="py-7 text-sm leading-6 text-neutral-400">
-            Your imported sources will appear here. Start with one strong visual; you can add more
-            as the story develops.
+          <div className="py-4 text-[11px] leading-4 text-neutral-400">
+            Imported media will appear here. Add one strong visual to begin.
           </div>
         ) : (
           <div className="divide-y divide-white/10">
             {assets.map((asset) => (
-              <div key={asset.assetId} className="group flex min-h-16 items-center gap-3 py-3">
+              <div key={asset.assetId} className="group flex min-h-12 items-center gap-2 py-1.5">
                 <span
                   aria-hidden="true"
-                  className="app-data inline-flex h-10 w-10 shrink-0 items-center justify-center bg-white/[0.06] text-[10px] font-semibold text-neutral-200"
+                  className="app-data inline-flex h-9 w-9 shrink-0 items-center justify-center bg-white/[0.06] text-[10px] font-semibold text-neutral-200"
                 >
                   {asset.kind.slice(0, 3).toUpperCase()}
                 </span>
                 <div className="min-w-0 flex-1">
-                  <p className="truncate text-sm font-medium text-neutral-100">{asset.name}</p>
-                  <p className="app-data mt-1 text-[10px] uppercase tracking-[0.08em] text-neutral-400">
+                  <p className="truncate text-xs font-medium text-neutral-100">{asset.name}</p>
+                  <p className="app-data mt-1 text-[9px] uppercase tracking-[0.08em] text-neutral-400">
                     {kindLabel[asset.kind]} · {asset.externalUrl ? "Built-in" : bytesToLabel(asset.size)}
                   </p>
                 </div>
@@ -117,7 +116,7 @@ export const MediaLibrary = ({
                   onClick={() => onRemoveAsset(asset.assetId)}
                   aria-label={`Delete ${asset.name}`}
                   title={`Delete ${asset.name}`}
-                  className="inline-flex h-11 w-11 shrink-0 items-center justify-center text-neutral-400 opacity-70 outline-none transition hover:bg-rose-500/10 hover:text-rose-200 focus-visible:ring-2 focus-visible:ring-cyan-300 group-hover:opacity-100 disabled:opacity-40"
+                  className="inline-flex h-12 w-12 shrink-0 items-center justify-center text-neutral-400 opacity-70 outline-none transition hover:bg-rose-500/10 hover:text-rose-200 focus-visible:ring-2 focus-visible:ring-cyan-300 group-hover:opacity-100 disabled:opacity-40"
                 >
                   <svg
                     aria-hidden="true"
@@ -138,8 +137,8 @@ export const MediaLibrary = ({
         )}
       </div>
 
-      <details className="group mt-5 border-t border-white/10 pt-1">
-        <summary className="flex min-h-11 cursor-pointer list-none items-center justify-between gap-4 text-xs font-semibold uppercase tracking-[0.12em] text-neutral-300 outline-none hover:text-neutral-50 focus-visible:ring-2 focus-visible:ring-cyan-300">
+      <details className="group mt-4 border-t border-white/10 pt-1">
+        <summary className="flex min-h-11 cursor-pointer list-none items-center justify-between gap-4 text-[10px] font-semibold uppercase tracking-[0.12em] text-neutral-300 outline-none hover:text-neutral-50 focus-visible:ring-2 focus-visible:ring-cyan-300">
           Editorial sound effects
           <span aria-hidden="true" className="text-lg text-cyan-300 transition group-open:rotate-45">
             +
@@ -155,7 +154,7 @@ export const MediaLibrary = ({
               type="button"
               disabled={disabled}
               onClick={() => onAddRemotionSfx(effect.id)}
-              className="min-h-11 border border-white/10 px-2 py-2 text-left text-[11px] font-medium text-neutral-200 outline-none transition hover:border-amber-300/40 hover:bg-amber-300/[0.06] focus-visible:ring-2 focus-visible:ring-cyan-300 disabled:cursor-not-allowed disabled:opacity-50"
+              className="min-h-12 border border-white/10 px-2 py-2 text-left text-[11px] font-medium text-neutral-200 outline-none transition hover:border-amber-300/40 hover:bg-amber-300/[0.06] focus-visible:ring-2 focus-visible:ring-cyan-300 disabled:cursor-not-allowed disabled:opacity-50"
             >
               {effect.label}
             </button>
