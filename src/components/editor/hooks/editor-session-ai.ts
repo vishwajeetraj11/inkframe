@@ -51,13 +51,6 @@ export const applyAIEditorActions = ({
     (asset) => asset.kind === "video" || asset.kind === "image",
   );
 
-  if (visualAssets.length === 0) {
-    return {
-      ok: false,
-      message: "Upload at least one image or video before applying AI edits.",
-    };
-  }
-
   let chosenVisualAsset =
     targetVersion.clips.length > 0 ? currentAssets[targetVersion.clips[0].assetId] : undefined;
 
@@ -77,8 +70,9 @@ export const applyAIEditorActions = ({
   }
 
   if (
-    !chosenVisualAsset ||
-    (chosenVisualAsset.kind !== "video" && chosenVisualAsset.kind !== "image")
+    chosenVisualAsset &&
+    chosenVisualAsset.kind !== "video" &&
+    chosenVisualAsset.kind !== "image"
   ) {
     return {
       ok: false,
@@ -100,22 +94,24 @@ export const applyAIEditorActions = ({
   const sceneFrames = fitSceneFramesToBudget(requestedFrames);
 
   let cursor = 0;
-  const clips = scenes.map((_, index) => {
-    const durationInFrames = sceneFrames[index];
-    const clip = {
-      id: nanoid(10),
-      assetId: chosenVisualAsset.assetId,
-      kind: chosenVisualAsset.kind,
-      startFrame: cursor,
-      endFrame: cursor + durationInFrames,
-      trimStartFrame: 0,
-      trimEndFrame: durationInFrames,
-      volume: 1,
-    } as VersionTimeline["clips"][number];
+  const clips = chosenVisualAsset
+    ? scenes.map((_, index) => {
+        const durationInFrames = sceneFrames[index];
+        const clip = {
+          id: nanoid(10),
+          assetId: chosenVisualAsset.assetId,
+          kind: chosenVisualAsset.kind,
+          startFrame: cursor,
+          endFrame: cursor + durationInFrames,
+          trimStartFrame: 0,
+          trimEndFrame: durationInFrames,
+          volume: 1,
+        } as VersionTimeline["clips"][number];
 
-    cursor += durationInFrames;
-    return clip;
-  });
+        cursor += durationInFrames;
+        return clip;
+      })
+    : [];
 
   const requestedTransitionFrames =
     actions.transitionSeconds === undefined

@@ -19,19 +19,28 @@ const createLocalImageAsset = (): Record<string, LocalAsset> => {
 };
 
 describe("applyAIEditorActions", () => {
-  it("rejects AI edits when no visual asset is available", () => {
+  it("builds a text-only version when no visual asset is available", () => {
     const result = applyAIEditorActions({
       actions: {
-        scenes: [{ text: "Hook line" }],
+        scenes: [
+          { text: "Hook line", durationSeconds: 2 },
+          { text: "Second beat", durationSeconds: 3 },
+        ],
       },
       currentProject: createInitialProjectSession(),
       currentAssets: {},
     });
 
-    expect(result).toEqual({
-      ok: false,
-      message: "Upload at least one image or video before applying AI edits.",
-    });
+    expect(result.ok).toBe(true);
+    if (!result.ok) {
+      throw new Error("Expected success result");
+    }
+
+    expect(result.nextVersion.clips).toEqual([]);
+    expect(result.nextVersion.textOverlays).toHaveLength(2);
+    expect(result.nextVersion.textOverlays[0]).toMatchObject({ startFrame: 0, endFrame: 60 });
+    expect(result.nextVersion.textOverlays[1]).toMatchObject({ startFrame: 60, endFrame: 150 });
+    expect(result.selectedClipId).toBeNull();
   });
 
   it("builds a version with clips and overlays from AI scenes", () => {
