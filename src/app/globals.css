@@ -90,25 +90,53 @@ body {
 
 /* Inspector controls stay dense so the canvas and timeline remain the focus. */
 .editor-inspector :where(input:not([type="checkbox"]):not([type="range"]):not([type="color"]), select) {
-  height: 34px;
-  min-height: 34px;
+  height: 44px;
+  min-height: 44px;
   padding-top: 0.25rem;
   padding-bottom: 0.25rem;
 }
 
 .editor-inspector input[type="color"] {
-  height: 34px;
-  min-height: 34px;
+  height: 44px;
+  min-height: 44px;
 }
 
 .editor-inspector textarea {
-  min-height: 52px;
+  min-height: 72px;
   padding-top: 0.375rem;
   padding-bottom: 0.375rem;
 }
 
 .editor-inspector button {
   min-height: 44px;
+}
+
+.editor-source-panel button,
+.editor-source-panel input,
+.editor-source-panel select {
+  min-height: 44px;
+}
+
+@media (min-width: 1280px) {
+  .editor-inspector :where(input:not([type="checkbox"]):not([type="range"]):not([type="color"]), select) {
+    height: 34px;
+    min-height: 34px;
+  }
+
+  .editor-inspector input[type="color"] {
+    height: 34px;
+    min-height: 34px;
+  }
+
+  .editor-inspector textarea {
+    min-height: 52px;
+  }
+
+  .editor-source-panel button,
+  .editor-source-panel input,
+  .editor-source-panel select {
+    min-height: revert;
+  }
 }
 
 .editor-inspector {

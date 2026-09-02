@@ -34,14 +34,15 @@ export const EditorHeader = ({
 }: EditorHeaderProps) => {
   const storageIsError = storageStatus === "error" || storageStatus === "unavailable";
   return (
-    <header className="relative z-20 border-b border-white/10 bg-[#0f0d0a]/95 px-3 backdrop-blur-xl md:px-4">
-      <div className="mx-auto flex h-[53px] w-full max-w-[1800px] flex-nowrap items-center gap-2">
+    <header className="relative z-20 border-b border-white/10 bg-[#0f0d0a]/95 px-2 backdrop-blur-xl md:px-4">
+      <div className="mx-auto flex h-[55px] w-full max-w-[1800px] flex-nowrap items-center gap-1.5 xl:h-[53px] xl:gap-2">
         <Link
           href="/"
-          className="group inline-flex min-h-10 items-center gap-2.5 pr-2 outline-none focus-visible:ring-2 focus-visible:ring-cyan-300"
+          aria-label="Inkframe home"
+          className="group inline-flex h-[44px] w-[44px] shrink-0 items-center justify-center gap-2.5 outline-none focus-visible:ring-2 focus-visible:ring-cyan-300 sm:w-auto sm:justify-start sm:pr-2"
         >
           <span className="h-2.5 w-2.5 bg-cyan-300 transition-transform duration-200 group-hover:rotate-45" />
-          <span className="app-title text-sm font-semibold uppercase tracking-[0.1em] text-neutral-50">
+          <span className="app-title hidden text-sm font-semibold uppercase tracking-[0.1em] text-neutral-50 sm:inline">
             Inkframe
           </span>
         </Link>
@@ -84,7 +85,7 @@ export const EditorHeader = ({
               onClick={onRetrySave}
               aria-label="Retry local autosave"
               title="Autosave failed — retry"
-              className="grid h-10 w-10 place-items-center text-amber-300 outline-none transition hover:bg-amber-300/10 focus-visible:ring-2 focus-visible:ring-cyan-300"
+              className="grid h-[44px] w-[44px] place-items-center text-amber-300 outline-none transition hover:bg-amber-300/10 focus-visible:ring-2 focus-visible:ring-cyan-300 xl:h-10 xl:w-10"
             >
               <CloudAlert aria-hidden="true" size={15} />
             </button>
@@ -93,7 +94,7 @@ export const EditorHeader = ({
               role="status"
               aria-label={`Local autosave ${storageStatus}`}
               title={`Autosave ${storageStatus}`}
-              className="grid h-10 w-10 place-items-center text-neutral-500"
+              className="grid h-[44px] w-[44px] place-items-center text-neutral-500 xl:h-10 xl:w-10"
             >
               {storageStatus === "saving" || storageStatus === "loading" ? (
                 <LoaderCircle aria-hidden="true" size={15} className="animate-spin" />
@@ -107,7 +108,7 @@ export const EditorHeader = ({
             type="button"
             disabled={isExporting || !canExport}
             onClick={onExport}
-            className="inline-flex min-h-10 items-center justify-center bg-cyan-300 px-3 text-[10px] font-semibold text-neutral-950 outline-none transition hover:bg-cyan-200 focus-visible:ring-2 focus-visible:ring-cyan-200 focus-visible:ring-offset-2 focus-visible:ring-offset-[#0f0d0a] disabled:cursor-not-allowed disabled:opacity-45"
+            className="inline-flex min-h-[44px] items-center justify-center bg-cyan-300 px-2.5 text-[10px] font-semibold text-neutral-950 outline-none transition hover:bg-cyan-200 focus-visible:ring-2 focus-visible:ring-cyan-200 focus-visible:ring-offset-2 focus-visible:ring-offset-[#0f0d0a] disabled:cursor-not-allowed disabled:opacity-45 sm:px-3 xl:min-h-10"
           >
             {isExporting ? "Rendering…" : "Export"}
           </button>

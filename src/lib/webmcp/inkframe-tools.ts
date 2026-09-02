@@ -161,7 +161,7 @@ export const createInkframeWebMcpTools = (
   context: InkframeWebMcpToolContext,
 ): WebMcpTool[] => [
   tool(
-    "inkframe_get_capabilities",
+    "get_capabilities",
     "Read Inkframe capabilities and the safe, same-origin workspace routes.",
     z.object({}).strict(),
     () => toJson({
@@ -172,7 +172,7 @@ export const createInkframeWebMcpTools = (
     }),
   ),
   tool(
-    "inkframe_list_templates",
+    "list_templates",
     "List and filter Inkframe templates, including aspect, duration, and editable layer metadata.",
     z.object({
       query: z.string().trim().max(80).optional(),
@@ -182,7 +182,7 @@ export const createInkframeWebMcpTools = (
     listTemplates,
   ),
   tool(
-    "inkframe_navigate_workspace",
+    "navigate_workspace",
     "Navigate to a known Inkframe workspace route. Explicit confirmation is required because navigation can discard unsaved work.",
     z.object({ route: routeSchema, confirmed: z.literal(true) }).strict(),
     async ({ route }) => {
@@ -194,7 +194,7 @@ export const createInkframeWebMcpTools = (
     false,
   ),
   tool(
-    "inkframe_open_editor_template",
+    "open_template",
     "Open a validated editor template in the Inkframe media editor. Explicit confirmation is required because navigation can discard unsaved work.",
     z.object({ templateId: editorTemplateIdSchema, confirmed: z.literal(true) }).strict(),
     async ({ templateId }) => {

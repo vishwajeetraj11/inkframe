@@ -49,7 +49,7 @@ export const EditorSidebar = ({
   return (
     <aside
       aria-label="Media and elements"
-      className="flex h-full min-h-0 flex-col border-b border-white/10 bg-[#15120e] xl:border-b-0 xl:border-r"
+      className="editor-source-panel flex h-full min-h-0 flex-col bg-[#15120e] xl:border-r"
     >
       <div className="flex items-center justify-between border-b border-white/10 px-3 py-2">
         <div>
@@ -75,7 +75,7 @@ export const EditorSidebar = ({
             role="tab"
             aria-selected={activeSource === source}
             onClick={() => setActiveSource(source)}
-            className={`relative h-10 border-r border-white/10 text-[8px] font-semibold uppercase tracking-[0.1em] outline-none transition last:border-r-0 focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[#ff4f1f] ${
+            className={`relative h-11 border-r border-white/10 text-[8px] font-semibold uppercase tracking-[0.1em] outline-none transition last:border-r-0 focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[#ff4f1f] xl:h-10 ${
               activeSource === source
                 ? "text-[#f2ede3]"
                 : "text-neutral-500 hover:bg-white/[0.025] hover:text-neutral-200"

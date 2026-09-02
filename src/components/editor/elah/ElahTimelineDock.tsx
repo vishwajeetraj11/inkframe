@@ -65,15 +65,15 @@ export const ElahTimelineDock = ({
   }
 
   return (
-    <div className="inkframe-elah flex h-full min-h-[240px] flex-col xl:min-h-0">
+    <div className="inkframe-elah flex h-full min-h-0 flex-col">
       <SelectionBridge
         version={version}
         onSelectClip={onSelectClip}
         onSelectText={onSelectText}
         onSelectAudio={onSelectAudio}
       />
-      <div className="flex min-h-10 items-center border-b border-white/10 pl-3">
-        <div className="flex items-center gap-2">
+      <div className="flex min-h-11 items-center overflow-visible border-b border-white/10 sm:pl-3 xl:min-h-10">
+        <div className="hidden items-center gap-2 sm:flex">
           <span className="h-2 w-2 bg-cyan-300" />
           <span className="app-eyebrow text-[9px] uppercase tracking-[0.16em] text-neutral-300">
             Elah interactive timeline

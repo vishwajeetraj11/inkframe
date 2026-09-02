@@ -99,11 +99,14 @@ export const PreviewPane = ({
     ? (safeDurationInFrames / safeFps).toFixed(2)
     : "0.00";
   const previewAspectLabel = aspect === "reel_9_16" ? "9:16" : "16:9";
-  const stageMaxWidth = aspect === "reel_9_16" ? "min(30vh, 280px)" : "min(72vw, 860px)";
+  const stageMaxWidth =
+    aspect === "reel_9_16"
+      ? "min(76vw, 280px, 52dvh)"
+      : "min(92vw, 860px, calc(58dvh * 1.7778))";
 
   return (
-    <section className="flex h-full min-h-[320px] flex-col bg-[#0b0a08] xl:min-h-0">
-      <div className="grid min-h-12 grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-3 border-b border-white/10 px-4 py-1">
+    <section className="flex h-full min-h-0 flex-col bg-[#0b0a08]">
+      <div className="grid min-h-12 grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-1.5 border-b border-white/10 px-2 py-0.5 sm:gap-3 sm:px-4 sm:py-1">
         <div className="flex items-center gap-3">
           <span className="h-2 w-2 bg-cyan-300" />
           <div>
@@ -124,7 +127,7 @@ export const PreviewPane = ({
             title="Undo"
             disabled={!canUndo}
             onClick={onUndo}
-            className="grid h-10 w-10 place-items-center text-neutral-300 outline-none transition hover:bg-white/[0.05] hover:text-neutral-50 focus-visible:ring-2 focus-visible:ring-cyan-300 disabled:cursor-not-allowed disabled:opacity-30"
+            className="grid h-[44px] w-[44px] place-items-center text-neutral-300 outline-none transition hover:bg-white/[0.05] hover:text-neutral-50 focus-visible:ring-2 focus-visible:ring-cyan-300 disabled:cursor-not-allowed disabled:opacity-30 xl:h-10 xl:w-10"
           >
             <Undo2 aria-hidden="true" size={16} strokeWidth={1.75} />
           </button>
@@ -134,7 +137,7 @@ export const PreviewPane = ({
             title="Redo"
             disabled={!canRedo}
             onClick={onRedo}
-            className="grid h-10 w-10 place-items-center text-neutral-300 outline-none transition hover:bg-white/[0.05] hover:text-neutral-50 focus-visible:ring-2 focus-visible:ring-cyan-300 disabled:cursor-not-allowed disabled:opacity-30"
+            className="grid h-[44px] w-[44px] place-items-center text-neutral-300 outline-none transition hover:bg-white/[0.05] hover:text-neutral-50 focus-visible:ring-2 focus-visible:ring-cyan-300 disabled:cursor-not-allowed disabled:opacity-30 xl:h-10 xl:w-10"
           >
             <Redo2 aria-hidden="true" size={16} strokeWidth={1.75} />
           </button>
@@ -175,14 +178,14 @@ export const PreviewPane = ({
                     className="h-full w-full"
                     style={{ width: "100%", height: "100%" }}
                   />
-                  <div className="absolute inset-x-0 bottom-0 z-20 flex min-h-10 items-center gap-2 border-t border-white/10 bg-black/75 px-2 backdrop-blur-sm">
+                  <div className="absolute inset-x-0 bottom-0 z-20 flex min-h-11 items-center gap-2 border-t border-white/10 bg-black/75 px-2 backdrop-blur-sm xl:min-h-10">
                     <button
                       type="button"
                       aria-label={isPlaying ? "Pause" : "Play"}
                       title={isPlaying ? "Pause" : "Play"}
                       aria-pressed={isPlaying}
                       onClick={playOrPause}
-                      className="grid h-10 w-10 place-items-center text-neutral-100 outline-none transition hover:bg-white/10 focus-visible:ring-2 focus-visible:ring-cyan-300"
+                      className="grid h-[44px] w-[44px] place-items-center text-neutral-100 outline-none transition hover:bg-white/10 focus-visible:ring-2 focus-visible:ring-cyan-300 xl:h-10 xl:w-10"
                     >
                       {isPlaying ? (
                         <Pause aria-hidden="true" size={17} fill="currentColor" />
@@ -201,7 +204,7 @@ export const PreviewPane = ({
                       title="Stop"
                       disabled={!isPlaying && currentFrame === 0}
                       onClick={stop}
-                      className="grid h-10 w-10 place-items-center text-neutral-100 outline-none transition hover:bg-white/10 focus-visible:ring-2 focus-visible:ring-cyan-300 disabled:cursor-not-allowed disabled:opacity-30"
+                      className="grid h-[44px] w-[44px] place-items-center text-neutral-100 outline-none transition hover:bg-white/10 focus-visible:ring-2 focus-visible:ring-cyan-300 disabled:cursor-not-allowed disabled:opacity-30 xl:h-10 xl:w-10"
                     >
                       <Square aria-hidden="true" size={14} fill="currentColor" />
                     </button>
@@ -239,7 +242,7 @@ export const PreviewPane = ({
                 type="button"
                 aria-label="Dismiss visual review"
                 onClick={onDismissVisualReview}
-                className="grid h-8 w-8 place-items-center text-neutral-400 outline-none hover:bg-white/[0.06] hover:text-neutral-100 focus-visible:ring-2 focus-visible:ring-cyan-300"
+                className="grid h-[44px] w-[44px] place-items-center text-neutral-400 outline-none hover:bg-white/[0.06] hover:text-neutral-100 focus-visible:ring-2 focus-visible:ring-cyan-300 xl:h-8 xl:w-8"
               >
                 <X aria-hidden="true" size={14} />
               </button>

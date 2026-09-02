@@ -13,10 +13,10 @@ describe("Inkframe WebMCP tools", () => {
   it("exposes capabilities, routes, and bounded catalog tools", async () => {
     const { tools } = setup();
     expect(tools.map((tool) => tool.name)).toEqual([
-      "inkframe_get_capabilities",
-      "inkframe_list_templates",
-      "inkframe_navigate_workspace",
-      "inkframe_open_editor_template",
+      "get_capabilities",
+      "list_templates",
+      "navigate_workspace",
+      "open_template",
     ]);
 
     const capabilities = tools[0];
@@ -54,8 +54,8 @@ describe("Inkframe WebMCP tools", () => {
 
   it("navigates only to known routes and validated editor templates", async () => {
     const { tools, navigate } = setup();
-    const navigateTool = tools.find((tool) => tool.name === "inkframe_navigate_workspace")!;
-    const openTemplate = tools.find((tool) => tool.name === "inkframe_open_editor_template")!;
+    const navigateTool = tools.find((tool) => tool.name === "navigate_workspace")!;
+    const openTemplate = tools.find((tool) => tool.name === "open_template")!;
 
     await navigateTool.execute({ route: "templates", confirmed: true }, executeOptions);
     expect(navigate).toHaveBeenCalledWith("/templates");

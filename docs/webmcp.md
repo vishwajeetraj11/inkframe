@@ -11,10 +11,10 @@ active page.
 
 ## Site-wide tools
 
-- `inkframe_get_capabilities`
-- `inkframe_list_templates`
-- `inkframe_navigate_workspace`
-- `inkframe_open_editor_template`
+- `get_capabilities`
+- `list_templates`
+- `navigate_workspace`
+- `open_template`
 
 ## Editor tools
 
@@ -147,3 +147,19 @@ Primary references:
 
 - [W3C WebMCP draft](https://webmachinelearning.github.io/webmcp/)
 - [Chrome WebMCP documentation](https://developer.chrome.com/docs/ai/webmcp)
+
+## Official WebMCP evals
+
+Inkframe pins Google Chrome Labs' `webmcp-evals` CLI. Deterministic live-browser
+coverage lives in `evals/webmcp-smoke.json`; natural-language agent journeys live
+in `evals/webmcp-evals.json`. The agent suite requires the model to discover the
+hydrated overlay ID before editing the One Number metric.
+
+With the app running on port 3000, run `npm run test:webmcp:smoke` for deterministic
+live-browser tool discovery and execution without an AI key. Run
+`npm run test:webmcp:agent` with `OPENAI_API_KEY` configured to test model tool
+selection and the multi-step agent trajectory. Override the default model with
+`WEBMCP_EVAL_MODEL` when needed.
+
+The separate Playwright export test remains the full artifact-level check:
+`npm run test:e2e -- e2e/webmcp-export.spec.ts`.

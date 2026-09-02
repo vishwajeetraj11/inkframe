@@ -66,14 +66,18 @@ export default function RootLayout({
         {clarityId ? <ClarityInit projectId={clarityId} /> : null}
         <InkframeWebMcp />
         <Toaster
-          position="top-right"
+          position="bottom-center"
+          offset={{ bottom: 16 }}
+          mobileOffset={{
+            bottom: "calc(52px + env(safe-area-inset-bottom) + 12px)",
+          }}
           theme="dark"
           closeButton
           toastOptions={{
             classNames: {
               toast: "rounded-none border border-white/10 border-l-2 border-l-cyan-300 bg-[#1b1813] text-neutral-100 shadow-2xl",
               title: "text-sm leading-5 text-neutral-100",
-              closeButton: "border-white/10 bg-transparent text-neutral-400 hover:bg-white/10 hover:text-neutral-100",
+              closeButton: "min-h-[44px] min-w-[44px] border-white/10 bg-transparent text-neutral-400 hover:bg-white/10 hover:text-neutral-100",
             },
           }}
         />

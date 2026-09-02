@@ -15,7 +15,9 @@
     "typecheck": "tsc --noEmit",
     "test": "vitest",
     "test:run": "vitest run",
-    "test:e2e": "playwright test"
+    "test:e2e": "playwright test",
+    "test:webmcp:smoke": "webmcp-evals --chrome-channel chrome --reporter console json --output-dir .evals smoke -u http://127.0.0.1:3000 -e evals/webmcp-smoke.json --timeout 60000 -v",
+    "test:webmcp:agent": "webmcp-evals --backend vercel --model ${WEBMCP_EVAL_MODEL:-openai:gpt-5-mini} --max-steps 10 --chrome-channel chrome --reporter console json html --output-dir .evals browser -u http://127.0.0.1:3000 -e evals/webmcp-evals.json"
   },
   "dependencies": {
     "@elah/editor": "0.4.1",
@@ -47,6 +49,7 @@
     "jsdom": "^28.1.0",
     "tailwindcss": "^4",
     "typescript": "^5",
-    "vitest": "^4.0.18"
+    "vitest": "^4.0.18",
+    "webmcp-evals": "0.0.4"
   }
 }

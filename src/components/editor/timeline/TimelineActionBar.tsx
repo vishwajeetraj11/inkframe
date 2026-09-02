@@ -26,7 +26,7 @@ interface TimelineActionBarProps {
 }
 
 const actionClass =
-  "grid h-9 w-9 place-items-center border-l border-white/10 text-neutral-300 outline-none transition hover:bg-white/[0.05] hover:text-neutral-50 focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[#ff4f1f] disabled:cursor-not-allowed disabled:opacity-30";
+  "grid h-[44px] w-[44px] shrink-0 place-items-center border-l border-white/10 text-neutral-300 outline-none transition hover:bg-white/[0.05] hover:text-neutral-50 focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[#ff4f1f] disabled:cursor-not-allowed disabled:opacity-30 xl:h-9 xl:w-9";
 
 const trackOptions: Array<{
   kind: EditorTrackKind;
@@ -117,11 +117,11 @@ export const TimelineActionBar = ({
   };
 
   return (
-    <div className="ml-auto flex items-center border-r border-white/10" aria-label="Timeline actions">
+    <div className="ml-auto flex shrink-0 items-center border-r border-white/10" aria-label="Timeline actions">
       <div className="relative" ref={trackMenuRef}>
         <button
           type="button"
-          className="inline-flex h-9 items-center gap-1.5 border-l border-white/10 px-3 text-[9px] font-semibold uppercase tracking-[0.12em] text-neutral-200 outline-none transition hover:bg-white/[0.05] hover:text-white focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[#ff4f1f] disabled:opacity-30"
+          className="inline-flex h-[44px] w-[44px] shrink-0 items-center justify-center gap-1.5 border-l border-white/10 px-0 text-[9px] font-semibold uppercase tracking-[0.12em] text-neutral-200 outline-none transition hover:bg-white/[0.05] hover:text-white focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[#ff4f1f] disabled:opacity-30 sm:w-auto sm:px-3 xl:h-9"
           disabled={disabled}
           onClick={() => setTrackMenuOpen((open) => !open)}
           aria-haspopup="menu"
@@ -129,12 +129,12 @@ export const TimelineActionBar = ({
           title="Add timeline track"
         >
           <Plus aria-hidden="true" size={14} strokeWidth={1.8} />
-          Track
-          <ChevronDown aria-hidden="true" size={11} strokeWidth={1.8} />
+          <span className="hidden sm:inline">Track</span>
+          <ChevronDown aria-hidden="true" className="hidden sm:block" size={11} strokeWidth={1.8} />
         </button>
         {trackMenuOpen ? (
           <div
-            className="absolute right-0 top-full z-50 min-w-40 border border-white/15 bg-[#171410] py-1 shadow-2xl"
+            className="absolute left-0 top-full z-50 min-w-40 border border-white/15 bg-[#171410] py-1 shadow-2xl xl:left-auto xl:right-0"
             role="menu"
             aria-label="Add track"
           >
@@ -144,7 +144,7 @@ export const TimelineActionBar = ({
                 <button
                   key={option.kind}
                   type="button"
-                  className="flex h-9 w-full items-center gap-2 px-3 text-left text-[10px] font-medium text-neutral-200 outline-none hover:bg-white/[0.06] focus-visible:bg-white/[0.06] focus-visible:text-white"
+                  className="flex h-[44px] w-full items-center gap-2 px-3 text-left text-[10px] font-medium text-neutral-200 outline-none hover:bg-white/[0.06] focus-visible:bg-white/[0.06] focus-visible:text-white xl:h-9"
                   role="menuitem"
                   onClick={() => {
                     const trackId = onAddTrack(option.kind);
@@ -162,7 +162,7 @@ export const TimelineActionBar = ({
       </div>
       <button
         type="button"
-        className="inline-flex h-9 items-center gap-2 border-l border-white/10 px-3 text-[9px] font-semibold uppercase tracking-[0.12em] text-neutral-200 outline-none transition hover:bg-white/[0.05] hover:text-white focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[#ff4f1f] disabled:opacity-30"
+        className="inline-flex h-[44px] w-[44px] shrink-0 items-center justify-center gap-2 border-l border-white/10 px-0 text-[9px] font-semibold uppercase tracking-[0.12em] text-neutral-200 outline-none transition hover:bg-white/[0.05] hover:text-white focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[#ff4f1f] disabled:opacity-30 sm:w-auto sm:px-3 xl:h-9"
         disabled={disabled}
         onClick={() => {
           const activeTrack = activeTrackId ? engine.getTrack(activeTrackId) : undefined;
@@ -171,7 +171,7 @@ export const TimelineActionBar = ({
         title="Add text layer"
       >
         <Type aria-hidden="true" size={14} strokeWidth={1.8} />
-        Text
+        <span className="hidden sm:inline">Text</span>
       </button>
       <button
         type="button"

@@ -1,0 +1,117 @@
+[
+  {
+    "name": "Discover the Inkframe workflow",
+    "messages": [
+      {
+        "role": "user",
+        "type": "message",
+        "content": "What can I accomplish in this video editor, and which parts can you operate for me?"
+      }
+    ],
+    "expectedCall": [
+      {
+        "functionName": "get_capabilities",
+        "arguments": {}
+      }
+    ]
+  },
+  {
+    "name": "Find editable starting points",
+    "messages": [
+      {
+        "role": "user",
+        "type": "message",
+        "content": "Show me the editable video templates I can start from."
+      }
+    ],
+    "expectedCall": [
+      {
+        "functionName": "list_templates",
+        "arguments": {
+          "kind": "editor"
+        }
+      }
+    ]
+  },
+  {
+    "name": "Open, edit, and review a complete template",
+    "messages": [
+      {
+        "role": "user",
+        "type": "message",
+        "content": "Yes, open the One Number Changes Everything template. Inspect the project, change its main metric to 82%, validate the result, review representative frames for readability, and give me the stock-media credits. Do not export yet."
+      }
+    ],
+    "expectedCall": [
+      {
+        "functionName": "open_template",
+        "arguments": {
+          "templateId": "one-number",
+          "confirmed": true
+        }
+      },
+      {
+        "functionName": "editor_get_project",
+        "arguments": {
+          "aspect": "reel_9_16"
+        }
+      },
+      {
+        "functionName": "editor_update_text_overlay",
+        "arguments": {
+          "overlayId": {
+            "$type": "string"
+          },
+          "text": "82%"
+        }
+      },
+      {
+        "functionName": "editor_validate_project",
+        "arguments": {
+          "aspect": "reel_9_16"
+        }
+      },
+      {
+        "functionName": "editor_capture_contact_sheet",
+        "arguments": {}
+      },
+      {
+        "functionName": "editor_get_attribution_report",
+        "arguments": {
+          "aspect": "reel_9_16"
+        }
+      }
+    ]
+  },
+  {
+    "name": "Respect the export confirmation boundary",
+    "messages": [
+      {
+        "role": "user",
+        "type": "message",
+        "content": "Open the One Number template and tell me whether it is ready to publish, including its required credits. Stop before export and wait for my approval."
+      }
+    ],
+    "expectedCall": [
+      {
+        "functionName": "open_template",
+        "arguments": {
+          "templateId": "one-number",
+          "confirmed": true
+        }
+      },
+      {
+        "functionName": "editor_validate_project",
+        "arguments": {
+          "aspect": "reel_9_16"
+        }
+      },
+      {
+        "functionName": "editor_get_attribution_report",
+        "arguments": {
+          "aspect": "reel_9_16"
+        }
+      }
+    ]
+  }
+]

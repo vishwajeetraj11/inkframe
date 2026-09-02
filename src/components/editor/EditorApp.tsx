@@ -4,6 +4,10 @@ import { EditorHeader } from "@/components/editor/EditorHeader";
 import { EditorSidebar } from "@/components/editor/EditorSidebar";
 import { EditorRightSidebar } from "@/components/editor/EditorRightSidebar";
 import { PreviewPane } from "@/components/editor/PreviewPane";
+import {
+  MobileWorkspaceNav,
+  type MobileWorkspacePanel,
+} from "@/components/editor/MobileWorkspaceNav";
 import { TimelineResizeHandle } from "@/components/editor/TimelineResizeHandle";
 import {
   ElahEditorWorkspace,
@@ -32,6 +36,7 @@ const MAX_TIMELINE_HEIGHT = 360;
 export const EditorApp = () => {
   const session = useEditorSession();
   const [timelineHeight, setTimelineHeight] = useState(DEFAULT_TIMELINE_HEIGHT);
+  const [mobilePanel, setMobilePanel] = useState<MobileWorkspacePanel>("canvas");
   const [visualReview, setVisualReview] = useState<EditorVisualReview | null>(null);
   const previewRef = useRef<PreviewHandle | null>(null);
 
@@ -192,7 +197,7 @@ export const EditorApp = () => {
   };
 
   return (
-    <div className="min-h-screen bg-[#0f0d0a] text-neutral-100 xl:h-screen xl:overflow-hidden">
+    <div className="h-[100dvh] min-h-[520px] overflow-hidden bg-[#0f0d0a] text-neutral-100">
       <EditorHeader
         activeAspect={session.activeAspect}
         isExporting={session.isExporting}
@@ -221,10 +226,13 @@ export const EditorApp = () => {
         }}
       >
         <main
-          className="mx-auto grid w-full max-w-[1800px] xl:h-[calc(100dvh-54px)] xl:grid-cols-[264px_minmax(0,1fr)_320px] xl:grid-rows-[minmax(0,1fr)_var(--timeline-height)]"
+          className="mx-auto flex h-[calc(100dvh-56px)] w-full max-w-[1800px] min-w-0 flex-col overflow-hidden xl:grid xl:h-[calc(100dvh-54px)] xl:grid-cols-[264px_minmax(0,1fr)_320px] xl:grid-rows-[minmax(0,1fr)_var(--timeline-height)]"
           style={{ "--timeline-height": `${timelineHeight}px` } as CSSProperties}
         >
-        <div className="order-1 min-h-0 xl:order-none xl:col-start-1 xl:row-start-1">
+        <div
+          id="mobile-media-panel"
+          className={`${mobilePanel === "media" ? "min-h-0 flex-1 overflow-hidden" : "hidden"} xl:order-none xl:col-start-1 xl:row-start-1 xl:block xl:min-h-0`}
+        >
           <EditorSidebar
             activeAspect={session.activeAspect}
             isExporting={session.isExporting}
@@ -242,7 +250,10 @@ export const EditorApp = () => {
           />
         </div>
 
-        <div className="order-2 min-w-0 border-b border-white/10 xl:order-none xl:col-start-2 xl:row-start-1">
+        <div
+          id="mobile-canvas-panel"
+          className={`${mobilePanel === "canvas" ? "min-h-0 min-w-0 flex-1" : "hidden"} xl:order-none xl:col-start-2 xl:row-start-1 xl:block xl:min-w-0 xl:border-b xl:border-white/10`}
+        >
           <PreviewPane
             previewRef={previewRef}
             aspect={session.activeAspect}
@@ -256,7 +267,10 @@ export const EditorApp = () => {
           />
         </div>
 
-        <div className="order-4 min-h-0 xl:order-none xl:col-start-3 xl:row-start-1">
+        <div
+          id="mobile-inspector-panel"
+          className={`${mobilePanel === "inspector" ? "min-h-0 flex-1 overflow-hidden" : "hidden"} xl:order-none xl:col-start-3 xl:row-start-1 xl:block xl:min-h-0`}
+        >
           <EditorRightSidebar
             selectedClip={session.selectedClip}
             selectedTextOverlay={session.selectedTextOverlay}
@@ -294,7 +308,10 @@ export const EditorApp = () => {
           />
         </div>
 
-        <div className="relative order-3 min-h-[240px] min-w-0 border-b border-white/10 xl:order-none xl:col-span-3 xl:col-start-1 xl:row-start-2 xl:min-h-0 xl:border-b-0 xl:border-t">
+        <div
+          id="mobile-timeline-panel"
+          className={`${mobilePanel === "timeline" ? "relative min-h-0 min-w-0 flex-1" : "hidden"} xl:order-none xl:col-span-3 xl:col-start-1 xl:row-start-2 xl:block xl:min-h-0 xl:border-t`}
+        >
           <TimelineResizeHandle
             height={timelineHeight}
             minHeight={MIN_TIMELINE_HEIGHT}
@@ -311,6 +328,8 @@ export const EditorApp = () => {
             onSelectAudio={selectAudio}
           />
         </div>
+
+        <MobileWorkspaceNav activePanel={mobilePanel} onChange={setMobilePanel} />
         </main>
       </ElahEditorWorkspace>
 
