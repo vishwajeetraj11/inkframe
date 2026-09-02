@@ -4,15 +4,18 @@
   "private": true,
   "scripts": {
     "elah:css": "node scripts/build-elah-scoped-css.mjs",
-    "predev": "npm run elah:css",
+    "elah:patch": "node scripts/patch-elah-text-motion.mjs",
+    "postinstall": "npm run elah:patch",
+    "predev": "npm run elah:css && npm run elah:patch",
     "dev": "next dev",
-    "prebuild": "npm run elah:css",
+    "prebuild": "npm run elah:css && npm run elah:patch",
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
     "typecheck": "tsc --noEmit",
     "test": "vitest",
-    "test:run": "vitest run"
+    "test:run": "vitest run",
+    "test:e2e": "playwright test"
   },
   "dependencies": {
     "@ai-sdk/openai": "^3.0.30",
@@ -31,6 +34,7 @@
     "zod": "^4.3.6"
   },
   "devDependencies": {
+    "@playwright/test": "^1.62.1",
     "@tailwindcss/postcss": "^4",
     "@testing-library/dom": "^10.4.1",
     "@testing-library/jest-dom": "^6.9.1",

@@ -3,6 +3,33 @@ import type { Clip, Transition, VersionTimeline } from "../types";
 import { clamp, getClipDurationInFrames, toSafeInt } from "./helpers";
 import { normalizeClips } from "./normalization";
 
+export type TransitionKind = NonNullable<Transition["kind"]>;
+export type TransitionDirection = NonNullable<Transition["direction"]>;
+export type TransitionEasing = NonNullable<Transition["easing"]>;
+
+export const getTransitionKind = (transition: Transition): TransitionKind =>
+  transition.kind ?? (transition.type === "crossfade" ? "fade" : "fade");
+
+export const normalizeTransition = (
+  transition: Transition,
+  maxDuration: number,
+): Transition => {
+  const kind = getTransitionKind(transition);
+  const direction = transition.direction ?? (kind === "fade" ? undefined : "right");
+
+  return {
+    ...transition,
+    kind,
+    easing: transition.easing ?? "linear",
+    ...(direction ? { direction } : {}),
+    durationInFrames: clamp(
+      toSafeInt(transition.durationInFrames, 1),
+      1,
+      maxDuration,
+    ),
+  };
+};
+
 export const sanitizeTransitions = (
   clips: Clip[],
   transitions: Transition[],
@@ -31,23 +58,13 @@ export const sanitizeTransitions = (
       continue;
     }
 
-    const durationInFrames = clamp(
-      toSafeInt(transition.durationInFrames, 1),
-      1,
-      maxDuration,
-    );
-
     const edgeKey = `${transition.fromClipId}:${transition.toClipId}`;
     if (uniqueByEdge.has(edgeKey)) {
       continue;
     }
 
     uniqueByEdge.add(edgeKey);
-    sanitized.push({
-      ...transition,
-      type: "crossfade",
-      durationInFrames,
-    });
+    sanitized.push(normalizeTransition(transition, maxDuration));
   }
 
   return sanitized;

@@ -72,6 +72,8 @@ const version: VersionTimeline = {
       trimStartFrame: 30,
       trimEndFrame: 180,
       volume: 0.55,
+      fadeInFrames: 12,
+      fadeOutFrames: 24,
     },
   ],
   transitions: [
@@ -122,6 +124,10 @@ describe("Inkframe ↔ Elah timeline adapter", () => {
       stage: { width: 1920, height: 1080 },
       version: 1,
     });
+    expect(projected.project.tracks.slice(0, 2)).toMatchObject([
+      { id: "inkframe-video", order: 0 },
+      { id: "inkframe-background", order: 1 },
+    ]);
     expect(projected.project.tracks.every((track) => track.height === 40)).toBe(true);
     expect(
       nativeClips
@@ -146,7 +152,15 @@ describe("Inkframe ↔ Elah timeline adapter", () => {
         durationFrames: 15,
       }),
     ]);
+    expect(nativeClips.find((clip) => clip.id === "audio-main")).toMatchObject({
+      fadeInFrames: 12,
+      fadeOutFrames: 24,
+    });
     expect(projected.sidecar.canonicalVersion).toEqual(version);
+    expect(nativeClips.find((clip) => clip.id === "text-preset")).toMatchObject({
+      content: "95%\n42% growth",
+      fontSize: 72,
+    });
     expect(projected.diagnostics).toEqual([
       expect.objectContaining({
         code: "preset-projected-as-text",

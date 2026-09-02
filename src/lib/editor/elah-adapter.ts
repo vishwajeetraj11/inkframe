@@ -11,10 +11,17 @@ import type {
   AudioTrack,
   Clip,
   TextOverlay,
+  TextOverlayAnimationKind,
   TextOverlayFontFamily,
   Transition,
   VersionTimeline,
 } from "./types";
+import { parseChartCardText } from "./chart-card";
+import { parseCreatedaleyOpenerText } from "./createdaley-opener";
+import { parseEditorialStatRingText } from "./editorial-stat-ring";
+import { parseFilmFrameGalleryText } from "./film-frame-gallery";
+import { parseRegionalMapFocusText } from "./regional-map-focus";
+import { parseVoxTimelineText } from "./vox-timeline";
 
 const ELah_SCHEMA_VERSION = 1;
 const ELah_TRACK_HEIGHT = 40;
@@ -90,6 +97,9 @@ const durationOf = (startFrame: number, endFrame: number): number =>
 const clampVolume = (volume: number | undefined, fallback = 1): number =>
   Math.min(1, Math.max(0, volume ?? fallback));
 
+const transitionKind = (transition: Transition): ElahTransition["kind"] =>
+  transition.kind ?? (transition.type === "crossfade" ? "fade" : "fade");
+
 const backgroundPalette = (
   preset: TextOverlay["stylePreset"],
 ): { from: string; to: string; accent: string } => {
@@ -126,6 +136,69 @@ const transformForOverlay = (overlay: TextOverlay): ElahTransform => ({
   rotation: 0,
   anchor: { x: 0.5, y: 0.5 },
 });
+
+const firstStructuredHeadline = (text: string): string => {
+  const lines = text
+    .split("\n")
+    .map((line) => line.trim())
+    .filter(Boolean);
+  const explicit = lines.find((line) => /^headline\s*:/i.test(line));
+  return (explicit ?? lines[0] ?? "Text")
+    .replace(/^headline\s*:/i, "")
+    .replace(/\[\[|\]\]/g, "")
+    .trim();
+};
+
+/**
+ * Structured presets retain their full canonical payload in the sidecar, but
+ * Elah should receive presentation copy instead of serialized metadata.
+ */
+const presentationTextForOverlay = (overlay: TextOverlay): string => {
+  if (overlay.stylePreset === "createdaley-opener") {
+    return parseCreatedaleyOpenerText(overlay.text).wordmark;
+  }
+  if (
+    overlay.stylePreset === "vox-timeline" ||
+    overlay.stylePreset === "vox-timeline-ribbon" ||
+    overlay.stylePreset === "vox-timeline-ledger"
+  ) {
+    return parseVoxTimelineText(overlay.text).headline;
+  }
+  if (overlay.stylePreset === "chart-card" || overlay.stylePreset === "editorial-seat-arc") {
+    return parseChartCardText(overlay.text).headline;
+  }
+  if (overlay.stylePreset === "editorial-stat-ring") {
+    const parsed = parseEditorialStatRingText(overlay.text);
+    return `${parsed.value}${parsed.suffix}\n${parsed.headline}`;
+  }
+  if (overlay.stylePreset === "film-frame-gallery") {
+    return parseFilmFrameGalleryText(overlay.text).headline;
+  }
+  if (overlay.stylePreset === "regional-map-focus") {
+    return parseRegionalMapFocusText(overlay.text).headline;
+  }
+  if (overlay.stylePreset === "world-map-focus" || overlay.stylePreset === "editorial-bar-chart") {
+    return firstStructuredHeadline(overlay.text);
+  }
+  return overlay.text;
+};
+
+const presentationFontSizeForOverlay = (overlay: TextOverlay): number => {
+  const structuredMinimums: Partial<Record<TextOverlay["stylePreset"], number>> = {
+    "createdaley-opener": 64,
+    "vox-timeline": 56,
+    "vox-timeline-ribbon": 56,
+    "vox-timeline-ledger": 56,
+    "chart-card": 52,
+    "editorial-stat-ring": 52,
+    "editorial-seat-arc": 52,
+    "film-frame-gallery": 52,
+    "world-map-focus": 52,
+    "regional-map-focus": 52,
+    "editorial-bar-chart": 52,
+  };
+  return Math.max(overlay.fontSize, structuredMinimums[overlay.stylePreset] ?? 0);
+};
 
 const ELah_FONT_BY_INKFRAME: Record<TextOverlayFontFamily, string> = {
   sans: "sans-serif",
@@ -202,6 +275,13 @@ export const toElahProject = (
     ...version.textOverlays.map((overlay) => overlay.endFrame),
     ...version.audioTracks.map((track) => track.endFrame),
   );
+  // Elah resolves smaller track orders above larger ones. Keep source media at
+  // order 0 and the generated canvas beneath it; element tracks receive their
+  // own high z-index band inside Elah's resolver.
+  const videoTrack = createTrack(VIDEO_TRACK_ID, "Video", "video", tracks.length);
+  tracks.push(videoTrack);
+  clipsByTrack[videoTrack.id] = [];
+
   const backgroundTrack = createTrack(
     BACKGROUND_TRACK_ID,
     "Canvas",
@@ -247,10 +327,6 @@ export const toElahProject = (
       disabled: false,
     })),
   ];
-
-  const videoTrack = createTrack(VIDEO_TRACK_ID, "Video", "video", tracks.length);
-  tracks.push(videoTrack);
-  clipsByTrack[videoTrack.id] = [];
 
   for (const clip of version.clips) {
     const src = resolveSource(clip.assetId, options, assetById);
@@ -299,17 +375,26 @@ export const toElahProject = (
       durationFrames: durationOf(overlay.startFrame, overlay.endFrame),
       sourceStartFrame: 0,
       sourceDurationFrames: durationOf(overlay.startFrame, overlay.endFrame),
-      content: overlay.text,
-      fontSize: overlay.fontSize,
+      content: presentationTextForOverlay(overlay),
+      fontSize: presentationFontSizeForOverlay(overlay),
       color: overlay.color,
       fontFamily: ELah_FONT_BY_INKFRAME[overlay.fontFamily],
       fontWeight: overlay.fontWeight >= 600 ? "bold" : "normal",
-      textAlign: "center",
+      textAlign: overlay.textAlign ?? "center",
       volume: 1,
       opacity: 1,
       locked: false,
       disabled: false,
       transform: transformForOverlay(overlay),
+      ...(overlay.animation
+        ? {
+            textAnimation: {
+              ...(overlay.animation.in ? { in: overlay.animation.in } : {}),
+              ...(overlay.animation.out ? { out: overlay.animation.out } : {}),
+              durationFrames: Math.max(0, Math.round(overlay.animation.durationFrames)),
+            } as ElahClip["textAnimation"],
+          }
+        : {}),
     };
     clipsByTrack[trackId] = [elahClip];
     projectionSnapshots[overlay.id] = projectSnapshot(elahClip);
@@ -337,6 +422,7 @@ export const toElahProject = (
 
     const trackId = `inkframe-audio-${audio.id}`;
     const track = createTrack(trackId, "Audio", "audio", tracks.length);
+    track.muted = audio.muted ?? false;
     tracks.push(track);
     const asset = assetById.get(audio.assetId);
     const elahClip: ElahClip = {
@@ -351,6 +437,8 @@ export const toElahProject = (
       src,
       assetId: audio.assetId,
       volume: clampVolume(audio.volume),
+      fadeInFrames: Math.max(0, Math.round(audio.fadeInFrames ?? 0)),
+      fadeOutFrames: Math.max(0, Math.round(audio.fadeOutFrames ?? 0)),
       opacity: 1,
       locked: false,
       disabled: false,
@@ -372,15 +460,17 @@ export const toElahProject = (
 
     const toClip = visualById.get(transition.toClipId);
     if (!toClip) continue;
+    const kind = transitionKind(transition);
     transitions.push({
       id: transition.id,
-      kind: "fade",
+      kind,
       fromClipId: transition.fromClipId,
       toClipId: transition.toClipId,
       trackId: VIDEO_TRACK_ID,
       startFrame: toClip.startFrame - Math.floor(transition.durationInFrames / 2),
       durationFrames: Math.max(1, transition.durationInFrames),
-      easing: "linear",
+      ...(transition.direction ? { direction: transition.direction } : {}),
+      easing: transition.easing ?? "linear",
     });
     mappedTransitionIds.push(transition.id);
   }
@@ -482,6 +572,7 @@ export const fromElahProject = (
   const canonicalClipById = new Map(canonical.clips.map((clip) => [clip.id, clip]));
   const canonicalAudioById = new Map(canonical.audioTracks.map((track) => [track.id, track]));
   const canonicalTextById = new Map(canonical.textOverlays.map((overlay) => [overlay.id, overlay]));
+  const trackById = new Map(project.tracks.map((track) => [track.id, track]));
   const nativeClips = flattenClips(project);
   const visualById = new Map<string, Clip>();
   const audioById = new Map<string, AudioTrack>();
@@ -539,6 +630,17 @@ export const fromElahProject = (
       const unchanged = hasSameProjection(native, sidecar.projectionSnapshots[native.id]);
       const trimStartFrame = Math.max(0, Math.round(native.sourceStartFrame));
       const durationFrames = Math.max(1, Math.round(native.durationFrames));
+      const muted = trackById.get(native.trackId)?.muted ?? original?.muted ?? false;
+      const volume = clampVolume(native.volume, original?.volume);
+      if (
+        original &&
+        unchanged &&
+        volume === original.volume &&
+        muted === (original.muted ?? false)
+      ) {
+        audioById.set(native.id, { ...original });
+        continue;
+      }
       audioById.set(native.id, {
         id: native.id,
         assetId,
@@ -549,7 +651,10 @@ export const fromElahProject = (
           unchanged && original
             ? original.trimEndFrame
             : trimStartFrame + durationFrames,
-        volume: clampVolume(native.volume, original?.volume),
+        volume,
+        fadeInFrames: original?.fadeInFrames ?? 0,
+        fadeOutFrames: original?.fadeOutFrames ?? 0,
+        muted,
       });
       continue;
     }
@@ -573,9 +678,18 @@ export const fromElahProject = (
             ? 700
             : 400;
       const syncMediaToTimelineEvents = original?.syncMediaToTimelineEvents;
+      const expectedPresentationText = original
+        ? presentationTextForOverlay(original)
+        : undefined;
+      const expectedPresentationFontSize = original
+        ? presentationFontSizeForOverlay(original)
+        : undefined;
       textById.set(native.id, {
         id: native.id,
-        text: native.content ?? original?.text ?? "Text",
+        text:
+          original && native.content === expectedPresentationText
+            ? original.text
+            : (native.content ?? original?.text ?? "Text"),
         startFrame: Math.max(0, Math.round(native.startFrame)),
         endFrame:
           Math.max(0, Math.round(native.startFrame)) +
@@ -588,13 +702,36 @@ export const fromElahProject = (
           native.transform?.y !== undefined
             ? native.transform.y * 100
             : (original?.y ?? 50),
-        fontSize: native.fontSize ?? original?.fontSize ?? 56,
+        fontSize:
+          original && native.fontSize === expectedPresentationFontSize
+            ? original.fontSize
+            : (native.fontSize ?? original?.fontSize ?? 64),
         color: native.color ?? original?.color ?? "#ffffff",
         fontFamily,
         fontWeight,
         fontStyle: original?.fontStyle ?? "normal",
+        ...(native.textAlign &&
+        (native.textAlign !== "center" || original?.textAlign !== undefined)
+          ? { textAlign: native.textAlign }
+          : {}),
         stylePreset: original?.stylePreset ?? "classic",
         createdaleyTexture: original?.createdaleyTexture ?? "plain",
+        ...(native.textAnimation
+          ? {
+              animation: {
+                ...(native.textAnimation.in
+                  ? { in: native.textAnimation.in as TextOverlayAnimationKind }
+                  : {}),
+                ...(native.textAnimation.out
+                  ? { out: native.textAnimation.out as TextOverlayAnimationKind }
+                  : {}),
+                durationFrames: Math.max(
+                  0,
+                  Math.round(native.textAnimation.durationFrames),
+                ),
+              },
+            }
+          : {}),
         ...(syncMediaToTimelineEvents !== undefined
           ? { syncMediaToTimelineEvents }
           : original
@@ -615,23 +752,43 @@ export const fromElahProject = (
   const visualIds = new Set(visualById.keys());
   for (const transition of project.transitions) {
     if (
-      transition.kind !== "fade" ||
       !visualIds.has(transition.fromClipId) ||
       !visualIds.has(transition.toClipId)
     ) {
       diagnostics.push({
         code: "unsupported-elah-transition",
         entityId: transition.id,
-        message: `Elah transition ${transition.id} cannot be represented as an Inkframe crossfade and was skipped.`,
+        message: `Elah transition ${transition.id} references clips that have no Inkframe equivalent and was skipped.`,
       });
       continue;
     }
+    const original = canonical.transitions.find((item) => item.id === transition.id);
+    const kind = transition.kind;
+    const toClip = visualById.get(transition.toClipId);
+    const expectedStartFrame = toClip
+      ? toClip.startFrame - Math.floor((original?.durationInFrames ?? transition.durationFrames) / 2)
+      : transition.startFrame;
+    const unchanged =
+      Boolean(original) &&
+      transition.startFrame === expectedStartFrame &&
+      transition.durationFrames === original?.durationInFrames &&
+      kind === (original?.kind ?? (original?.type === "crossfade" ? "fade" : "fade")) &&
+      (transition.direction ?? undefined) === (original?.direction ?? undefined) &&
+      (transition.easing ?? "linear") === (original?.easing ?? "linear");
+
+    if (unchanged && original) {
+      transitionById.set(transition.id, { ...original });
+      continue;
+    }
+
     transitionById.set(transition.id, {
       id: transition.id,
-      type: "crossfade",
+      kind,
       fromClipId: transition.fromClipId,
       toClipId: transition.toClipId,
       durationInFrames: Math.max(1, Math.round(transition.durationFrames)),
+      ...(transition.direction ? { direction: transition.direction } : {}),
+      ...(transition.easing ? { easing: transition.easing } : {}),
     });
   }
 

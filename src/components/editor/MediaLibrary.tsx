@@ -5,7 +5,7 @@ import {
   SOUND_EFFECT_LIBRARY,
   type SoundEffectId,
 } from "@/lib/editor/sound-effects";
-import type { AssetKind } from "@/lib/editor/types";
+import type { AssetKind, AssetRef } from "@/lib/editor/types";
 
 interface MediaLibraryAsset {
   assetId: string;
@@ -13,6 +13,7 @@ interface MediaLibraryAsset {
   name: string;
   size: number;
   externalUrl?: string;
+  attribution?: AssetRef["attribution"];
 }
 
 interface MediaLibraryProps {
@@ -33,6 +34,16 @@ const kindLabel: Record<AssetKind, string> = {
   video: "Video",
   image: "Image",
   audio: "Audio",
+};
+
+const providerLabel: Record<
+  NonNullable<AssetRef["attribution"]>["provider"],
+  string
+> = {
+  pexels: "Pexels",
+  mixkit: "Mixkit",
+  jamendo: "Jamendo",
+  freesound: "Freesound",
 };
 
 export const MediaLibrary = ({
@@ -107,8 +118,18 @@ export const MediaLibrary = ({
                 <div className="min-w-0 flex-1">
                   <p className="truncate text-xs font-medium text-neutral-100">{asset.name}</p>
                   <p className="app-data mt-1 text-[9px] uppercase tracking-[0.08em] text-neutral-400">
-                    {kindLabel[asset.kind]} · {asset.externalUrl ? "Built-in" : bytesToLabel(asset.size)}
+                    {kindLabel[asset.kind]} · {asset.attribution ? providerLabel[asset.attribution.provider] : asset.externalUrl ? "Built-in" : bytesToLabel(asset.size)}
                   </p>
+                  {asset.attribution ? (
+                    <a
+                      href={asset.attribution.creatorUrl}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="mt-0.5 block truncate text-[9px] text-[#ff9b7d] hover:underline"
+                    >
+                      {kindLabel[asset.kind]} by {asset.attribution.creatorName}
+                    </a>
+                  ) : null}
                 </div>
                 <button
                   type="button"

@@ -1,4 +1,9 @@
-import type { TextOverlayStylePreset } from "../types";
+import {
+  FLAGSHIP_TEMPLATE_BLUEPRINTS,
+  instantiateTemplateBlueprint,
+  type FlagshipTemplateId,
+} from "./blueprints";
+import type { TextOverlayStylePreset, VersionTimeline } from "../types";
 
 export interface TemplateDefinition {
   id: string;
@@ -7,13 +12,159 @@ export interface TemplateDefinition {
   description: string;
   sampleText: string;
   accentClass: string;
+  /** Elah-native editable starter timeline, when provided. */
+  blueprint?: VersionTimeline;
   starterAssets?: {
-    kind: "image";
+    kind: "audio" | "image" | "video";
     name: string;
     mimeType: string;
     publicPath: string;
   }[];
 }
+
+const FLAGSHIP_TEMPLATE_ASSETS: Record<
+  FlagshipTemplateId,
+  NonNullable<TemplateDefinition["starterAssets"]>
+> = {
+  "editorial-explainer": [
+    {
+      kind: "image",
+      name: "Explainer scene 01",
+      mimeType: "image/jpeg",
+      publicPath: "/starter-assets/berlin-wall/alexanderplatz-demonstration-1989.jpg",
+    },
+    {
+      kind: "image",
+      name: "Explainer scene 02",
+      mimeType: "image/jpeg",
+      publicPath: "/starter-assets/berlin-wall/schabowski-press-conference-1989.jpg",
+    },
+    {
+      kind: "image",
+      name: "Explainer scene 03",
+      mimeType: "image/jpeg",
+      publicPath: "/starter-assets/berlin-wall/bornholmer-strasse-opening-1989.jpg",
+    },
+    {
+      kind: "audio",
+      name: "Explainer audio bed",
+      mimeType: "audio/mpeg",
+      publicPath: "builtin:sfx:low-hit",
+    },
+  ],
+  "product-reveal": [
+    {
+      kind: "image",
+      name: "Product reveal detail",
+      mimeType: "image/jpeg",
+      publicPath: "/starter-assets/berlin-wall/schabowski-press-conference-1989.jpg",
+    },
+    {
+      kind: "image",
+      name: "Product reveal in use",
+      mimeType: "image/jpeg",
+      publicPath: "/starter-assets/berlin-wall/brandenburg-gate-crowds-1989.jpg",
+    },
+    {
+      kind: "image",
+      name: "Product reveal hero",
+      mimeType: "image/jpeg",
+      publicPath: "/starter-assets/berlin-wall/german-reunification-1990.jpg",
+    },
+    {
+      kind: "audio",
+      name: "Product reveal audio bed",
+      mimeType: "audio/mpeg",
+      publicPath: "builtin:sfx:whoosh",
+    },
+  ],
+  "social-promo": [
+    {
+      kind: "image",
+      name: "Social promo hook",
+      mimeType: "image/jpeg",
+      publicPath: "/starter-assets/berlin-wall/brandenburg-gate-crowds-1989.jpg",
+    },
+    {
+      kind: "image",
+      name: "Social promo proof",
+      mimeType: "image/jpeg",
+      publicPath: "/starter-assets/berlin-wall/alexanderplatz-demonstration-1989.jpg",
+    },
+    {
+      kind: "image",
+      name: "Social promo call to action",
+      mimeType: "image/jpeg",
+      publicPath: "/starter-assets/berlin-wall/german-reunification-1990.jpg",
+    },
+    {
+      kind: "audio",
+      name: "Social promo audio bed",
+      mimeType: "audio/mpeg",
+      publicPath: "builtin:sfx:whip",
+    },
+  ],
+  "documentary-cut": [
+    {
+      kind: "image",
+      name: "Documentary opening",
+      mimeType: "image/jpeg",
+      publicPath: "/starter-assets/berlin-wall/alexanderplatz-demonstration-1989.jpg",
+    },
+    {
+      kind: "image",
+      name: "Documentary turning point",
+      mimeType: "image/jpeg",
+      publicPath: "/starter-assets/berlin-wall/schabowski-press-conference-1989.jpg",
+    },
+    {
+      kind: "image",
+      name: "Documentary resolution",
+      mimeType: "image/jpeg",
+      publicPath: "/starter-assets/berlin-wall/bornholmer-strasse-opening-1989.jpg",
+    },
+  ],
+  "data-pulse": [
+    {
+      kind: "image",
+      name: "Data pulse opening",
+      mimeType: "image/jpeg",
+      publicPath: "/starter-assets/berlin-wall/german-reunification-1990.jpg",
+    },
+    {
+      kind: "image",
+      name: "Data pulse context",
+      mimeType: "image/jpeg",
+      publicPath: "/starter-assets/berlin-wall/brandenburg-gate-crowds-1989.jpg",
+    },
+    {
+      kind: "image",
+      name: "Data pulse close",
+      mimeType: "image/jpeg",
+      publicPath: "/starter-assets/berlin-wall/alexanderplatz-demonstration-1989.jpg",
+    },
+  ],
+  "quote-reel": [
+    {
+      kind: "image",
+      name: "Quote reel opening",
+      mimeType: "image/jpeg",
+      publicPath: "/starter-assets/berlin-wall/schabowski-press-conference-1989.jpg",
+    },
+    {
+      kind: "image",
+      name: "Quote reel emphasis",
+      mimeType: "image/jpeg",
+      publicPath: "/starter-assets/berlin-wall/brandenburg-gate-crowds-1989.jpg",
+    },
+    {
+      kind: "image",
+      name: "Quote reel close",
+      mimeType: "image/jpeg",
+      publicPath: "/starter-assets/berlin-wall/german-reunification-1990.jpg",
+    },
+  ],
+};
 
 const BERLIN_WALL_TIMELINE_STARTER_ASSETS: NonNullable<
   TemplateDefinition["starterAssets"]
@@ -50,7 +201,7 @@ const BERLIN_WALL_TIMELINE_STARTER_ASSETS: NonNullable<
   },
 ];
 
-export const TEMPLATE_DEFINITIONS: TemplateDefinition[] = [
+const TEMPLATE_CATALOG_SOURCE: TemplateDefinition[] = [
   {
     id: "vox-timeline",
     stylePreset: "vox-timeline",
@@ -193,7 +344,77 @@ export const TEMPLATE_DEFINITIONS: TemplateDefinition[] = [
       "SVALBARD, NORWAY\n78.2232 N, 15.6267 E\nARCHIVE / 1993",
     accentClass: "text-red-300",
   },
+  {
+    id: "editorial-explainer",
+    stylePreset: "classic",
+    name: "Editorial Explainer",
+    description:
+      "A three-scene editorial explainer with image beats, kinetic headlines, native transitions, and a paced audio bed.",
+    sampleText: "THE SIGNAL\nBEHIND THE STORY",
+    accentClass: "text-orange-300",
+    starterAssets: FLAGSHIP_TEMPLATE_ASSETS["editorial-explainer"],
+    blueprint: FLAGSHIP_TEMPLATE_BLUEPRINTS["editorial-explainer"],
+  },
+  {
+    id: "product-reveal",
+    stylePreset: "classic",
+    name: "Product Reveal",
+    description:
+      "A cinematic product launch cut with a sharp introduction, benefit beat, call to action, and native audio fades in the sidecar.",
+    sampleText: "INTRODUCING\nA SMALLER WAY FORWARD",
+    accentClass: "text-red-300",
+    starterAssets: FLAGSHIP_TEMPLATE_ASSETS["product-reveal"],
+    blueprint: FLAGSHIP_TEMPLATE_BLUEPRINTS["product-reveal"],
+  },
+  {
+    id: "social-promo",
+    stylePreset: "classic",
+    name: "Social Promo",
+    description:
+      "A fast three-beat social promo built for a hard hook, proof point, and unmistakable next action.",
+    sampleText: "STOP SCROLLING.\nSTART MAKING.",
+    accentClass: "text-yellow-300",
+    starterAssets: FLAGSHIP_TEMPLATE_ASSETS["social-promo"],
+    blueprint: FLAGSHIP_TEMPLATE_BLUEPRINTS["social-promo"],
+  },
+  {
+    id: "documentary-cut",
+    stylePreset: "classic",
+    name: "Documentary Cut",
+    description:
+      "A paced three-act documentary opener with archival imagery, editorial typography, and native wipe and slide transitions.",
+    sampleText: "THE NIGHT\nTHE WALL OPENED",
+    accentClass: "text-amber-300",
+    starterAssets: FLAGSHIP_TEMPLATE_ASSETS["documentary-cut"],
+    blueprint: FLAGSHIP_TEMPLATE_BLUEPRINTS["documentary-cut"],
+  },
+  {
+    id: "data-pulse",
+    stylePreset: "classic",
+    name: "Data Pulse",
+    description:
+      "A high-contrast statistic reel that alternates punch, rise, and word-reveal motion across three editable beats.",
+    sampleText: "95%\nSTILL UNEXPLORED",
+    accentClass: "text-orange-300",
+    starterAssets: FLAGSHIP_TEMPLATE_ASSETS["data-pulse"],
+    blueprint: FLAGSHIP_TEMPLATE_BLUEPRINTS["data-pulse"],
+  },
+  {
+    id: "quote-reel",
+    stylePreset: "classic",
+    name: "Quote Reel",
+    description:
+      "An image-led editorial quote sequence with deliberate pacing, serif emphasis, and browser-native text motion.",
+    sampleText: "WE DIDN’T JUST\nREDRAW THE MAP.",
+    accentClass: "text-red-300",
+    starterAssets: FLAGSHIP_TEMPLATE_ASSETS["quote-reel"],
+    blueprint: FLAGSHIP_TEMPLATE_BLUEPRINTS["quote-reel"],
+  },
 ];
+
+/** Only expose templates backed by complete Elah-native timelines. */
+export const TEMPLATE_DEFINITIONS: TemplateDefinition[] =
+  TEMPLATE_CATALOG_SOURCE.filter((template) => Boolean(template.blueprint));
 
 export type TemplateDefinitionId = (typeof TEMPLATE_DEFINITIONS)[number]["id"];
 
@@ -210,4 +431,16 @@ export const getTemplateDefinition = (
   }
 
   return TEMPLATE_DEFINITION_MAP[value as TemplateDefinitionId] ?? null;
+};
+
+export const getTemplateBlueprint = (
+  value: string | null | undefined,
+): VersionTimeline | null => getTemplateDefinition(value)?.blueprint ?? null;
+
+export const instantiateTemplate = (
+  value: string | null | undefined,
+  createId: () => string,
+): VersionTimeline | null => {
+  const blueprint = getTemplateBlueprint(value);
+  return blueprint ? instantiateTemplateBlueprint(blueprint, createId) : null;
 };

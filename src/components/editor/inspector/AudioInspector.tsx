@@ -1,5 +1,7 @@
 import { InspectorCard } from "@/components/editor/controls/InspectorCard";
 import { LabeledControl } from "@/components/editor/controls/LabeledControl";
+import { AudioEnhancementsInspector } from "@/components/editor/features/AudioEnhancementsInspector";
+import { FPS } from "@/lib/editor/constants";
 import type { AudioTrack } from "@/lib/editor/types";
 import { framesToSeconds, parseNumber, secondsToFrames } from "./utils";
 
@@ -117,33 +119,28 @@ export const AudioInspector = ({
         </LabeledControl>
       </div>
 
-      <LabeledControl className="block space-y-1 text-xs text-neutral-200" label="Volume">
-        <input
-          type="range"
-          min={0}
-          max={1}
-          step={0.05}
-          disabled={disabled}
-          value={audioTrack.volume}
-          onChange={(event) => {
-            onUpdateAudio(audioTrack.id, {
-              volume: Number.parseFloat(event.currentTarget.value),
-            });
-          }}
-          className="w-full"
-        />
-      </LabeledControl>
-
-      {onRemoveAudio ? (
-        <button
-          type="button"
-          disabled={disabled}
-          onClick={() => onRemoveAudio(audioTrack.id)}
-          className="w-full rounded-xl border border-rose-400/40 px-3 py-2 text-sm font-semibold text-rose-200 transition hover:bg-rose-500/12 disabled:cursor-not-allowed disabled:opacity-60"
-        >
-          Delete Audio Track
-        </button>
-      ) : null}
+      <AudioEnhancementsInspector
+        audio={{
+          volume: audioTrack.volume,
+          fadeIn: (audioTrack.fadeInFrames ?? 0) / FPS,
+          fadeOut: (audioTrack.fadeOutFrames ?? 0) / FPS,
+          muted: audioTrack.muted ?? false,
+        }}
+        disabled={disabled}
+        onDelete={onRemoveAudio ? () => onRemoveAudio(audioTrack.id) : undefined}
+        onUpdate={(patch) => {
+          onUpdateAudio(audioTrack.id, {
+            ...(patch.volume !== undefined ? { volume: patch.volume } : {}),
+            ...(patch.fadeIn !== undefined
+              ? { fadeInFrames: Math.round(patch.fadeIn * FPS) }
+              : {}),
+            ...(patch.fadeOut !== undefined
+              ? { fadeOutFrames: Math.round(patch.fadeOut * FPS) }
+              : {}),
+            ...(patch.muted !== undefined ? { muted: patch.muted } : {}),
+          });
+        }}
+      />
     </InspectorCard>
   );
 };

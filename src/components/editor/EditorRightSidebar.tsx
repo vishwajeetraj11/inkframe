@@ -10,6 +10,7 @@ interface EditorRightSidebarProps {
   assetNames: Record<string, string>;
   isExporting: boolean;
   onUpdateClip: (clipId: string, patch: Partial<Omit<Clip, "id">>) => void;
+  onDetachAudio?: (clipId: string) => void;
   onUpdateText: (overlayId: string, patch: Partial<Omit<TextOverlay, "id">>) => void;
   onUpdateAudio: (trackId: string, patch: Partial<Omit<AudioTrack, "id">>) => void;
   onRemoveAudio: (trackId: string) => void;
@@ -22,6 +23,7 @@ export const EditorRightSidebar = ({
   assetNames,
   isExporting,
   onUpdateClip,
+  onDetachAudio,
   onUpdateText,
   onUpdateAudio,
   onRemoveAudio,
@@ -38,6 +40,7 @@ export const EditorRightSidebar = ({
         assetNames={assetNames}
         disabled={isExporting}
         onUpdateClip={onUpdateClip}
+        onDetachAudio={onDetachAudio}
         onUpdateText={onUpdateText}
         onUpdateAudio={onUpdateAudio}
         onRemoveAudio={onRemoveAudio}

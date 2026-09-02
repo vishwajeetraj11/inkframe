@@ -6,9 +6,9 @@ import path from "node:path";
 
 const TEMPLATE_PREVIEW_DIR = path.join(process.cwd(), "public", "template-previews");
 const BOTTOM_TEMPLATE_IDS = new Set([
-  "vox-timeline",
-  "vox-timeline-ribbon",
-  "vox-timeline-ledger",
+  "documentary-cut",
+  "data-pulse",
+  "quote-reel",
 ] satisfies (typeof TEMPLATE_DEFINITIONS)[number]["id"][]);
 
 const getTemplatePreviewCandidates = (templateId: (typeof TEMPLATE_DEFINITIONS)[number]["id"]) => [
@@ -67,8 +67,6 @@ export default async function TemplatesPage() {
 
     return leftBottom ? 1 : -1;
   });
-
-  const previewCount = Object.keys(templateVideoPreviews).length;
 
   return (
     <main className="min-h-screen overflow-hidden bg-[#e9e3d7] text-[#16130f]">
@@ -129,9 +127,9 @@ export default async function TemplatesPage() {
                 </dd>
               </div>
               <div>
-                <dt className="text-[#6b6257]">Motion previews</dt>
+                <dt className="text-[#6b6257]">Native builds</dt>
                 <dd className="mt-1 text-base font-medium tracking-normal text-[#16130f]">
-                  {String(previewCount).padStart(2, "0")}
+                  {String(orderedTemplates.length).padStart(2, "0")}
                 </dd>
               </div>
             </dl>

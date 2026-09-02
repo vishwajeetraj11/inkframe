@@ -38,8 +38,17 @@ describe("applyAIEditorActions", () => {
 
     expect(result.nextVersion.clips).toEqual([]);
     expect(result.nextVersion.textOverlays).toHaveLength(2);
-    expect(result.nextVersion.textOverlays[0]).toMatchObject({ startFrame: 0, endFrame: 60 });
-    expect(result.nextVersion.textOverlays[1]).toMatchObject({ startFrame: 60, endFrame: 150 });
+    expect(result.nextVersion.textOverlays[0]).toMatchObject({
+      startFrame: 0,
+      endFrame: 60,
+      textAlign: "center",
+      animation: { in: "punch", out: "fade", durationFrames: 12 },
+    });
+    expect(result.nextVersion.textOverlays[1]).toMatchObject({
+      startFrame: 60,
+      endFrame: 150,
+      animation: { in: "rise", out: "fade", durationFrames: 12 },
+    });
     expect(result.selectedClipId).toBeNull();
   });
 
@@ -50,12 +59,12 @@ describe("applyAIEditorActions", () => {
         scenes: [
           {
             text: "Move fast",
-            stylePreset: "grid-kinetic",
+            stylePreset: "classic",
             fontSize: 92,
           },
           {
             text: "Break the scroll",
-            stylePreset: "hero-slam",
+            stylePreset: "classic",
           },
         ],
       },
@@ -73,7 +82,7 @@ describe("applyAIEditorActions", () => {
     expect(result.nextVersion.textOverlays).toHaveLength(2);
     expect(result.selectedClipId).toBe(result.nextVersion.clips[0]?.id ?? null);
     expect(result.selectedTextId).toBe(result.nextVersion.textOverlays[0]?.id ?? null);
-    expect(result.nextVersion.textOverlays[0]?.stylePreset).toBe("grid-kinetic");
-    expect(result.nextVersion.textOverlays[1]?.stylePreset).toBe("hero-slam");
+    expect(result.nextVersion.textOverlays[0]?.stylePreset).toBe("classic");
+    expect(result.nextVersion.textOverlays[1]?.stylePreset).toBe("classic");
   });
 });

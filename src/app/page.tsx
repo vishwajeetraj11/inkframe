@@ -17,7 +17,7 @@ const CYCLE_WORDS = ["FRAME.", "CUT.", "BEAT.", "EXPORT."] as const;
 const PRESETS = TEMPLATE_DEFINITIONS.map((template) => template.id);
 
 const JUDGE_PROMPT =
-  "Open the Inkframe editor. Create a 9-second Reel with three editorial text scenes about why browser agents should use structured tools instead of clicking through interfaces. Use three different visual presets, inspect the resulting timeline, then ask me before exporting the MP4.";
+  "Open the Inkframe editor. Create a 9-second Reel with three editorial text scenes about why browser agents should use structured tools instead of clicking through interfaces. Use punch, rise, and word-reveal motion, validate the timeline, inspect two key frames, then ask me before exporting the MP4 and verify the export metadata.";
 
 const MODES = [
   {
@@ -363,7 +363,7 @@ function AgentProofSection() {
               {copyStatus === "copied" ? "Prompt copied" : "Copy judge prompt"}
             </button>
             <span className="app-data text-[10px] uppercase" role="status" style={{ color: `${BONE}59` }}>
-              {copyStatus === "failed" ? "Copy unavailable — select the prompt above" : "25 editor tools · strict schemas"}
+              {copyStatus === "failed" ? "Copy unavailable — select the prompt above" : "43 editor tools · strict schemas"}
             </span>
           </div>
         </div>

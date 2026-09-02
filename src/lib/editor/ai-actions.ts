@@ -1,7 +1,7 @@
 import { z } from "zod";
 import {
   TEXT_OVERLAY_FONT_STYLES,
-  TEXT_OVERLAY_STYLE_PRESETS,
+  TEXT_OVERLAY_ANIMATION_KINDS,
 } from "./types";
 
 export const AI_EDITOR_ACTIONS_START = "[[EDITOR_ACTIONS]]";
@@ -65,180 +65,21 @@ const aiSceneSchema = z.object({
   ),
   fontWeight: z.number().int().min(100).max(900).optional(),
   fontStyle: z.enum(TEXT_OVERLAY_FONT_STYLES).optional(),
-  stylePreset: z
-    .preprocess(
-      (value) => {
-        if (typeof value !== "string") {
-          return undefined;
-        }
-
-        const normalized = value.trim().toLowerCase();
-        if (normalized === "classic") {
-          return "classic";
-        }
-
-        if (
-          normalized === "impact-grid" ||
-          normalized === "impact grid" ||
-          normalized === "impact"
-        ) {
-          return "impact-grid";
-        }
-
-        if (
-          normalized === "grid-kinetic" ||
-          normalized === "grid kinetic" ||
-          normalized === "kinetic grid" ||
-          normalized === "neon grid" ||
-          normalized === "dark grid kinetic"
-        ) {
-          return "grid-kinetic";
-        }
-
-        if (
-          normalized === "hero-slam" ||
-          normalized === "hero slam" ||
-          normalized === "hero"
-        ) {
-          return "hero-slam";
-        }
-
-        if (
-          normalized === "sticker-cutout" ||
-          normalized === "sticker cutout" ||
-          normalized === "sticker"
-        ) {
-          return "sticker-cutout";
-        }
-
-        if (
-          normalized === "editorial-mono" ||
-          normalized === "editorial mono" ||
-          normalized === "editorial"
-        ) {
-          return "editorial-mono";
-        }
-
-        if (
-          normalized === "vox-explainer"
-        ) {
-          return "vox-explainer";
-        }
-
-        if (
-          normalized === "vox-typography"
-        ) {
-          return "vox-typography";
-        }
-
-        if (
-          normalized === "film-frame-gallery" ||
-          normalized === "film frame gallery" ||
-          normalized === "image gallery" ||
-          normalized === "photo gallery" ||
-          normalized === "archival slideshow" ||
-          normalized === "film frame" ||
-          normalized === "projector slideshow"
-        ) {
-          return "film-frame-gallery";
-        }
-
-        if (
-          normalized === "regional-map-focus" ||
-          normalized === "regional map focus" ||
-          normalized === "regional map" ||
-          normalized === "border map" ||
-          normalized === "geopolitics map" ||
-          normalized === "conflict map" ||
-          normalized === "regional atlas zoom"
-        ) {
-          return "regional-map-focus";
-        }
-
-        if (
-          normalized === "world-map-focus" ||
-          normalized === "world map focus" ||
-          normalized === "world map" ||
-          normalized === "atlas map" ||
-          normalized === "country highlight map" ||
-          normalized === "global map"
-        ) {
-          return "world-map-focus";
-        }
-
-        if (
-          normalized === "editorial-bar-chart" ||
-          normalized === "editorial bar chart" ||
-          normalized === "bar chart" ||
-          normalized === "editorial bars" ||
-          normalized === "newspaper chart"
-        ) {
-          return "editorial-bar-chart";
-        }
-
-        if (
-          normalized === "editorial-stat-ring" ||
-          normalized === "editorial stat ring" ||
-          normalized === "stat ring" ||
-          normalized === "stat ring card" ||
-          normalized === "percentage ring" ||
-          normalized === "consensus ring" ||
-          normalized === "ring stat"
-        ) {
-          return "editorial-stat-ring";
-        }
-
-        if (
-          normalized === "createdaley-opener" ||
-          normalized === "createdaley opener" ||
-          normalized === "dictionary animation" ||
-          normalized === "dictionary-animation" ||
-          normalized === "dictionary opener" ||
-          normalized === "definition card" ||
-          normalized === "paper definition card"
-        ) {
-          return "createdaley-opener";
-        }
-
-        if (
-          normalized === "editorial-seat-arc" ||
-          normalized === "editorial seat arc" ||
-          normalized === "seat arc" ||
-          normalized === "parliament arc" ||
-          normalized === "parliament chart" ||
-          normalized === "seat chart" ||
-          normalized === "semicircle chart" ||
-          normalized === "balance of power chart"
-        ) {
-          return "editorial-seat-arc";
-        }
-
-        if (
-          normalized === "chart-card" ||
-          normalized === "chart card" ||
-          normalized === "pie chart" ||
-          normalized === "pie-chart" ||
-          normalized === "data viz" ||
-          normalized === "dataviz" ||
-          normalized === "infographic" ||
-          normalized === "editorial chart"
-        ) {
-          return "chart-card";
-        }
-
-        if (
-          normalized === "news-clipping" ||
-          normalized === "news clipping" ||
-          normalized === "newspaper" ||
-          normalized === "newspaper headline"
-        ) {
-          return "news-clipping";
-        }
-
-        return undefined;
-      },
-      z.enum(TEXT_OVERLAY_STYLE_PRESETS).optional(),
-    ),
+  textAlign: z.enum(["left", "center", "right"]).optional(),
+  animation: z
+    .object({
+      in: z.enum(TEXT_OVERLAY_ANIMATION_KINDS).optional(),
+      out: z.enum(TEXT_OVERLAY_ANIMATION_KINDS).optional(),
+      durationSeconds: z.number().min(0.05).max(2).optional(),
+    })
+    .optional(),
+  stylePreset: z.preprocess(
+    (value) =>
+      typeof value === "string" && value.trim().toLowerCase() === "classic"
+        ? "classic"
+        : undefined,
+    z.literal("classic").optional(),
+  ),
 });
 
 const TARGET_ASPECT_VALUES = [

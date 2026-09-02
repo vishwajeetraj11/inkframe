@@ -1,4 +1,5 @@
 import { act, render, waitFor } from "@testing-library/react";
+import { StrictMode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { useWebMcpTools, type WebMcpToolFactory } from "@/components/webmcp/use-webmcp-tools";
 import type { WebMCPModelContext, WebMcpTool } from "@/lib/webmcp/types";
@@ -53,5 +54,27 @@ describe("useWebMcpTools", () => {
 
     act(() => view.unmount());
     expect(registrationSignal?.aborted).toBe(true);
+  });
+
+  it("does not unregister the replacement tool during Strict Mode remount", async () => {
+    const registered = new Map<string, WebMcpTool>();
+    const registerTool = vi.fn(async (tool: WebMcpTool) => {
+      registered.set(tool.name, tool);
+    });
+    const unregisterTool = vi.fn(async (name: string) => {
+      registered.delete(name);
+    });
+    Object.defineProperty(document, "modelContext", {
+      configurable: true,
+      value: { registerTool, unregisterTool } satisfies WebMCPModelContext,
+    });
+
+    const view = render(<StrictMode><Harness value="strict" /></StrictMode>);
+    await waitFor(() => expect(registerTool).toHaveBeenCalledTimes(2));
+    await waitFor(() => expect(registered.has("test_get_value")).toBe(true));
+    expect(unregisterTool).not.toHaveBeenCalled();
+
+    act(() => view.unmount());
+    await waitFor(() => expect(unregisterTool).toHaveBeenCalledTimes(1));
   });
 });

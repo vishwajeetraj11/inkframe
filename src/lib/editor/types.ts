@@ -13,6 +13,9 @@ export type TextOverlayFontFamily = (typeof TEXT_OVERLAY_FONT_FAMILIES)[number];
 export const TEXT_OVERLAY_FONT_STYLES = ["normal", "italic"] as const;
 export type TextOverlayFontStyle = (typeof TEXT_OVERLAY_FONT_STYLES)[number];
 
+export const TEXT_OVERLAY_ALIGNMENTS = ["left", "center", "right"] as const;
+export type TextOverlayAlignment = (typeof TEXT_OVERLAY_ALIGNMENTS)[number];
+
 export const TEXT_OVERLAY_STYLE_PRESETS = [
   "classic",
   "impact-grid",
@@ -117,6 +120,15 @@ export interface AssetRef {
   name: string;
   size: number;
   externalUrl?: string;
+  attribution?: {
+    provider: "pexels" | "mixkit" | "jamendo" | "freesound";
+    sourceUrl: string;
+    creatorName: string;
+    creatorUrl: string;
+    licenseName?: string;
+    licenseUrl?: string;
+    attributionRequired?: boolean;
+  };
 }
 
 export interface Clip {
@@ -142,9 +154,29 @@ export interface TextOverlay {
   fontFamily: TextOverlayFontFamily;
   fontWeight: number;
   fontStyle: TextOverlayFontStyle;
+  textAlign?: TextOverlayAlignment;
   stylePreset: TextOverlayStylePreset;
   createdaleyTexture: CreatedaleyOpenerTexture;
+  /** Browser-native text motion rendered by Inkframe's Elah compatibility layer. */
+  animation?: TextOverlayAnimation;
   syncMediaToTimelineEvents?: boolean;
+}
+
+export const TEXT_OVERLAY_ANIMATION_KINDS = [
+  "fade",
+  "rise",
+  "slide-left",
+  "punch",
+  "typewriter",
+  "word-reveal",
+] as const;
+export type TextOverlayAnimationKind =
+  (typeof TEXT_OVERLAY_ANIMATION_KINDS)[number];
+
+export interface TextOverlayAnimation {
+  in?: TextOverlayAnimationKind;
+  out?: TextOverlayAnimationKind;
+  durationFrames: number;
 }
 
 export interface AudioTrack {
@@ -155,14 +187,22 @@ export interface AudioTrack {
   trimStartFrame: number;
   trimEndFrame: number;
   volume: number;
+  /** Audio clip fades are retained in Inkframe; Elah 0.4.1 has no clip fade fields. */
+  fadeInFrames?: number;
+  fadeOutFrames?: number;
+  muted?: boolean;
 }
 
 export interface Transition {
   id: string;
-  type: "crossfade";
+  /** Native transition kind. `type: "crossfade"` is the legacy persisted form. */
+  kind?: "fade" | "slide" | "wipe";
+  type?: "crossfade";
   durationInFrames: number;
   fromClipId: string;
   toClipId: string;
+  direction?: "left" | "right" | "up" | "down";
+  easing?: "linear" | "ease-in" | "ease-out";
 }
 
 export interface VersionTimeline {

@@ -17,6 +17,7 @@ import {
   type InkframeElahSidecar,
 } from "@/lib/editor/elah-adapter";
 import { ElahEditorProvider } from "./ElahEditorProvider";
+import { ElahMediaLibraryBridge } from "./ElahMediaLibraryBridge";
 
 interface ElahEditorWorkspaceProps {
   version: VersionTimeline;
@@ -89,6 +90,11 @@ export const ElahEditorWorkspace = ({
       project={projectForProvider}
       onProjectChange={handleProjectChange}
     >
+      <ElahMediaLibraryBridge
+        assets={assets}
+        assetSources={assetSources}
+        version={version}
+      />
       {children}
     </ElahEditorProvider>
   );

@@ -13,62 +13,24 @@ include a machine-readable block in this exact format:
 
 Rules for EDITOR_ACTIONS:
 - Output valid minified JSON only (no markdown fence).
-- Keep 3 to 12 scenes, unless the user explicitly asks for a single standalone chart card, stat ring card, or dictionary-style opener.
+- Keep 3 to 12 scenes.
 - Each scene must include at least "text". Use durationSeconds when useful.
-- Keep each scene text punchy (about 2 to 8 words) and never leave unfinished phrases, except for structured chart-card, editorial-bar-chart, editorial-stat-ring, or createdaley-opener scenes.
+- Keep each scene text punchy (about 2 to 8 words) and never leave unfinished phrases.
 - When style is requested, set scene-level font fields:
   - "fontFamily": one of "sans" | "serif" | "mono"
   - "fontWeight": 100..900
   - "fontStyle": "normal" | "italic"
-- For kinetic references, set "stylePreset" per scene:
-  - "classic" | "impact-grid" | "grid-kinetic" | "hero-slam" | "sticker-cutout" | "editorial-mono" | "vox-timeline" | "vox-timeline-ribbon" | "vox-timeline-ledger" | "world-map-focus" | "regional-map-focus" | "film-frame-gallery" | "editorial-bar-chart" | "editorial-stat-ring" | "editorial-seat-arc" | "createdaley-opener" | "chart-card" | "news-clipping"
-- If the user asks for an image-led historical chronology, documentary timeline, or archival-event sequence, prefer "vox-timeline".
-- If the user asks for a lower-third chronology strip or ribbon timeline, prefer "vox-timeline-ribbon".
-- If the user asks for a ledger timeline, dossier chronology, or stacked archival timeline, prefer "vox-timeline-ledger".
-- If the user asks for a world map, atlas map, or country highlight map, prefer "world-map-focus".
-- If the user asks for a regional map, border map, geopolitics map, conflict map, or regional atlas zoom, prefer "regional-map-focus".
-- If the user asks for an image gallery, projector slideshow, archival film frame, or travel-photo sequence, prefer "film-frame-gallery".
-- If the user asks for a clean editorial bar-chart look, prefer "editorial-bar-chart".
-- If the user asks for a percentage ring, consensus card, or stat ring card, prefer "editorial-stat-ring".
-- If the user asks for a parliament chart, semicircle seat chart, or balance-of-power graphic, prefer "editorial-seat-arc".
-- If the user asks for a dictionary animation, dictionary-style opener, definition card, or paper-definition card, prefer "createdaley-opener".
-- If the user asks for a pie chart, chart explainer, infographic, or data-viz card, prefer "chart-card".
-- For dynamic reels, alternate stylePreset values across scenes instead of using one style everywhere, unless the user explicitly requests a specific preset.
-- For motion typography requests, every scene should include: stylePreset, x, y, fontSize, fontFamily, fontWeight.
-- For dictionary animation scenes, "text" may be structured multiline content:
-  - line 1: wordmark
-  - line 2: pronunciation without brackets
-  - line 3: part of speech
-  - line 4+: definition text
-- For chart-card scenes, "text" may be structured multiline content:
-  - line 1: headline
-  - line 2: subhead
-  - line 3+: rows formatted as Label|Value|Color
-- "editorial-seat-arc" uses the same structured multiline chart format as "chart-card".
-- For editorial-stat-ring scenes, "text" may be structured multiline content:
-  - line 1: headline (optionally with [[highlight phrase]])
-  - line 2: subhead or source line
-  - line 3: Value|Suffix|Color
-- For world-map-focus scenes, "text" may be structured multiline content:
-  - line 1: headline
-  - line 2: subhead
-  - line 3: COUNTRY: Country Name
-- For regional-map-focus scenes, "text" may be structured multiline content:
-  - line 1: headline
-  - line 2: subhead
-  - line 3+: prefixed rows using PRIMARY:, SECONDARY:, LABEL:, YEAR:, and FOCUS:
-- For film-frame-gallery scenes, "text" may be structured multiline content:
-  - line 1: headline
-  - line 2: subhead
-  - line 3+: optional prefixed rows using LOCATION: and YEAR:
-- For editorial-bar-chart scenes, "text" may be structured multiline content:
-  - line 1: headline
-  - line 2: subhead
-  - line 3+: rows formatted as Label|Value|Color (values in 0..100)
-- For timeline scenes ("vox-timeline", "vox-timeline-ribbon", "vox-timeline-ledger"), "text" may be structured multiline content:
-  - line 1: kicker
-  - line 2: headline
-  - line 3+: rows formatted as Date|Title|Caption|focus
+  - "textAlign": "left" | "center" | "right"
+- Give every scene purposeful motion with "animation":
+  - "in": "fade" | "rise" | "slide-left" | "punch" | "typewriter" | "word-reveal"
+  - "out": use "fade" for most scenes; use "rise", "slide-left", or "punch" sparingly
+  - "durationSeconds": 0.2 for snap, 0.4 for smooth, or 0.65 for cinematic pacing
+- Prefer punch for short headlines, rise for supporting copy, and word-reveal for paced statements. Avoid typewriter on long centered text.
+- Use "stylePreset":"classic" for every scene; it is the Elah-native style with preview/export parity.
+- Build visual variety with font size, font family, alignment, color, placement, and animation rather than legacy structured preset identifiers.
+- Do not emit chart, map, timeline, dictionary, gallery, or other serialized preset payloads.
+- For motion typography requests, every scene should include: stylePreset, x, y, fontSize, fontFamily, fontWeight, textAlign, and animation.
+- Keep essential reel copy at fontSize 48 or larger. Use 32 only for short supporting details.
 - Never use cursive/script/handwritten font suggestions.
 - Use y in safe area (roughly 30..74) unless user explicitly asks for edge placement.
 - Default transitionSeconds to 0 unless the user explicitly asks for crossfades.

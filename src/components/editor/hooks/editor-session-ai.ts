@@ -160,6 +160,8 @@ export const applyAIEditorActions = ({
       Math.ceil(scene.text.trim().split(/\s+/).filter(Boolean).length / 3),
     );
     const maxSafeY = Math.max(58, 80 - (estimatedLineCount - 1) * 6);
+    const motionSequence = ["punch", "rise", "slide-left", "word-reveal"] as const;
+    const defaultMotion = motionSequence[index % motionSequence.length];
 
     return {
       id: nanoid(10),
@@ -168,11 +170,17 @@ export const applyAIEditorActions = ({
       endFrame: startFrame + durationInFrames,
       x: Math.min(Math.max(scene.x ?? fallbackPosition.x, 12), 88),
       y: Math.min(Math.max(scene.y ?? fallbackPosition.y, 16), maxSafeY),
-      fontSize: Math.min(Math.max(fontSize, 22), 170),
+      fontSize: Math.min(Math.max(fontSize, 32), 170),
       color: scene.color ?? styleDefaults.color,
       fontFamily: readableFontFamily,
       fontWeight: normalizeFontWeight(scene.fontWeight ?? styleDefaults.fontWeight),
       fontStyle: scene.fontStyle ?? styleDefaults.fontStyle,
+      textAlign: scene.textAlign ?? "center",
+      animation: {
+        in: scene.animation?.in ?? defaultMotion,
+        out: scene.animation?.out ?? "fade",
+        durationFrames: secondsToFrames(scene.animation?.durationSeconds ?? 0.4),
+      },
       stylePreset: resolvedStylePreset,
       createdaleyTexture:
         resolvedStylePreset === "editorial-seat-arc" ? "warm-editorial" : "plain",

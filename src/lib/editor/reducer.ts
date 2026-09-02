@@ -22,6 +22,20 @@ export type EditorAction =
   | { type: "remove-clip"; aspect: AspectPreset; clipId: string }
   | { type: "move-clip"; aspect: AspectPreset; clipId: string; offset: -1 | 1 }
   | {
+      type: "split-clip";
+      aspect: AspectPreset;
+      clipId: string;
+      splitFrame: number;
+      leftClipId: string;
+      rightClipId: string;
+    }
+  | {
+      type: "duplicate-clip";
+      aspect: AspectPreset;
+      clipId: string;
+      newClipId: string;
+    }
+  | {
       type: "set-transition";
       aspect: AspectPreset;
       transition: Transition;
@@ -146,6 +160,90 @@ export const editorReducer = (
           clips,
           transitions,
         };
+      });
+    }
+    case "split-clip": {
+      return withUpdatedVersion(state, action.aspect, (version) => {
+        const clipIndex = version.clips.findIndex((clip) => clip.id === action.clipId);
+        if (
+          clipIndex === -1 ||
+          !action.leftClipId ||
+          !action.rightClipId ||
+          action.leftClipId === action.rightClipId ||
+          version.clips.some(
+            (clip) =>
+              clip.id === action.leftClipId || clip.id === action.rightClipId,
+          )
+        ) {
+          return version;
+        }
+
+        const clip = version.clips[clipIndex];
+        const splitFrame = Math.round(action.splitFrame);
+        if (splitFrame <= clip.startFrame || splitFrame >= clip.endFrame) {
+          return version;
+        }
+
+        const sourceSplitFrame =
+          clip.trimStartFrame + (splitFrame - clip.startFrame);
+        const leftClip: Clip = {
+          ...clip,
+          id: action.leftClipId,
+          endFrame: splitFrame,
+          trimEndFrame: sourceSplitFrame,
+        };
+        const rightClip: Clip = {
+          ...clip,
+          id: action.rightClipId,
+          startFrame: splitFrame,
+          trimStartFrame: sourceSplitFrame,
+        };
+        const clips = [...version.clips];
+        clips.splice(clipIndex, 1, leftClip, rightClip);
+        const transitions = version.transitions.map((transition) => ({
+          ...transition,
+          toClipId:
+            transition.toClipId === clip.id
+              ? action.leftClipId
+              : transition.toClipId,
+          fromClipId:
+            transition.fromClipId === clip.id
+              ? action.rightClipId
+              : transition.fromClipId,
+        }));
+
+        return { ...version, clips, transitions };
+      });
+    }
+    case "duplicate-clip": {
+      return withUpdatedVersion(state, action.aspect, (version) => {
+        const clipIndex = version.clips.findIndex((clip) => clip.id === action.clipId);
+        if (
+          clipIndex === -1 ||
+          !action.newClipId ||
+          version.clips.some((clip) => clip.id === action.newClipId)
+        ) {
+          return version;
+        }
+
+        const source = version.clips[clipIndex];
+        const duration = Math.max(1, source.endFrame - source.startFrame);
+        const duplicate: Clip = {
+          ...source,
+          id: action.newClipId,
+          startFrame: source.endFrame,
+          endFrame: source.endFrame + duration,
+        };
+        const clips = [...version.clips];
+        clips.splice(clipIndex + 1, 0, duplicate);
+        // An outgoing transition belongs to the final copy so it remains
+        // connected to the original next clip after insertion.
+        const transitions = version.transitions.map((transition) =>
+          transition.fromClipId === source.id
+            ? { ...transition, fromClipId: action.newClipId }
+            : transition,
+        );
+        return { ...version, clips, transitions };
       });
     }
     case "move-clip": {

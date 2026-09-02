@@ -8,16 +8,13 @@ import { useEffect, useMemo } from "react";
 import type { VersionTimeline } from "@/lib/editor/types";
 import { detectElahBrowserCapabilities } from "@/lib/editor/elah-browser-capabilities";
 import "./inkframe-elah.css";
+import { TimelineActionBar } from "@/components/editor/timeline/TimelineActionBar";
 
 interface ElahTimelineDockProps {
   version: VersionTimeline;
   onSelectClip: (clipId: string | null) => void;
   onSelectText: (overlayId: string | null) => void;
   onSelectAudio: (trackId: string | null) => void;
-  canUndo: boolean;
-  canRedo: boolean;
-  onUndo: () => void;
-  onRedo: () => void;
   onAddTrack: () => void;
 }
 
@@ -48,43 +45,11 @@ const SelectionBridge = ({
   return null;
 };
 
-const ElahHistoryControls = ({
-  canUndo,
-  canRedo,
-  onUndo,
-  onRedo,
-}: Pick<ElahTimelineDockProps, "canUndo" | "canRedo" | "onUndo" | "onRedo">) => {
-  return (
-    <div className="flex items-center gap-1 border-l border-white/10 pl-2">
-      <button
-        type="button"
-        disabled={!canUndo}
-        onClick={onUndo}
-        className="min-h-10 px-2.5 text-[9px] font-semibold uppercase tracking-[0.12em] text-neutral-300 outline-none transition hover:bg-white/[0.05] hover:text-neutral-50 focus-visible:ring-2 focus-visible:ring-cyan-300 disabled:opacity-35"
-      >
-        Undo
-      </button>
-      <button
-        type="button"
-        disabled={!canRedo}
-        onClick={onRedo}
-        className="min-h-10 px-2.5 text-[9px] font-semibold uppercase tracking-[0.12em] text-neutral-300 outline-none transition hover:bg-white/[0.05] hover:text-neutral-50 focus-visible:ring-2 focus-visible:ring-cyan-300 disabled:opacity-35"
-      >
-        Redo
-      </button>
-    </div>
-  );
-};
-
 export const ElahTimelineDock = ({
   version,
   onSelectClip,
   onSelectText,
   onSelectAudio,
-  canUndo,
-  canRedo,
-  onUndo,
-  onRedo,
   onAddTrack,
 }: ElahTimelineDockProps) => {
   const capabilities = useMemo(() => detectElahBrowserCapabilities(), []);
@@ -105,26 +70,14 @@ export const ElahTimelineDock = ({
         onSelectText={onSelectText}
         onSelectAudio={onSelectAudio}
       />
-      <div className="flex min-h-12 items-center justify-between border-b border-white/10 px-3">
+      <div className="flex min-h-10 items-center border-b border-white/10 pl-3">
         <div className="flex items-center gap-2">
           <span className="h-2 w-2 bg-cyan-300" />
           <span className="app-eyebrow text-[9px] uppercase tracking-[0.16em] text-neutral-300">
             Elah interactive timeline
           </span>
-          <button
-            type="button"
-            onClick={onAddTrack}
-            className="ml-2 min-h-10 border-l border-white/10 px-3 text-[9px] font-semibold uppercase tracking-[0.12em] text-neutral-200 outline-none transition hover:bg-white/[0.05] hover:text-white focus-visible:ring-2 focus-visible:ring-cyan-300 disabled:opacity-35"
-          >
-            + Track
-          </button>
         </div>
-        <ElahHistoryControls
-          canUndo={canUndo}
-          canRedo={canRedo}
-          onUndo={onUndo}
-          onRedo={onRedo}
-        />
+        <TimelineActionBar onAddText={onAddTrack} />
       </div>
       <div className="min-h-0 flex-1 overflow-hidden">
         <ElahTimeline compactSidebar sidebarWidth={136} />

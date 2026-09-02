@@ -51,9 +51,11 @@ describe("UX regressions", () => {
     );
 
     expect(screen.queryByRole("button", { name: /text layer/i })).not.toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "Templates" }).parentElement).toHaveClass(
-      "lg:hidden",
+    expect(screen.getByRole("tab", { name: "project" })).toHaveAttribute(
+      "aria-selected",
+      "true",
     );
+    expect(screen.getByRole("tab", { name: "stock" })).toBeInTheDocument();
   });
 
   it("lets keyboard users resize and reset the timeline", () => {

@@ -70,8 +70,20 @@ const textOverlaySchema = z
     fontFamily: z.enum(TEXT_OVERLAY_FONT_FAMILIES).default("sans"),
     fontWeight: z.number().int().min(100).max(900).default(700),
     fontStyle: z.enum(TEXT_OVERLAY_FONT_STYLES).default("normal"),
+    textAlign: z.enum(["left", "center", "right"]).default("center"),
     stylePreset: z.enum(TEXT_OVERLAY_STYLE_PRESETS).default("classic"),
     createdaleyTexture: z.enum(CREATEDALEY_OPENER_TEXTURES).default("plain"),
+    animation: z
+      .object({
+        in: z
+          .enum(["fade", "rise", "slide-left", "punch", "typewriter", "word-reveal"])
+          .optional(),
+        out: z
+          .enum(["fade", "rise", "slide-left", "punch", "typewriter", "word-reveal"])
+          .optional(),
+        durationFrames: z.number().int().min(0).max(MAX_DURATION_FRAMES),
+      })
+      .optional(),
     syncMediaToTimelineEvents: z.boolean().default(false),
   })
   .superRefine((overlay, context) => {
@@ -93,6 +105,9 @@ const audioTrackSchema = z
     trimStartFrame: z.number().int().min(0),
     trimEndFrame: z.number().int().min(1),
     volume: z.number().min(0).max(1),
+    fadeInFrames: z.number().int().min(0).max(MAX_DURATION_FRAMES).default(0),
+    fadeOutFrames: z.number().int().min(0).max(MAX_DURATION_FRAMES).default(0),
+    muted: z.boolean().default(false),
   })
   .superRefine((track, context) => {
     if (track.endFrame <= track.startFrame) {
@@ -110,14 +125,35 @@ const audioTrackSchema = z
         message: "trimEndFrame must be greater than trimStartFrame.",
       });
     }
+
+    const duration = track.endFrame - track.startFrame;
+    if (track.fadeInFrames > duration) {
+      context.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["fadeInFrames"],
+        message: "fadeInFrames cannot exceed the track duration.",
+      });
+    }
+    if (track.fadeOutFrames > duration) {
+      context.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["fadeOutFrames"],
+        message: "fadeOutFrames cannot exceed the track duration.",
+      });
+    }
   });
 
 const transitionSchema = z.object({
   id: z.string().min(1),
-  type: z.literal("crossfade"),
+  // `type: "crossfade"` is accepted for projects written before native Elah
+  // transition kinds were introduced. `kind` is the canonical representation.
+  kind: z.enum(["fade", "slide", "wipe"]).default("fade"),
+  type: z.literal("crossfade").optional(),
   durationInFrames: z.number().int().min(1),
   fromClipId: z.string().min(1),
   toClipId: z.string().min(1),
+  direction: z.enum(["left", "right", "up", "down"]).optional(),
+  easing: z.enum(["linear", "ease-in", "ease-out"]).optional(),
 });
 
 const versionTimelineSchema = z.object({
@@ -135,6 +171,17 @@ const assetRefSchema = z.object({
   name: z.string().min(1),
   size: z.number().int().min(0),
   externalUrl: z.string().url().optional(),
+  attribution: z
+    .object({
+      provider: z.enum(["pexels", "mixkit", "jamendo", "freesound"]),
+      sourceUrl: z.string().url(),
+      creatorName: z.string().min(1).max(160),
+      creatorUrl: z.string().url(),
+      licenseName: z.string().min(1).max(120).optional(),
+      licenseUrl: z.string().url().optional(),
+      attributionRequired: z.boolean().optional(),
+    })
+    .optional(),
 });
 
 const clipHasAdjacentTransition = (

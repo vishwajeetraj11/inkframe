@@ -5,14 +5,16 @@ import {
 } from "@/lib/editor/templates";
 
 describe("editor template catalog", () => {
-  it("keeps the public template ids stable", () => {
-    expect(TEMPLATE_DEFINITIONS.map((template) => template.id)).toContain("vox-timeline");
-    expect(TEMPLATE_DEFINITIONS.map((template) => template.id)).toContain("vox-timeline-ribbon");
-    expect(TEMPLATE_DEFINITIONS.map((template) => template.id)).toContain("vox-timeline-ledger");
-    expect(TEMPLATE_DEFINITIONS.map((template) => template.id)).toContain("regional-map-focus");
-    expect(TEMPLATE_DEFINITIONS.map((template) => template.id)).toContain("film-frame-gallery");
-    expect(TEMPLATE_DEFINITIONS.map((template) => template.id)).toContain("editorial-seat-arc");
-    expect(TEMPLATE_DEFINITIONS.map((template) => template.id)).toContain("news-clipping");
+  it("only exposes templates with complete Elah-native timelines", () => {
+    expect(TEMPLATE_DEFINITIONS.map((template) => template.id)).toEqual([
+      "editorial-explainer",
+      "product-reveal",
+      "social-promo",
+      "documentary-cut",
+      "data-pulse",
+      "quote-reel",
+    ]);
+    expect(TEMPLATE_DEFINITIONS.every((template) => template.blueprint)).toBe(true);
   });
 
   it("returns null for unknown templates", () => {
@@ -30,52 +32,19 @@ describe("editor template catalog", () => {
     expect(getTemplateDefinition("vox-explainer")).toBeNull();
   });
 
-  it("resolves the vox timeline template", () => {
-    expect(getTemplateDefinition("vox-timeline")).toMatchObject({
-      id: "vox-timeline",
-      stylePreset: "vox-timeline",
-      name: "Vox Timeline",
-    });
-    expect(getTemplateDefinition("vox-timeline")?.starterAssets).toHaveLength(5);
+  it("retires Remotion-era preset links instead of opening broken projects", () => {
+    expect(getTemplateDefinition("vox-timeline")).toBeNull();
+    expect(getTemplateDefinition("editorial-seat-arc")).toBeNull();
+    expect(getTemplateDefinition("regional-map-focus")).toBeNull();
+    expect(getTemplateDefinition("film-frame-gallery")).toBeNull();
   });
 
-  it("resolves the additional timeline variations", () => {
-    expect(getTemplateDefinition("vox-timeline-ribbon")).toMatchObject({
-      id: "vox-timeline-ribbon",
-      stylePreset: "vox-timeline-ribbon",
-      name: "Timeline Ribbon",
+  it("resolves the replacement native templates with starter media", () => {
+    expect(getTemplateDefinition("documentary-cut")).toMatchObject({
+      name: "Documentary Cut",
+      stylePreset: "classic",
     });
-    expect(getTemplateDefinition("vox-timeline-ribbon")?.starterAssets).toHaveLength(5);
-    expect(getTemplateDefinition("vox-timeline-ledger")).toMatchObject({
-      id: "vox-timeline-ledger",
-      stylePreset: "vox-timeline-ledger",
-      name: "Timeline Ledger",
-    });
-    expect(getTemplateDefinition("vox-timeline-ledger")?.starterAssets).toHaveLength(5);
-  });
-
-  it("resolves the editorial seat arc template", () => {
-    expect(getTemplateDefinition("editorial-seat-arc")).toMatchObject({
-      id: "editorial-seat-arc",
-      stylePreset: "editorial-seat-arc",
-      name: "Editorial Seat Arc",
-    });
-  });
-
-  it("resolves the regional map focus template", () => {
-    expect(getTemplateDefinition("regional-map-focus")).toMatchObject({
-      id: "regional-map-focus",
-      stylePreset: "regional-map-focus",
-      name: "Regional Map Focus",
-    });
-  });
-
-  it("resolves the film frame gallery template", () => {
-    expect(getTemplateDefinition("film-frame-gallery")).toMatchObject({
-      id: "film-frame-gallery",
-      stylePreset: "film-frame-gallery",
-      name: "Film Frame Gallery",
-    });
-    expect(getTemplateDefinition("film-frame-gallery")?.starterAssets).toHaveLength(5);
+    expect(getTemplateDefinition("data-pulse")?.starterAssets).toHaveLength(3);
+    expect(getTemplateDefinition("quote-reel")?.starterAssets).toHaveLength(3);
   });
 });

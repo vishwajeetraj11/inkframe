@@ -11,8 +11,11 @@ import {
   ElahTimelineDock,
 } from "@/components/editor/elah";
 import { createDefaultTextOverlay } from "@/lib/editor/defaults";
+import type { EditorFrameCapture } from "@/lib/editor/export-state";
+import { analyzeFrameContrast } from "@/lib/editor/webmcp/contrast";
+import { usePlaybackStore, type PreviewHandle } from "@elah/editor";
 import { nanoid } from "nanoid";
-import { useState, type CSSProperties } from "react";
+import { useRef, useState, type CSSProperties } from "react";
 import { useEditorWebMcp } from "./hooks/use-editor-webmcp";
 import { useEditorSession } from "./hooks/use-editor-session";
 
@@ -29,6 +32,50 @@ export const EditorApp = ({
 }: EditorAppProps) => {
   const session = useEditorSession();
   const [timelineHeight, setTimelineHeight] = useState(DEFAULT_TIMELINE_HEIGHT);
+  const previewRef = useRef<PreviewHandle | null>(null);
+
+  const capturePreviewFrame = async (frame: number, includeImage: boolean) => {
+    const playback = usePlaybackStore.getState();
+    playback.pause();
+    playback.setCurrentFrame(frame);
+    await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
+    await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
+
+    const canvas = previewRef.current?.getCanvas();
+    if (!canvas) throw new Error("The preview canvas is not ready.");
+    const capture: EditorFrameCapture = {
+      frame,
+      width: canvas.width,
+      height: canvas.height,
+      contrastChecks: [],
+    };
+
+    try {
+      const maximumWidth = 480;
+      const scale = Math.min(1, maximumWidth / Math.max(1, canvas.width));
+      const snapshot = document.createElement("canvas");
+      snapshot.width = Math.max(1, Math.round(canvas.width * scale));
+      snapshot.height = Math.max(1, Math.round(canvas.height * scale));
+      const context = snapshot.getContext("2d");
+      if (!context) throw new Error("The browser could not create a frame snapshot.");
+      context.drawImage(canvas, 0, 0, snapshot.width, snapshot.height);
+      capture.contrastChecks = analyzeFrameContrast({
+        pixels: context.getImageData(0, 0, snapshot.width, snapshot.height).data,
+        width: snapshot.width,
+        height: snapshot.height,
+        version: session.activeVersion,
+        frame,
+      });
+      if (includeImage) {
+        capture.mimeType = "image/jpeg";
+        capture.dataUrl = snapshot.toDataURL("image/jpeg", 0.72);
+      }
+    } catch (error) {
+      capture.imageError =
+        error instanceof Error ? error.message : "Frame image capture failed.";
+    }
+    return capture;
+  };
 
   const selectClip = (clipId: string | null) => {
     session.setSelectedClipId(clipId);
@@ -59,7 +106,11 @@ export const EditorApp = ({
     selectAudio: (trackId) => selectAudio(trackId),
     addSoundEffect: session.onAddSoundEffect,
     applyAIEditorActions: session.onApplyEditorActions,
-    requestExport: (signal) => session.onExport(signal),
+    requestExport: () => session.onRequestExport(),
+    getExportState: () => session.exportState,
+    cancelExport: session.onCancelExport,
+    captureFrame: capturePreviewFrame,
+    getRenderDiagnostics: session.getRenderDiagnostics,
     removeAsset: session.onRemoveAsset,
     requestMediaPicker: () => {
       const input = document.getElementById("media-upload");
@@ -68,6 +119,15 @@ export const EditorApp = ({
       }
       input.click();
     },
+    searchStockVideos: session.searchStockVideos,
+    importStockVideo: session.onImportStockVideoById,
+    searchStockPhotos: session.searchStockPhotos,
+    importStockPhoto: session.onImportStockPhotoById,
+    searchLicensedMusic: session.searchLicensedMusic,
+    importLicensedMusic: session.onImportLicensedMusic,
+    searchLicensedSoundEffects: session.searchLicensedSoundEffects,
+    importLicensedSoundEffect: session.onImportLicensedSoundEffect,
+    importAudioFromUrl: session.onImportAudioFromUrl,
   });
 
   const workspaceStats = [
@@ -131,18 +191,25 @@ export const EditorApp = ({
         >
         <div className="order-1 min-h-0 xl:order-none xl:col-start-1 xl:row-start-1">
           <EditorSidebar
+            activeAspect={session.activeAspect}
             isExporting={session.isExporting}
             assets={session.assetList}
             onFilesSelected={session.onFilesSelected}
             onAddSoundEffect={session.onAddSoundEffect}
             onRemoveAsset={session.onRemoveAsset}
+            onAddStockVideo={session.onImportStockVideo}
           />
         </div>
 
         <div className="order-2 min-w-0 border-b border-white/10 xl:order-none xl:col-start-2 xl:row-start-1">
           <PreviewPane
+            previewRef={previewRef}
             aspect={session.activeAspect}
             version={session.activeVersion}
+            canUndo={session.canUndo}
+            canRedo={session.canRedo}
+            onUndo={session.undo}
+            onRedo={session.redo}
           />
         </div>
 
@@ -153,6 +220,7 @@ export const EditorApp = ({
             selectedAudioTrack={session.selectedAudioTrack}
             assetNames={session.assetNames}
             isExporting={session.isExporting}
+            onDetachAudio={session.onDetachAudio}
             onUpdateClip={(clipId, patch) => {
               session.dispatch({ type: "update-clip", aspect: session.activeAspect, clipId, patch });
             }}
@@ -193,10 +261,6 @@ export const EditorApp = ({
           />
           <ElahTimelineDock
             version={session.activeVersion}
-            canUndo={session.canUndo}
-            canRedo={session.canRedo}
-            onUndo={session.undo}
-            onRedo={session.redo}
             onAddTrack={handleAddText}
             onSelectClip={selectClip}
             onSelectText={selectText}

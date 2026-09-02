@@ -15,6 +15,34 @@ import {
   toSafeInt,
 } from "./helpers";
 
+const normalizeTextOverlayAnimation = (
+  animation: TextOverlay["animation"],
+  durationInFrames: number,
+): TextOverlay["animation"] => {
+  if (!animation) return undefined;
+  const durationFrames = clamp(
+    toSafeInt(animation.durationFrames, 0),
+    0,
+    durationInFrames,
+  );
+  const validKinds = new Set([
+    "fade",
+    "rise",
+    "slide-left",
+    "punch",
+    "typewriter",
+    "word-reveal",
+  ]);
+  const normalized: NonNullable<TextOverlay["animation"]> = {
+    ...(animation.in && validKinds.has(animation.in) ? { in: animation.in } : {}),
+    ...(animation.out && validKinds.has(animation.out) ? { out: animation.out } : {}),
+    durationFrames,
+  };
+  return normalized.in || normalized.out || durationFrames > 0
+    ? normalized
+    : undefined;
+};
+
 export const normalizeClips = (clips: Clip[]): Clip[] => {
   let cursor = 0;
 
@@ -66,9 +94,18 @@ export const normalizeTextOverlays = (textOverlays: TextOverlay[]): TextOverlay[
         fontFamily: normalizeTextOverlayFontFamily(overlay.fontFamily),
         fontWeight: normalizeTextOverlayFontWeight(overlay.fontWeight),
         fontStyle: normalizeTextOverlayFontStyle(overlay.fontStyle),
+        textAlign: (
+          overlay.textAlign === "left" || overlay.textAlign === "right"
+            ? overlay.textAlign
+            : "center"
+        ) as TextOverlay["textAlign"],
         stylePreset,
         createdaleyTexture: normalizeCreatedaleyTexture(
           (overlay as Partial<TextOverlay>).createdaleyTexture,
+        ),
+        animation: normalizeTextOverlayAnimation(
+          (overlay as Partial<TextOverlay>).animation,
+          endFrame - startFrame,
         ),
         syncMediaToTimelineEvents: Boolean(
           (overlay as Partial<TextOverlay>).syncMediaToTimelineEvents,
@@ -94,5 +131,16 @@ export const normalizeAudioTracks = (audioTracks: AudioTrack[]): AudioTrack[] =>
       trimStartFrame,
       trimEndFrame,
       volume: clamp(track.volume, 0, 1),
+      fadeInFrames: clamp(
+        toSafeInt((track as Partial<AudioTrack>).fadeInFrames ?? 0, 0),
+        0,
+        endFrame - startFrame,
+      ),
+      fadeOutFrames: clamp(
+        toSafeInt((track as Partial<AudioTrack>).fadeOutFrames ?? 0, 0),
+        0,
+        endFrame - startFrame,
+      ),
+      muted: Boolean((track as Partial<AudioTrack>).muted),
     };
   });

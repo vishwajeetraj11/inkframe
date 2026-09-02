@@ -1,8 +1,13 @@
 import { InspectorCard } from "@/components/editor/controls/InspectorCard";
 import { LabeledControl } from "@/components/editor/controls/LabeledControl";
+import { TextMotionInspector } from "@/components/editor/features/TextMotionInspector";
+import { FPS } from "@/lib/editor/constants";
 import { STYLE_PRESET_SEQUENCE } from "@/components/editor/hooks/editor-session-config";
 import { hasCustomInspector } from "@/lib/editor/domain/preset-guards";
-import type { TextOverlay } from "@/lib/editor/types";
+import type {
+  TextOverlay,
+  TextOverlayAnimationKind,
+} from "@/lib/editor/types";
 import {
   isChartCardStylePreset,
   isVoxTimelineStylePreset,
@@ -42,6 +47,13 @@ const INSPECTOR_INPUT_CLASS =
   "min-h-9 w-full rounded-lg border border-white/10 bg-neutral-950/70 px-2.5 py-1.5 text-xs text-neutral-100 outline-none transition focus:border-cyan-300/35 focus:ring-2 focus:ring-cyan-300/12";
 const INSPECTOR_COLOR_INPUT_CLASS =
   "h-9 w-full rounded-lg border border-white/10 bg-neutral-950/70 p-1 outline-none transition focus:border-cyan-300/35 focus:ring-2 focus:ring-cyan-300/12";
+
+const TEXT_SIZE_PRESETS = [
+  { label: "Caption", size: 32 },
+  { label: "Body", size: 48 },
+  { label: "Title", size: 64 },
+  { label: "Hero", size: 88 },
+] as const;
 
 /**
  * Factory for creating preset-specific update handlers
@@ -554,6 +566,23 @@ export const TextOverlayInspector = ({
                 </select>
               </LabeledControl>
 
+              <LabeledControl label="Alignment">
+                <select
+                  disabled={disabled}
+                  value={overlay.textAlign ?? "center"}
+                  onChange={(event) => {
+                    onUpdateText(overlay.id, {
+                      textAlign: event.currentTarget.value as TextOverlay["textAlign"],
+                    });
+                  }}
+                  className={INSPECTOR_INPUT_CLASS}
+                >
+                  <option value="left">Left</option>
+                  <option value="center">Center</option>
+                  <option value="right">Right</option>
+                </select>
+              </LabeledControl>
+
               <LabeledControl label="Style Preset">
                 <select
                   disabled={disabled}
@@ -573,9 +602,74 @@ export const TextOverlayInspector = ({
                 </select>
               </LabeledControl>
             </div>
+
+            <div>
+              <p className="app-eyebrow mb-1.5 text-[9px] uppercase tracking-[0.18em] text-neutral-500">
+                Type scale
+              </p>
+              <div aria-label="Typography size presets" className="grid grid-cols-4 gap-1.5">
+                {TEXT_SIZE_PRESETS.map((preset) => {
+                  const active = overlay.fontSize === preset.size;
+                  return (
+                    <button
+                      key={preset.label}
+                      aria-pressed={active}
+                      className={`h-8 rounded-md border px-1 text-[9px] font-semibold uppercase tracking-[0.08em] transition-colors ${
+                        active
+                          ? "border-[#ff4f1f] bg-[#ff4f1f] text-[#0b0907]"
+                          : "border-white/10 bg-neutral-950/60 text-neutral-500 hover:border-white/25 hover:text-neutral-200"
+                      }`}
+                      disabled={disabled}
+                      onClick={() => onUpdateText(overlay.id, { fontSize: preset.size })}
+                      type="button"
+                    >
+                      {preset.label}
+                    </button>
+                  );
+                })}
+              </div>
+              <p className="mt-1.5 text-[10px] leading-4 text-neutral-500">
+                Keep essential reel copy at Body or larger; use Caption for supporting details only.
+              </p>
+            </div>
           </section>
         </div>
       )}
+
+      <TextMotionInspector
+        disabled={disabled}
+        textMotion={{
+          in: overlay.animation?.in ?? "none",
+          out: overlay.animation?.out ?? "none",
+          duration: (overlay.animation?.durationFrames ?? 15) / FPS,
+        }}
+        onReset={() => onUpdateText(overlay.id, { animation: undefined })}
+        onUpdate={(patch) => {
+          const current = overlay.animation ?? { durationFrames: 15 };
+          onUpdateText(overlay.id, {
+            animation: {
+              ...(patch.in !== undefined
+                ? patch.in !== "none"
+                  ? { in: patch.in as TextOverlayAnimationKind }
+                  : {}
+                : current.in
+                  ? { in: current.in }
+                  : {}),
+              ...(patch.out !== undefined
+                ? patch.out !== "none"
+                  ? { out: patch.out as TextOverlayAnimationKind }
+                  : {}
+                : current.out
+                  ? { out: current.out }
+                  : {}),
+              durationFrames:
+                patch.duration !== undefined
+                  ? Math.max(1, Math.round(patch.duration * FPS))
+                  : current.durationFrames,
+            },
+          });
+        }}
+      />
     </InspectorCard>
   );
 };

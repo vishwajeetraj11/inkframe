@@ -30,9 +30,11 @@ export const useWebMcpTools = <T>(
       signal: controller.signal,
     }).then((registration) => {
       cleanup = registration.cleanup;
-      if (disposed) {
-        void registration.cleanup();
-      }
+      // If React Strict Mode disposed this effect while async registration was
+      // settling, the aborted registration signal owns cleanup. Explicitly
+      // unregistering by name here can delete the replacement registration
+      // created by the second Strict Mode mount.
+      if (disposed) cleanup = null;
     });
 
     return () => {

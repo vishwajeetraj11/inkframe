@@ -6,23 +6,6 @@ export const MAX_SCENE_DURATION_FRAMES = FPS * 20;
 export const ALL_ASPECTS: AspectPreset[] = ["reel_9_16", "widescreen_16_9"];
 
 export const STYLE_PRESET_SEQUENCE: VersionTimeline["textOverlays"][number]["stylePreset"][] = [
-  "impact-grid",
-  "grid-kinetic",
-  "hero-slam",
-  "sticker-cutout",
-  "editorial-mono",
-  "vox-timeline",
-  "vox-timeline-ribbon",
-  "vox-timeline-ledger",
-  "world-map-focus",
-  "regional-map-focus",
-  "film-frame-gallery",
-  "editorial-bar-chart",
-  "editorial-stat-ring",
-  "editorial-seat-arc",
-  "chart-card",
-  "news-clipping",
-  "createdaley-opener",
   "classic",
 ];
 

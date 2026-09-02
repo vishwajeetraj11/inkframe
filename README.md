@@ -10,16 +10,17 @@ Inkframe combines Next.js, Elah, and WebMCP to make short-form video creation a 
 
 Most browser agents must reverse-engineer a video editor by inspecting the DOM and clicking controls. Inkframe gives the agent the editor's real actions instead:
 
-1. **Compose:** the agent creates or edits scenes through strict, state-aware WebMCP tools.
-2. **Review:** every result appears in the same Elah timeline and WebGL preview the person uses.
-3. **Confirm:** destructive actions, generation, navigation, and MP4 export require explicit confirmation.
-4. **Deliver:** Elah renders and encodes the active 9:16 or 16:9 composition entirely in the browser, then starts the download.
+1. **Plan:** the agent previews scene timings and replacement effects without changing the project.
+2. **Confirm:** a human-approved, content-bound token authorizes exactly that storyboard—not a later mutation.
+3. **Review:** validation, render diagnostics, frame capture, and conservative auto-fixes inspect and improve the same Elah timeline the person uses.
+4. **Credit:** Inkframe produces a copyable stock-media provenance and attribution report.
+5. **Deliver:** Elah renders and encodes the active 9:16 or 16:9 composition entirely in the browser, then reports and downloads the MP4.
 
 ### Try the judge flow
 
 Open the [live editor](https://inkframe-eta.vercel.app/editor) in ChatGPT's in-app browser and ask:
 
-> Create a 9-second Reel with three editorial text scenes about why browser agents should use structured tools instead of clicking through interfaces. Use three different visual presets, inspect the resulting timeline, then ask me before exporting the MP4.
+> Plan a 9-second Reel with three editorial scenes about why browser agents should use structured tools instead of clicking interfaces. Show me the scene timing before changing the editor. After I approve, compose it with punch, rise, and word-reveal motion, validate it, inspect two key frames, safely fix readability problems, report stock-media credits, then ask before exporting and verify the MP4 metadata.
 
 This demonstrates a complete agent-native task rather than a tool-discovery-only proof: project inspection → structured composition → visible human review → confirmed render.
 
@@ -30,14 +31,17 @@ This demonstrates a complete agent-native task rather than a tool-discovery-only
 - Tool handlers read current React state at invocation time instead of capturing stale snapshots.
 - File contents and object URLs never cross the structured tool boundary; native pickers preserve browser security.
 - Tool outputs are bounded and sanitized, and registrations are cleaned up on unmount.
+- `editor_get_capabilities` returns task-oriented workflows and tool groups so agents do not need to scan the entire atomic surface.
+- Storyboard approval tokens are bound to the exact normalized plan; changing a scene invalidates the token and requires approval again.
 - WebMCP hosts that omit an execution context remain supported while supplied abort signals still cancel work.
+- Export jobs expose progress, cancellation, and local artifact metadata without uploading the video.
 
 All WebMCP integration work was added on September 1, 2026, during the challenge submission period. The underlying video editor predates the challenge; the agent tool surface, route-aware registration, live state bridge, tests, and judge workflow are the challenge extension.
 
 ## What the app includes
 
-- `Editor`: upload image, video, and audio assets; build clip timelines; add structured text presets; export MP4.
-- `Templates`: browse preset-driven caption and explainer layouts and deep-link into `/editor?template=<id>`.
+- `Editor`: import local or Pexels image/video/audio assets; trim, split, duplicate, transition, mix, and export MP4.
+- `Templates`: browse complete Elah-native multi-scene timelines and deep-link into `/editor?template=<id>`.
 - `Text Motion`: generate kinetic typography storyboards with OpenAI, preview them in Elah, and export MP4 locally.
 - `API routes`: AI chat and text-motion generation only; media preview and export stay in the browser.
 
@@ -48,6 +52,11 @@ All WebMCP integration work was added on September 1, 2026, during the challenge
 - `/text-motion`: AI text-motion editor with Elah preview and browser-native export.
 
 ## Presets
+
+The template gallery exposes six complete Elah-native projects: `editorial-explainer`,
+`product-reveal`, `social-promo`, `documentary-cut`, `data-pulse`, and `quote-reel`.
+Older structured style identifiers remain readable for project compatibility, but are no
+longer presented as templates because their original visual renderers depended on Remotion.
 
 Available `stylePreset` values (registered in `src/lib/editor/types.ts`):
 
@@ -95,6 +104,7 @@ Additional notes are in [docs/architecture.md](./docs/architecture.md).
 - `npm run lint`: ESLint checks.
 - `npm run typecheck`: TypeScript checks.
 - `npm run test:run`: run Vitest once.
+- `npm run test:e2e`: run the real Chrome WebMCP compose → inspect → browser-export verification.
 - `npm run test`: watch mode for Vitest.
 
 ## Test coverage
@@ -115,19 +125,33 @@ The current safety net covers:
 - route-aware WebMCP registration and cleanup
 - editor, Text Motion, and site-wide WebMCP contracts
 - browser-host compatibility for tool calls with or without cancellation context
+- non-mutating storyboard planning and content-bound approval tokens
+- safe typography/contrast auto-fixes and stock-media credit reporting
+- fresh-profile Chrome composition, inspection, browser export, and codec verification
 
 ## Runtime and data handling
 
 - Editor assets stay in browser memory through preview and export.
 - Elah renders in a Web Worker and MediaBunny encodes the MP4 locally.
 - Export downloads a browser-created Blob; source media is never sent to Inkframe's server.
-- No project persistence layer is configured.
+- Projects and local source blobs autosave to browser IndexedDB; they are never uploaded by the editor.
 
 ## Environment
 
 The AI routes require:
 
 - `OPENAI_API_KEY`
+
+Pexels stock search requires:
+
+- `PEXELS_API_KEY` (used only by the metadata search proxy; selected media downloads directly into the browser)
+
+Optional licensed audio search requires:
+
+- `JAMENDO_CLIENT_ID` for downloadable CC0/CC BY/CC BY-SA music
+- `FREESOUND_API_KEY` for CC0/CC BY/CC BY-SA sound effects
+
+Both credentials stay server-side. Imported audio downloads into the browser and retains creator, source, license, and attribution metadata.
 
 No storage or render-service credentials are required for export.
 
