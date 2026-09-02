@@ -1,6 +1,5 @@
 "use client";
 
-import type { AIChatEditorContext } from "@/components/editor/AIChatDrawer";
 import type { AIEditorActions } from "@/lib/editor/ai-actions";
 import {
   ASPECT_PRESETS,
@@ -24,11 +23,6 @@ import {
   createInitialEditorHistory,
   editorHistoryReducer,
 } from "@/lib/editor/history";
-import {
-  getSoundEffectById,
-  getSoundEffectDataUrl,
-  type SoundEffectId,
-} from "@/lib/editor/sound-effects";
 import { isSupportedImageMimeType, assetKindFromMimeType } from "@/lib/editor/schema";
 import { getTemplateDefinition, instantiateTemplate } from "@/lib/editor/templates";
 import {
@@ -91,6 +85,9 @@ const getStarterAssetFilename = (publicPath: string): string => {
   return filename ? sanitizeUploadFilename(filename) : "starter-asset";
 };
 
+const RESTORE_STATUS_MESSAGE = "Restored your last local project.";
+const RESTORE_STATUS_DISMISS_MS = 4500;
+
 export const useEditorSession = () => {
   const searchParams = useSearchParams();
   const [history, dispatch] = useReducer(
@@ -119,6 +116,16 @@ export const useEditorSession = () => {
   const exportArtifactUrlRef = useRef<string | null>(null);
   const saveQueueRef = useRef<Promise<unknown>>(Promise.resolve());
   const saveGenerationRef = useRef(0);
+
+  useEffect(() => {
+    if (statusMessage !== RESTORE_STATUS_MESSAGE) return;
+
+    const timeoutId = window.setTimeout(() => {
+      setStatusMessage(null);
+    }, RESTORE_STATUS_DISMISS_MS);
+
+    return () => window.clearTimeout(timeoutId);
+  }, [statusMessage]);
 
   projectRef.current = project;
   assetsRef.current = assets;
@@ -192,8 +199,9 @@ export const useEditorSession = () => {
         if (snapshot.project.activeVersion !== projectRef.current.activeVersion) {
           dispatch({ type: "switch-aspect", aspect: snapshot.project.activeVersion });
         }
+        dispatch({ type: "history/clear" });
         setAssets(restoredAssets);
-        setStatusMessage("Restored your last local project.");
+        setStatusMessage(RESTORE_STATUS_MESSAGE);
       })
       .then(() => {
         if (!cancelled) setStorageStatus("saved");
@@ -291,14 +299,6 @@ export const useEditorSession = () => {
         })),
       };
 
-      const builtInSources = new Map<string, string>();
-      for (const { assetId, asset } of starterAssets) {
-        if (!asset.publicPath.startsWith("builtin:sfx:")) continue;
-        const effectId = asset.publicPath.slice("builtin:sfx:".length) as SoundEffectId;
-        const effect = getSoundEffectById(effectId);
-        if (effect) builtInSources.set(assetId, getSoundEffectDataUrl(effect));
-      }
-
       setAssets(
         Object.fromEntries(
           starterAssets.map(({ assetId, asset }) => [
@@ -306,14 +306,11 @@ export const useEditorSession = () => {
             {
               assetId,
               kind: asset.kind,
-              mimeType: asset.publicPath.startsWith("builtin:sfx:")
-                ? "audio/wav"
-                : asset.mimeType,
+              mimeType: asset.mimeType,
               name: asset.name,
               size: 0,
-              externalUrl:
-                builtInSources.get(assetId) ??
-                new URL(asset.publicPath, window.location.origin).toString(),
+              externalUrl: new URL(asset.publicPath, window.location.origin).toString(),
+              attribution: asset.attribution,
             } satisfies LocalAsset,
           ]),
         ),
@@ -333,6 +330,7 @@ export const useEditorSession = () => {
           },
         });
       }
+      dispatch({ type: "history/clear" });
       setSelectedTextId(templateVersion.textOverlays[0]?.id ?? null);
       setSelectedClipId(null);
       setSelectedAudioId(null);
@@ -340,11 +338,8 @@ export const useEditorSession = () => {
 
       void (async () => {
         try {
-          const loadableAssets = starterAssets.filter(
-            ({ asset }) => !asset.publicPath.startsWith("builtin:sfx:"),
-          );
           const loadedAssets = await Promise.all(
-            loadableAssets.map(async ({ assetId, asset }) => {
+            starterAssets.map(async ({ assetId, asset }) => {
               const response = await fetch(asset.publicPath);
               if (!response.ok) throw new Error(`Failed to load ${asset.publicPath}.`);
               const blob = await response.blob();
@@ -362,6 +357,7 @@ export const useEditorSession = () => {
                   size: file.size,
                   file,
                   objectUrl,
+                  attribution: asset.attribution,
                 } satisfies LocalAsset,
               ] as const;
             }),
@@ -405,6 +401,7 @@ export const useEditorSession = () => {
             name: asset.name,
             size: 0,
             externalUrl: new URL(asset.publicPath, window.location.origin).toString(),
+            attribution: asset.attribution,
           } satisfies LocalAsset,
         ]),
       );
@@ -458,6 +455,8 @@ export const useEditorSession = () => {
       }
     }
 
+    dispatch({ type: "history/clear" });
+
     if (nextAssets) {
       setAssets((previous) => ({
         ...previous,
@@ -500,6 +499,7 @@ export const useEditorSession = () => {
                 size: file.size,
                 file,
                 objectUrl,
+                attribution: asset.attribution,
               } satisfies LocalAsset,
             ] as const;
           }),
@@ -543,25 +543,6 @@ export const useEditorSession = () => {
   );
   const remainingFrames = Math.max(0, MAX_DURATION_FRAMES - timelineDurationInFrames);
   const assetList = useMemo(() => Object.values(assets), [assets]);
-  const editorChatContext = useMemo<AIChatEditorContext>(
-    () => ({
-      activeAspect,
-      timelineDurationInFrames,
-      timelineDurationSeconds: timelineDurationInFrames / FPS,
-      clipCount: activeVersion.clips.length,
-      textOverlayCount: activeVersion.textOverlays.length,
-      audioTrackCount: activeVersion.audioTracks.length,
-      assetCount: assetList.length,
-    }),
-    [
-      activeAspect,
-      timelineDurationInFrames,
-      activeVersion.clips.length,
-      activeVersion.textOverlays.length,
-      activeVersion.audioTracks.length,
-      assetList.length,
-    ],
-  );
 
   const assetNames = useMemo(
     () =>
@@ -676,52 +657,6 @@ export const useEditorSession = () => {
     }
 
     setStatusMessage(rejectedMessages.length > 0 ? rejectedMessages.join(" ") : null);
-  };
-
-  const onAddSoundEffect = (
-    effectId: SoundEffectId,
-    targetAspect: AspectPreset = activeAspect,
-  ): void => {
-    if (isExporting) {
-      return;
-    }
-
-    const effect = getSoundEffectById(effectId);
-
-    if (!effect) {
-      setStatusMessage("Could not find that sound effect.");
-      return;
-    }
-
-    const assetId = nanoid(10);
-    const trackId = nanoid(10);
-
-    setAssets((previous) => ({
-      ...previous,
-      [assetId]: {
-        assetId,
-        kind: "audio",
-        mimeType: "audio/wav",
-        name: effect.label,
-        size: 0,
-        externalUrl: getSoundEffectDataUrl(effect),
-      },
-    }));
-
-    dispatch({
-      type: "add-audio-track",
-      aspect: targetAspect,
-      track: {
-        ...createDefaultAudioTrack(trackId, assetId),
-        endFrame: effect.defaultDurationInFrames,
-        trimEndFrame: effect.defaultDurationInFrames,
-      },
-    });
-
-    setSelectedAudioId(trackId);
-    setSelectedClipId(null);
-    setSelectedTextId(null);
-    setStatusMessage(`Added ${effect.label}.`);
   };
 
   const onDetachAudio = (clipId: string): void => {
@@ -1564,14 +1499,12 @@ export const useEditorSession = () => {
     activeVersion,
     assetList,
     assetNames,
-    editorChatContext,
     exportState,
     getRenderDiagnostics,
     isExporting,
     canRedo: history.future.length > 0,
     canUndo: history.past.length > 0,
     onApplyEditorActions,
-    onAddSoundEffect,
     onDetachAudio,
     onImportStockVideo,
     onImportStockVideoById,

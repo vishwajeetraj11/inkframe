@@ -2,11 +2,7 @@
 
 import dynamic from "next/dynamic";
 
-interface EditorShellProps {
-  enableAIChat: boolean;
-}
-
-const EditorApp = dynamic<EditorShellProps>(
+const EditorApp = dynamic(
   () => import("@/components/editor/EditorApp").then((module) => module.EditorApp),
   {
     ssr: false,
@@ -28,8 +24,6 @@ const EditorApp = dynamic<EditorShellProps>(
   },
 );
 
-export const EditorShell = ({
-  enableAIChat,
-}: EditorShellProps) => {
-  return <EditorApp enableAIChat={enableAIChat} />;
+export const EditorShell = () => {
+  return <EditorApp />;
 };

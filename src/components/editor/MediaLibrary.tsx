@@ -1,11 +1,13 @@
 "use client";
 
 import { useRef } from "react";
-import {
-  SOUND_EFFECT_LIBRARY,
-  type SoundEffectId,
-} from "@/lib/editor/sound-effects";
 import type { AssetKind, AssetRef } from "@/lib/editor/types";
+
+// Elah's public drag contract. Kept local so this light source-rail component
+// does not pull the full editor runtime into isolated UI tests.
+const MEDIA_DRAG_MIME = "application/x-elah-media";
+const mediaDragKindMime = (kind: AssetKind) =>
+  `application/x-elah-media-kind-${kind}`;
 
 interface MediaLibraryAsset {
   assetId: string;
@@ -19,7 +21,6 @@ interface MediaLibraryAsset {
 interface MediaLibraryProps {
   assets: MediaLibraryAsset[];
   onFilesSelected: (files: FileList | null) => void;
-  onAddSoundEffect: (effectId: SoundEffectId) => void;
   onRemoveAsset: (assetId: string) => void;
   disabled?: boolean;
 }
@@ -49,7 +50,6 @@ const providerLabel: Record<
 export const MediaLibrary = ({
   assets,
   onFilesSelected,
-  onAddSoundEffect,
   onRemoveAsset,
   disabled,
 }: MediaLibraryProps) => {
@@ -108,7 +108,20 @@ export const MediaLibrary = ({
         ) : (
           <div className="divide-y divide-white/10">
             {assets.map((asset) => (
-              <div key={asset.assetId} className="group flex min-h-12 items-center gap-2 py-1.5">
+              <div
+                key={asset.assetId}
+                draggable={!disabled}
+                onDragStart={(event) => {
+                  event.dataTransfer.setData(
+                    MEDIA_DRAG_MIME,
+                    JSON.stringify({ kind: "media-asset", assetId: asset.assetId }),
+                  );
+                  event.dataTransfer.setData(mediaDragKindMime(asset.kind), "");
+                  event.dataTransfer.effectAllowed = "copy";
+                }}
+                title={`Drag ${asset.name} to a compatible timeline track`}
+                className="group flex min-h-12 cursor-grab items-center gap-2 py-1.5 active:cursor-grabbing"
+              >
                 <span
                   aria-hidden="true"
                   className="app-data inline-flex h-9 w-9 shrink-0 items-center justify-center bg-white/[0.06] text-[10px] font-semibold text-neutral-200"
@@ -121,14 +134,31 @@ export const MediaLibrary = ({
                     {kindLabel[asset.kind]} · {asset.attribution ? providerLabel[asset.attribution.provider] : asset.externalUrl ? "Built-in" : bytesToLabel(asset.size)}
                   </p>
                   {asset.attribution ? (
-                    <a
-                      href={asset.attribution.creatorUrl}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="mt-0.5 block truncate text-[9px] text-[#ff9b7d] hover:underline"
-                    >
-                      {kindLabel[asset.kind]} by {asset.attribution.creatorName}
-                    </a>
+                    <div className="mt-0.5 flex min-w-0 items-center gap-1 text-[9px]">
+                      <a
+                        href={asset.attribution.creatorUrl}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="min-w-0 truncate text-[#ff9b7d] hover:underline"
+                      >
+                        {kindLabel[asset.kind]} by {asset.attribution.creatorName}
+                      </a>
+                      {asset.attribution.licenseName && asset.attribution.licenseUrl ? (
+                        <>
+                          <span aria-hidden="true" className="shrink-0 text-neutral-600">·</span>
+                          <a
+                            href={asset.attribution.licenseUrl}
+                            target="_blank"
+                            rel="noreferrer"
+                            title={asset.attribution.attributionRequired ? "Credit required when publishing" : "No credit required"}
+                            className="shrink-0 text-neutral-400 hover:text-neutral-100"
+                          >
+                            {asset.attribution.licenseName}
+                            {asset.attribution.attributionRequired ? " · credit" : ""}
+                          </a>
+                        </>
+                      ) : null}
+                    </div>
                   ) : null}
                 </div>
                 <button
@@ -158,30 +188,6 @@ export const MediaLibrary = ({
         )}
       </div>
 
-      <details className="group mt-4 border-t border-white/10 pt-1">
-        <summary className="flex min-h-11 cursor-pointer list-none items-center justify-between gap-4 text-[10px] font-semibold uppercase tracking-[0.12em] text-neutral-300 outline-none hover:text-neutral-50 focus-visible:ring-2 focus-visible:ring-cyan-300">
-          Editorial sound effects
-          <span aria-hidden="true" className="text-lg text-cyan-300 transition group-open:rotate-45">
-            +
-          </span>
-        </summary>
-        <p className="mb-3 text-xs leading-5 text-neutral-400">
-          Add a short cue at the current end of the sequence.
-        </p>
-        <div className="grid grid-cols-2 gap-1.5 pb-3">
-          {SOUND_EFFECT_LIBRARY.map((effect) => (
-            <button
-              key={effect.id}
-              type="button"
-              disabled={disabled}
-              onClick={() => onAddSoundEffect(effect.id)}
-              className="min-h-12 border border-white/10 px-2 py-2 text-left text-[11px] font-medium text-neutral-200 outline-none transition hover:border-amber-300/40 hover:bg-amber-300/[0.06] focus-visible:ring-2 focus-visible:ring-cyan-300 disabled:cursor-not-allowed disabled:opacity-50"
-            >
-              {effect.label}
-            </button>
-          ))}
-        </div>
-      </details>
     </section>
   );
 };

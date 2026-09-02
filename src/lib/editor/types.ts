@@ -134,6 +134,8 @@ export interface AssetRef {
 export interface Clip {
   id: string;
   assetId: string;
+  /** Persistent timeline lane. Older projects are assigned to the default video lane. */
+  trackId?: string;
   kind: "video" | "image";
   startFrame: number;
   endFrame: number;
@@ -144,6 +146,8 @@ export interface Clip {
 
 export interface TextOverlay {
   id: string;
+  /** Persistent timeline lane. Older projects are assigned to the default text lane. */
+  trackId?: string;
   text: string;
   startFrame: number;
   endFrame: number;
@@ -182,6 +186,8 @@ export interface TextOverlayAnimation {
 export interface AudioTrack {
   id: string;
   assetId: string;
+  /** Persistent timeline lane. Older projects are assigned to the default audio lane. */
+  trackId?: string;
   startFrame: number;
   endFrame: number;
   trimStartFrame: number;
@@ -205,8 +211,21 @@ export interface Transition {
   easing?: "linear" | "ease-in" | "ease-out";
 }
 
+export const EDITOR_TRACK_KINDS = ["video", "text", "audio"] as const;
+export type EditorTrackKind = (typeof EDITOR_TRACK_KINDS)[number];
+
+/** A persistent, user-visible lane in the browser-native Elah timeline. */
+export interface EditorTrack {
+  id: string;
+  kind: EditorTrackKind;
+  name: string;
+  order: number;
+}
+
 export interface VersionTimeline {
   aspect: AspectPreset;
+  /** Optional only for compatibility with projects created before persistent lanes. */
+  tracks?: EditorTrack[];
   clips: Clip[];
   textOverlays: TextOverlay[];
   audioTracks: AudioTrack[];

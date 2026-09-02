@@ -10,12 +10,19 @@ import type {
   AssetRef,
   AudioTrack,
   Clip,
+  EditorTrack,
   TextOverlay,
   TextOverlayAnimationKind,
   TextOverlayFontFamily,
   Transition,
   VersionTimeline,
 } from "./types";
+import {
+  DEFAULT_AUDIO_TRACK_ID,
+  DEFAULT_TEXT_TRACK_ID,
+  DEFAULT_VIDEO_TRACK_ID,
+  ensureEditorTracks,
+} from "./tracks";
 import { parseChartCardText } from "./chart-card";
 import { parseCreatedaleyOpenerText } from "./createdaley-opener";
 import { parseEditorialStatRingText } from "./editorial-stat-ring";
@@ -26,7 +33,7 @@ import { parseVoxTimelineText } from "./vox-timeline";
 const ELah_SCHEMA_VERSION = 1;
 const ELah_TRACK_HEIGHT = 40;
 const BACKGROUND_TRACK_ID = "inkframe-background";
-const VIDEO_TRACK_ID = "inkframe-video";
+const VIDEO_AUDIO_TRACK_PREFIX = "inkframe-video-audio-";
 
 export type ElahAdapterDiagnosticCode =
   | "missing-asset-source"
@@ -85,6 +92,7 @@ export interface InkframeTimelineProjection {
 
 const cloneVersion = (version: VersionTimeline): VersionTimeline => ({
   ...version,
+  tracks: version.tracks?.map((track) => ({ ...track })),
   clips: version.clips.map((clip) => ({ ...clip })),
   textOverlays: version.textOverlays.map((overlay) => ({ ...overlay })),
   audioTracks: version.audioTracks.map((track) => ({ ...track })),
@@ -220,18 +228,25 @@ const createTrack = (
   name: string,
   kind: ElahTrack["kind"],
   order: number,
+  height = ELah_TRACK_HEIGHT,
 ): ElahTrack => ({
   id,
   name,
   kind,
   order,
-  height: ELah_TRACK_HEIGHT,
+  height,
   locked: false,
   disabled: false,
   muted: false,
   solo: false,
   volume: 1,
 });
+
+const toElahTrackKind = (kind: EditorTrack["kind"]): ElahTrack["kind"] =>
+  kind === "text" ? "elements" : kind;
+
+const toEditorTrackKind = (kind: ElahTrack["kind"]): EditorTrack["kind"] =>
+  kind === "elements" ? "text" : kind === "audio" ? "audio" : "video";
 
 const projectSnapshot = (clip: ElahClip): ElahProjectionSnapshot => ({
   startFrame: clip.startFrame,
@@ -275,18 +290,27 @@ export const toElahProject = (
     ...version.textOverlays.map((overlay) => overlay.endFrame),
     ...version.audioTracks.map((track) => track.endFrame),
   );
-  // Elah resolves smaller track orders above larger ones. Keep source media at
-  // order 0 and the generated canvas beneath it; element tracks receive their
-  // own high z-index band inside Elah's resolver.
-  const videoTrack = createTrack(VIDEO_TRACK_ID, "Video", "video", tracks.length);
-  tracks.push(videoTrack);
-  clipsByTrack[videoTrack.id] = [];
+  const editorTracks = ensureEditorTracks(version);
+  const editorTrackById = new Map(editorTracks.map((track) => [track.id, track]));
+  for (const editorTrack of editorTracks) {
+    const track = createTrack(
+      editorTrack.id,
+      editorTrack.name,
+      toElahTrackKind(editorTrack.kind),
+      tracks.length,
+    );
+    tracks.push(track);
+    clipsByTrack[track.id] = [];
+  }
 
+  // The generated canvas remains a render-only Elah layer. A zero-height row
+  // keeps it out of the user-facing lane list while preserving composition.
   const backgroundTrack = createTrack(
     BACKGROUND_TRACK_ID,
     "Canvas",
     "video",
     tracks.length,
+    0,
   );
   tracks.push(backgroundTrack);
   clipsByTrack[backgroundTrack.id] = [
@@ -340,9 +364,13 @@ export const toElahProject = (
     }
 
     const asset = assetById.get(clip.assetId);
+    const trackId =
+      clip.trackId && editorTrackById.get(clip.trackId)?.kind === "video"
+        ? clip.trackId
+        : DEFAULT_VIDEO_TRACK_ID;
     const elahClip: ElahClip = {
       id: clip.id,
-      trackId: videoTrack.id,
+      trackId,
       type: clip.kind,
       name: asset?.name ?? clip.assetId,
       startFrame: clip.startFrame,
@@ -356,16 +384,42 @@ export const toElahProject = (
       locked: false,
       disabled: false,
     };
-    clipsByTrack[videoTrack.id].push(elahClip);
+    clipsByTrack[trackId].push(elahClip);
     projectionSnapshots[clip.id] = projectSnapshot(elahClip);
     mappedClipIds.push(clip.id);
+
+    if (clip.kind === "video" && clip.volume > 0) {
+      // Elah's audio controller schedules audio-track clips, not the audio
+      // stream embedded in a video clip. Mirror that stream as a linked audio
+      // clip so uploaded videos retain their original soundtrack in preview
+      // and export without adding a second Inkframe asset.
+      const sourceAudioId = `${VIDEO_AUDIO_TRACK_PREFIX}${clip.id}`;
+      clipsByTrack[DEFAULT_AUDIO_TRACK_ID].push(
+        {
+          id: sourceAudioId,
+          trackId: DEFAULT_AUDIO_TRACK_ID,
+          type: "audio",
+          name: `${asset?.name ?? clip.assetId} audio`,
+          startFrame: clip.startFrame,
+          durationFrames: durationOf(clip.startFrame, clip.endFrame),
+          sourceStartFrame: clip.trimStartFrame,
+          sourceDurationFrames: Math.max(1, clip.trimEndFrame),
+          src,
+          assetId: clip.assetId,
+          volume: clampVolume(clip.volume),
+          opacity: 1,
+          locked: true,
+          disabled: false,
+        },
+      );
+    }
   }
 
   for (const overlay of version.textOverlays) {
-    const trackId = `inkframe-elements-${overlay.id}`;
-    const track = createTrack(trackId, "Text", "elements", tracks.length);
-    tracks.push(track);
-
+    const trackId =
+      overlay.trackId && editorTrackById.get(overlay.trackId)?.kind === "text"
+        ? overlay.trackId
+        : DEFAULT_TEXT_TRACK_ID;
     const elahClip: ElahClip = {
       id: overlay.id,
       trackId,
@@ -396,7 +450,6 @@ export const toElahProject = (
           }
         : {}),
     };
-    clipsByTrack[trackId] = [elahClip];
     projectionSnapshots[overlay.id] = projectSnapshot(elahClip);
     mappedTextOverlayIds.push(overlay.id);
 
@@ -407,6 +460,8 @@ export const toElahProject = (
         message: `Preset ${overlay.stylePreset} is shown as editable text in Elah; its canonical preset data remains in the sidecar.`,
       });
     }
+
+    clipsByTrack[trackId].push(elahClip);
   }
 
   for (const audio of version.audioTracks) {
@@ -420,10 +475,10 @@ export const toElahProject = (
       continue;
     }
 
-    const trackId = `inkframe-audio-${audio.id}`;
-    const track = createTrack(trackId, "Audio", "audio", tracks.length);
-    track.muted = audio.muted ?? false;
-    tracks.push(track);
+    const trackId =
+      audio.trackId && editorTrackById.get(audio.trackId)?.kind === "audio"
+        ? audio.trackId
+        : DEFAULT_AUDIO_TRACK_ID;
     const asset = assetById.get(audio.assetId);
     const elahClip: ElahClip = {
       id: audio.id,
@@ -441,15 +496,20 @@ export const toElahProject = (
       fadeOutFrames: Math.max(0, Math.round(audio.fadeOutFrames ?? 0)),
       opacity: 1,
       locked: false,
-      disabled: false,
+      disabled: audio.muted ?? false,
     };
-    clipsByTrack[trackId] = [elahClip];
+    clipsByTrack[trackId].push(elahClip);
     projectionSnapshots[audio.id] = projectSnapshot(elahClip);
     mappedAudioTrackIds.push(audio.id);
   }
 
   const mappedVisualIds = new Set(mappedClipIds);
-  const visualById = new Map(clipsByTrack[VIDEO_TRACK_ID].map((clip) => [clip.id, clip]));
+  const visualById = new Map(
+    editorTracks
+      .filter((track) => track.kind === "video")
+      .flatMap((track) => clipsByTrack[track.id] ?? [])
+      .map((clip) => [clip.id, clip]),
+  );
   for (const transition of version.transitions) {
     if (
       !mappedVisualIds.has(transition.fromClipId) ||
@@ -466,7 +526,7 @@ export const toElahProject = (
       kind,
       fromClipId: transition.fromClipId,
       toClipId: transition.toClipId,
-      trackId: VIDEO_TRACK_ID,
+      trackId: toClip.trackId,
       startFrame: toClip.startFrame - Math.floor(transition.durationInFrames / 2),
       durationFrames: Math.max(1, transition.durationInFrames),
       ...(transition.direction ? { direction: transition.direction } : {}),
@@ -573,12 +633,35 @@ export const fromElahProject = (
   const canonicalAudioById = new Map(canonical.audioTracks.map((track) => [track.id, track]));
   const canonicalTextById = new Map(canonical.textOverlays.map((overlay) => [overlay.id, overlay]));
   const trackById = new Map(project.tracks.map((track) => [track.id, track]));
+  const editorTracks = ensureEditorTracks({
+    tracks: project.tracks
+      .filter((track) => track.id !== BACKGROUND_TRACK_ID)
+      .map((track) => ({
+        id: track.id,
+        kind: toEditorTrackKind(track.kind),
+        name: track.name,
+        order: track.order,
+      })),
+  });
+  const editorTrackIds = new Set(editorTracks.map((track) => track.id));
+  const resolvePersistedTrackId = (
+    originalTrackId: string | undefined,
+    projectedTrackId: string,
+    defaultTrackId: string,
+  ): string | undefined =>
+    canonical.tracks || originalTrackId || projectedTrackId !== defaultTrackId
+      ? projectedTrackId
+      : undefined;
   const nativeClips = flattenClips(project);
   const visualById = new Map<string, Clip>();
   const audioById = new Map<string, AudioTrack>();
   const textById = new Map<string, TextOverlay>();
 
   for (const native of nativeClips) {
+    if (native.id.startsWith(VIDEO_AUDIO_TRACK_PREFIX)) {
+      continue;
+    }
+
     if (
       native.trackId === BACKGROUND_TRACK_ID &&
       native.id.startsWith("inkframe-background-")
@@ -603,6 +686,11 @@ export const fromElahProject = (
       visualById.set(native.id, {
         id: native.id,
         assetId,
+        trackId: resolvePersistedTrackId(
+          original?.trackId,
+          editorTrackIds.has(native.trackId) ? native.trackId : DEFAULT_VIDEO_TRACK_ID,
+          DEFAULT_VIDEO_TRACK_ID,
+        ),
         kind: native.type,
         startFrame: Math.max(0, Math.round(native.startFrame)),
         endFrame: Math.max(0, Math.round(native.startFrame)) + durationFrames,
@@ -630,7 +718,11 @@ export const fromElahProject = (
       const unchanged = hasSameProjection(native, sidecar.projectionSnapshots[native.id]);
       const trimStartFrame = Math.max(0, Math.round(native.sourceStartFrame));
       const durationFrames = Math.max(1, Math.round(native.durationFrames));
-      const muted = trackById.get(native.trackId)?.muted ?? original?.muted ?? false;
+      const muted =
+        native.disabled ||
+        trackById.get(native.trackId)?.muted ||
+        original?.muted ||
+        false;
       const volume = clampVolume(native.volume, original?.volume);
       if (
         original &&
@@ -638,12 +730,24 @@ export const fromElahProject = (
         volume === original.volume &&
         muted === (original.muted ?? false)
       ) {
-        audioById.set(native.id, { ...original });
+        audioById.set(native.id, {
+          ...original,
+          trackId: resolvePersistedTrackId(
+            original.trackId,
+            editorTrackIds.has(native.trackId) ? native.trackId : DEFAULT_AUDIO_TRACK_ID,
+            DEFAULT_AUDIO_TRACK_ID,
+          ),
+        });
         continue;
       }
       audioById.set(native.id, {
         id: native.id,
         assetId,
+        trackId: resolvePersistedTrackId(
+          original?.trackId,
+          editorTrackIds.has(native.trackId) ? native.trackId : DEFAULT_AUDIO_TRACK_ID,
+          DEFAULT_AUDIO_TRACK_ID,
+        ),
         startFrame: Math.max(0, Math.round(native.startFrame)),
         endFrame: Math.max(0, Math.round(native.startFrame)) + durationFrames,
         trimStartFrame,
@@ -686,6 +790,11 @@ export const fromElahProject = (
         : undefined;
       textById.set(native.id, {
         id: native.id,
+        trackId: resolvePersistedTrackId(
+          original?.trackId,
+          editorTrackIds.has(native.trackId) ? native.trackId : DEFAULT_TEXT_TRACK_ID,
+          DEFAULT_TEXT_TRACK_ID,
+        ),
         text:
           original && native.content === expectedPresentationText
             ? original.text
@@ -795,6 +904,7 @@ export const fromElahProject = (
   return {
     version: {
       aspect: canonical.aspect,
+      ...(canonical.tracks ? { tracks: editorTracks } : {}),
       clips: mergeVisualTimelineOrder(
         canonical.clips,
         new Set(sidecar.mapped.clipIds),

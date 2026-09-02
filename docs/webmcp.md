@@ -2,7 +2,7 @@
 
 Inkframe exposes its product workflows as route-aware tools through the current WebMCP
 draft API, `document.modelContext`. This is progressive enhancement: the editor
-and Text Motion interfaces work normally when WebMCP is unavailable.
+works normally when WebMCP is unavailable.
 
 WebMCP is an evolving W3C Community Group draft and browser preview. For local
 Chrome testing, enable `chrome://flags/#enable-webmcp-testing`, open Inkframe,
@@ -32,7 +32,6 @@ Discovery and inspection:
 - `editor_list_assets`
 - `editor_get_attribution_report`
 - `editor_list_style_presets`
-- `editor_list_sound_effects`
 
 Workspace and timeline actions:
 
@@ -67,34 +66,12 @@ Workspace and timeline actions:
 - `editor_remove_transition`
 - `editor_update_audio_track`
 - `editor_remove_audio_track`
-- `editor_add_sound_effect`
 - `editor_apply_ai_editor_actions`
 - `editor_request_export`
 - `editor_cancel_export`
 - `editor_remove_asset`
 - `editor_undo`
 - `editor_redo`
-
-## Text Motion tools
-
-- `text_motion_get_capabilities`
-- `text_motion_list_templates`
-- `text_motion_list_animations`
-- `text_motion_get_project_summary`
-- `text_motion_set_aspect_template`
-- `text_motion_load_template`
-- `text_motion_set_prompt`
-- `text_motion_set_title`
-- `text_motion_add_scene`
-- `text_motion_update_scene`
-- `text_motion_update_theme`
-- `text_motion_list_image_assets`
-- `text_motion_assign_image_to_all_scenes`
-- `text_motion_remove_image_asset`
-- `text_motion_remove_scene`
-- `text_motion_generate`
-- `text_motion_export`
-- `text_motion_request_image_picker`
 
 All tool inputs are checked with strict Zod schemas before execution, while the
 browser receives standards-compatible JSON Schema. Tool callbacks read current
@@ -160,10 +137,10 @@ CC0, CC BY, or CC BY-SA items; imported assets retain creator, source, license,
 and attribution requirements.
 
 Inkframe never uploads an exported MP4. It retains the latest export as a
-page-scoped Blob URL until the next export or page close, displays an in-editor
-playback/download panel, and exposes that same local artifact through WebMCP.
+page-scoped Blob URL until the next export or page close, downloads it directly,
+and exposes that same local artifact through WebMCP.
 Local project persistence stores timeline metadata separately from deduplicated
-asset blobs, and API-backed stock/AI routes enforce per-client limits and
+asset blobs, and API-backed stock routes enforce per-client limits and
 bounded request bodies.
 
 Primary references:

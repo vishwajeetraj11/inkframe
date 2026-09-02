@@ -24,11 +24,10 @@ Tests live flat in `test/` (jsdom environment, setup in `test/setup.ts`). The `@
 
 ## Architecture
 
-**Inkframe** is a browser-based video composition tool: users assemble clips, images, audio, and text overlays into a timeline, then export as MP4. The project has three routes:
+**Inkframe** is a browser-based video composition tool: users assemble clips, images, audio, and text overlays into a timeline, then export as MP4. The project has two routes:
 
 1. **`/editor`** — Timeline-based editor (primary)
 2. **`/templates`** — Preset gallery; deep-links into `/editor?template=<id>`
-3. **`/text-motion`** — AI-generated kinetic typography composer
 
 ### State Management
 
@@ -63,17 +62,7 @@ Export is a browser-side operation powered by Elah. The flow:
 3. Elah renders frames with its browser renderer and MediaBunny encodes MP4 locally.
 4. The resulting Blob is downloaded directly, retained as a page-scoped URL for playback verification, and revoked on the next export or page teardown; source media never passes through an Inkframe render route.
 
-Local persistence uses IndexedDB v2: project metadata lives in `projects`, while media Blobs live in `assets` and are only rewritten when their fingerprint changes. Stock and AI API routes use shared request-size and per-client rate guards from `src/server/request-guard.ts`.
-
-### AI Chat Protocol
-
-The AI chat drawer (`POST /api/chat`) uses the Vercel AI SDK. The LLM can embed structured editor mutations in its response using sentinel tags:
-
-```
-[[EDITOR_ACTIONS]]{ ...AIEditorActions JSON... }[[/EDITOR_ACTIONS]]
-```
-
-These are parsed by `src/lib/editor/ai-actions.ts` and applied via `applyAIEditorActions` in `src/components/editor/hooks/editor-session-ai.ts`. The JSON schema for valid actions is defined in `ai-actions.ts` using Zod.
+Local persistence uses IndexedDB v2: project metadata lives in `projects`, while media Blobs live in `assets` and are only rewritten when their fingerprint changes. Stock API routes use shared request-size and per-client rate guards from `src/server/request-guard.ts`.
 
 ### Domain Logic vs. UI
 
@@ -83,16 +72,7 @@ These are parsed by `src/lib/editor/ai-actions.ts` and applied via `applyAIEdito
 - `parsers/` — per-preset structured-text parsers (parse raw text content into typed preset data)
 - Per-preset domain files (e.g. `vox-timeline.ts`, `chart-card.ts`, `editorial-stat-ring.ts`) — preset-specific business logic, co-located with but separate from the generic domain
 
-`src/components/editor/` contains the React UI and Elah preview workspace. `src/lib/export/` contains the browser download/export bridge. `src/server/` contains AI services, stock-provider HTTP helpers, and shared request guards.
-
-### Text Motion (separate workflow)
-
-`/text-motion` is a parallel, self-contained pipeline that does not share state with the editor:
-
-- `src/lib/text-motion/` — project types, defaults, Zod schema, template catalog, sanitization (pure TS, mirrors the `src/lib/editor/` split)
-- `src/components/text-motion/hooks/use-text-motion-project.ts` — the state hook (analogous to `useEditorSession`)
-- `src/lib/text-motion/elah-adapter.ts` — converts storyboards into Elah projects for preview and MP4 export
-- `POST /api/text-motion/generate` — OpenAI storyboard generation backed by `text-motion-generate-service.ts`
+`src/components/editor/` contains the React UI and Elah preview workspace. `src/lib/export/` contains the browser download/export bridge. `src/server/` contains stock-provider HTTP helpers and shared request guards.
 
 ### Constants
 
@@ -100,7 +80,3 @@ Key values in `src/lib/editor/constants.ts`:
 - `FPS = 30`
 - `MAX_DURATION_FRAMES = 1800` (60 seconds)
 - `PRESET_MIN_DURATIONS_FRAMES` — per-preset minimum frame counts
-
-### Environment Variables
-
-- `OPENAI_API_KEY` — required for AI chat and text-motion generation

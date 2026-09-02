@@ -4,7 +4,7 @@
 
 [Live app](https://inkframe-eta.vercel.app/) · [Open the editor](https://inkframe-eta.vercel.app/editor) · [WebMCP tool reference](./docs/webmcp.md)
 
-Inkframe combines Next.js, Elah, and WebMCP to make short-form video creation a shared human-agent workflow. A browser agent can inspect the current project, compose structured scenes, adjust timeline items, switch aspect ratios, add sound effects, and request a local browser export through typed tools. The same edits stay visible and editable in the human interface.
+Inkframe combines Next.js, Elah, and WebMCP to make short-form video creation a shared human-agent workflow. A browser agent can inspect the current project, compose structured scenes, adjust timeline items, switch aspect ratios, import licensed audio, and request a local browser export through typed tools. The same edits stay visible and editable in the human interface.
 
 ## The WebMCP moment
 
@@ -26,7 +26,7 @@ This demonstrates a complete agent-native task rather than a tool-discovery-only
 
 ## WebMCP implementation
 
-- Route-aware catalogs expose site, editor, and Text Motion workflows only while their pages are active.
+- Route-aware catalogs expose site and editor workflows only while their pages are active.
 - Strict Zod inputs are converted to standards-compatible JSON Schema.
 - Tool handlers read current React state at invocation time instead of capturing stale snapshots.
 - File contents and object URLs never cross the structured tool boundary; native pickers preserve browser security.
@@ -42,21 +42,19 @@ All WebMCP integration work was added on September 1, 2026, during the challenge
 
 - `Editor`: import local or Pexels image/video/audio assets; trim, split, duplicate, transition, mix, and export MP4.
 - `Templates`: browse complete Elah-native multi-scene timelines and deep-link into `/editor?template=<id>`.
-- `Text Motion`: compose kinetic typography storyboards, preview them in Elah, and export MP4 locally.
 - `API routes`: licensed stock-search proxies; media preview, project storage, and export stay in the browser.
 
 ## Main entrypoints
 
 - `/templates`: preset gallery for the editor workflow.
-- `/editor`: timeline editor with asset library, preview, inspector, and AI chat drawer.
-- `/text-motion`: AI text-motion editor with Elah preview and browser-native export.
+- `/editor`: timeline editor with asset library, preview, inspector, WebMCP controls, and local export.
 
 ## Presets
 
-The template gallery exposes six complete Elah-native projects: `editorial-explainer`,
-`product-reveal`, `social-promo`, `documentary-cut`, `data-pulse`, and `quote-reel`.
-Older structured style identifiers remain readable for project compatibility, but are no
-longer presented as templates because they belong to the retired server-rendered pipeline.
+The template gallery exposes the verified `agent-demo-reel`, a 19-second WebMCP-created
+vertical edit that opens directly in the Elah timeline. Older structured style identifiers
+remain readable for project compatibility, but are not presented as templates because they
+belong to the retired server-rendered pipeline.
 
 Available `stylePreset` values (registered in `src/lib/editor/types.ts`):
 
@@ -84,16 +82,12 @@ Available `stylePreset` values (registered in `src/lib/editor/types.ts`):
   - Editor domain logic, reducers, schema validation, template catalog, and structured preset parsers.
   - `templates/` is the typed editor preset catalog.
   - `parsers/` contains structured overlay parsers such as chart-card, stat-ring, and createdaley-opener.
-- `src/lib/text-motion`
-  - Text-motion project types, defaults, template catalog, validation, and sanitization.
 - `src/components/editor`
-  - Editor UI panels plus `hooks/use-editor-session.ts` for reducer state, asset lifecycle, template hydration, export, and AI-apply actions.
-- `src/components/text-motion`
-  - Text-motion UI panels plus `hooks/use-text-motion-project.ts` for project state, image assets, template loading, and export.
+  - Editor UI panels plus `hooks/use-editor-session.ts` for reducer state, asset lifecycle, template hydration, and export.
 - `src/lib/export`
   - Elah browser-export bridge and local Blob download handling.
-- `src/server/services`
-  - AI chat context handling only.
+- `src/server`
+  - Bounded stock-provider HTTP helpers and shared request guards.
 
 Additional notes are in [docs/architecture.md](./docs/architecture.md).
 
@@ -114,16 +108,13 @@ The current safety net covers:
 - editor template catalog lookup
 - editor timeline sanitization and render-track behavior
 - AI editor action parsing and session application
-- text-motion project sanitization
-- chat-service context parsing
-- Elah project conversion for editor and Text Motion timelines
+- Elah project conversion for editor timelines
 - film-frame-gallery data helpers
 - inspector routing for split sub-inspectors
 - regional-map-focus helpers
 - vox-timeline data helpers
-- browser-native sound effect generation
 - route-aware WebMCP registration and cleanup
-- editor, Text Motion, and site-wide WebMCP contracts
+- editor and site-wide WebMCP contracts
 - browser-host compatibility for tool calls with or without cancellation context
 - non-mutating storyboard planning and content-bound approval tokens
 - safe typography/contrast auto-fixes and stock-media credit reporting
@@ -137,10 +128,6 @@ The current safety net covers:
 - Projects and local source blobs autosave to browser IndexedDB; they are never uploaded by the editor.
 
 ## Environment
-
-The AI routes require:
-
-- `OPENAI_API_KEY`
 
 Pexels stock search requires:
 

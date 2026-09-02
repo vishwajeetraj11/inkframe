@@ -6,6 +6,55 @@ import {
 } from "@/lib/editor/templates";
 
 describe("Elah-native editor template blueprints", () => {
+  it("ships the agent-created reel as a fully editable 19-second project", () => {
+    const blueprint = FLAGSHIP_TEMPLATE_BLUEPRINTS["agent-demo-reel"];
+
+    expect(blueprint.aspect).toBe("reel_9_16");
+    expect(blueprint.clips).toHaveLength(3);
+    expect(blueprint.clips[0]).toMatchObject({ kind: "video", startFrame: 0, endFrame: 240 });
+    expect(blueprint.clips[2]).toMatchObject({ kind: "video", startFrame: 480, endFrame: 570 });
+    expect(blueprint.textOverlays).toHaveLength(7);
+    expect(blueprint.transitions).toHaveLength(2);
+    expect(blueprint.audioTracks).toHaveLength(1);
+    expect(blueprint.audioTracks[0]).toMatchObject({
+      startFrame: 0,
+      endFrame: 570,
+      trimEndFrame: 570,
+      volume: 0.32,
+      muted: false,
+    });
+  });
+
+  it("ships One Number as a fully editable twelve-second audiovisual project", () => {
+    const blueprint = FLAGSHIP_TEMPLATE_BLUEPRINTS["one-number"];
+
+    expect(blueprint.aspect).toBe("reel_9_16");
+    expect(blueprint.clips).toHaveLength(2);
+    expect(blueprint.clips[0]).toMatchObject({ kind: "video", startFrame: 0, endFrame: 180 });
+    expect(blueprint.clips[1]).toMatchObject({ kind: "video", startFrame: 180, endFrame: 368 });
+    expect(blueprint.audioTracks).toHaveLength(1);
+    expect(blueprint.audioTracks[0]).toMatchObject({
+      startFrame: 0,
+      endFrame: 358,
+      trimEndFrame: 358,
+      volume: 0.24,
+      muted: false,
+    });
+    expect(blueprint.transitions).toHaveLength(1);
+    expect(blueprint.textOverlays).toHaveLength(9);
+    expect(blueprint.textOverlays.every((overlay) => overlay.stylePreset === "classic")).toBe(
+      true,
+    );
+    expect(blueprint.textOverlays.map((overlay) => overlay.text)).toEqual(
+      expect.arrayContaining([
+        "73%",
+        "THEN\n41%",
+        "NOW\n73%",
+        "DEMO DATA — REPLACE WITH YOUR SOURCE",
+      ]),
+    );
+  });
+
   it.each([
     "editorial-explainer",
     "product-reveal",
@@ -31,12 +80,6 @@ describe("Elah-native editor template blueprints", () => {
       );
     },
   );
-
-  it("keeps the audio-backed flagship cuts intact", () => {
-    expect(FLAGSHIP_TEMPLATE_BLUEPRINTS["editorial-explainer"].audioTracks).toHaveLength(1);
-    expect(FLAGSHIP_TEMPLATE_BLUEPRINTS["product-reveal"].audioTracks).toHaveLength(1);
-    expect(FLAGSHIP_TEMPLATE_BLUEPRINTS["social-promo"].audioTracks).toHaveLength(1);
-  });
 
   it("injects fresh ids and remaps transition endpoints", () => {
     let sequence = 0;
@@ -65,7 +108,7 @@ describe("Elah-native editor template blueprints", () => {
     const timeline = instantiateTemplate("editorial-explainer", () => `id-${++sequence}`);
 
     expect(timeline?.textOverlays[0].stylePreset).toBe("classic");
-    expect(timeline?.audioTracks[0].fadeInFrames).toBeGreaterThan(0);
+    expect(timeline?.audioTracks).toEqual([]);
     expect(instantiateTemplate("missing", () => "never")).toBeNull();
   });
 });

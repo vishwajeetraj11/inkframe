@@ -21,7 +21,6 @@ const setup = () => {
     state = { ...state, present: editorReducer(state.present, action) };
   };
   const callbacks = {
-    addSoundEffect: async () => undefined,
     applyAIEditorActions: async () => ({ ok: true, message: "Applied" }),
     requestExport: vi.fn(() => ({ ok: true, message: "Export started", jobId: "export-1" })),
     getExportState: () => ({
@@ -135,7 +134,6 @@ describe("editor WebMCP tools", () => {
       "editor_list_style_presets",
       "editor_list_assets",
       "editor_get_attribution_report",
-      "editor_list_sound_effects",
       "editor_search_stock_videos",
       "editor_import_stock_video",
       "editor_search_stock_photos",
@@ -167,7 +165,6 @@ describe("editor WebMCP tools", () => {
       "editor_remove_transition",
       "editor_update_audio_track",
       "editor_remove_audio_track",
-      "editor_add_sound_effect",
       "editor_apply_ai_editor_actions",
       "editor_request_export",
       "editor_cancel_export",

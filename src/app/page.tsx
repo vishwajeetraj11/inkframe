@@ -32,16 +32,6 @@ const MODES = [
   },
   {
     index: "02",
-    href: "/text-motion",
-    title: "AI TEXT MOTION",
-    navLabel: "Text Motion",
-    reveal: "prompt the type",
-    description:
-      "Describe a storyboard, get beat-synced kinetic typography. Tune pacing scene by scene.",
-    meta: "prompt · scenes · rhythm",
-  },
-  {
-    index: "03",
     href: "/templates",
     title: "TEMPLATE LIBRARY",
     navLabel: "Templates",

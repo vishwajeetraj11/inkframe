@@ -1,11 +1,12 @@
 "use client";
 
 import { useState } from "react";
-import type { SoundEffectId } from "@/lib/editor/sound-effects";
 import type { AspectPreset, AssetKind, AssetRef } from "@/lib/editor/types";
 import { MediaLibrary } from "@/components/editor/MediaLibrary";
+import { StockAudioPanel } from "@/components/editor/stock/StockAudioPanel";
 import { StockVideoPanel } from "@/components/editor/stock/StockVideoPanel";
 import type { PexelsVideoRendition, PexelsVideoResult } from "@/lib/pexels";
+import type { LicensedAudioResult } from "@/lib/stock-audio";
 
 interface MediaLibraryAsset {
   assetId: string;
@@ -21,12 +22,15 @@ interface EditorSidebarProps {
   isExporting: boolean;
   assets: MediaLibraryAsset[];
   onFilesSelected: (files: FileList | null) => void;
-  onAddSoundEffect: (effectId: SoundEffectId) => void;
   onRemoveAsset: (assetId: string) => void;
   onAddStockVideo?: (
     video: PexelsVideoResult,
     rendition: PexelsVideoRendition,
   ) => void | Promise<void>;
+  onAddStockSoundEffect?: (
+    query: string,
+    audio: LicensedAudioResult,
+  ) => { ok: boolean; message: string } | Promise<{ ok: boolean; message: string }>;
 }
 
 export const EditorSidebar = ({
@@ -34,11 +38,13 @@ export const EditorSidebar = ({
   isExporting,
   assets,
   onFilesSelected,
-  onAddSoundEffect,
   onRemoveAsset,
   onAddStockVideo,
+  onAddStockSoundEffect,
 }: EditorSidebarProps) => {
-  const [activeSource, setActiveSource] = useState<"project" | "stock">("project");
+  const [activeSource, setActiveSource] = useState<
+    "project" | "footage" | "sound-effects"
+  >("project");
 
   return (
     <aside
@@ -57,21 +63,31 @@ export const EditorSidebar = ({
         <span className="app-data text-[10px] text-neutral-400">{assets.length} media</span>
       </div>
 
-      <div className="grid grid-cols-2 border-b border-white/10" role="tablist" aria-label="Media source">
-        {(["project", "stock"] as const).map((source) => (
+      <div className="grid grid-cols-3 border-b border-white/10" role="tablist" aria-label="Media source">
+        {([
+          ["project", "Project"],
+          ["footage", "Footage"],
+          ["sound-effects", "Sound FX"],
+        ] as const).map(([source, label]) => (
           <button
             key={source}
             type="button"
             role="tab"
             aria-selected={activeSource === source}
             onClick={() => setActiveSource(source)}
-            className={`h-9 border-r border-white/10 text-[9px] font-semibold uppercase tracking-[0.14em] outline-none transition last:border-r-0 focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[#ff4f1f] ${
+            className={`relative h-10 border-r border-white/10 text-[8px] font-semibold uppercase tracking-[0.1em] outline-none transition last:border-r-0 focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[#ff4f1f] ${
               activeSource === source
-                ? "bg-white/[0.05] text-[#ff9b7d]"
-                : "text-neutral-400 hover:text-neutral-100"
+                ? "text-[#f2ede3]"
+                : "text-neutral-500 hover:bg-white/[0.025] hover:text-neutral-200"
             }`}
           >
-            {source}
+            {label}
+            {activeSource === source ? (
+              <span
+                aria-hidden="true"
+                className="absolute inset-x-3 bottom-0 h-px bg-[#ff4f1f]"
+              />
+            ) : null}
           </button>
         ))}
       </div>
@@ -82,14 +98,18 @@ export const EditorSidebar = ({
             assets={assets}
             disabled={isExporting}
             onFilesSelected={onFilesSelected}
-            onAddSoundEffect={onAddSoundEffect}
             onRemoveAsset={onRemoveAsset}
           />
-        ) : (
+        ) : activeSource === "footage" ? (
           <StockVideoPanel
             orientation={activeAspect === "reel_9_16" ? "portrait" : "landscape"}
             disabled={isExporting}
             onAdd={onAddStockVideo}
+          />
+        ) : (
+          <StockAudioPanel
+            disabled={isExporting}
+            onAdd={onAddStockSoundEffect}
           />
         )}
       </div>

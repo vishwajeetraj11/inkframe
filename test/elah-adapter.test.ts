@@ -4,6 +4,7 @@ import {
   toElahProject,
 } from "@/lib/editor/elah-adapter";
 import type { AssetRef, VersionTimeline } from "@/lib/editor/types";
+import { createDefaultEditorTracks } from "@/lib/editor/tracks";
 
 const version: VersionTimeline = {
   aspect: "widescreen_16_9",
@@ -124,11 +125,14 @@ describe("Inkframe ↔ Elah timeline adapter", () => {
       stage: { width: 1920, height: 1080 },
       version: 1,
     });
-    expect(projected.project.tracks.slice(0, 2)).toMatchObject([
+    expect(projected.project.tracks.slice(0, 3)).toMatchObject([
       { id: "inkframe-video", order: 0 },
-      { id: "inkframe-background", order: 1 },
+      { id: "inkframe-elements", order: 1 },
+      { id: "inkframe-audio", order: 2 },
     ]);
-    expect(projected.project.tracks.every((track) => track.height === 40)).toBe(true);
+    expect(projected.project.tracks.filter((track) => track.height > 0)).toHaveLength(3);
+    expect(projected.project.tracks.find((track) => track.id === "inkframe-background"))
+      .toMatchObject({ height: 0 });
     expect(
       nativeClips
         .filter((clip) => !clip.id.startsWith("inkframe-background"))
@@ -138,6 +142,7 @@ describe("Inkframe ↔ Elah timeline adapter", () => {
       "image",
       "text",
       "text",
+      "audio",
       "audio",
     ]);
     expect(nativeClips.find((clip) => clip.id === "inkframe-background-base")).toMatchObject({
@@ -175,6 +180,81 @@ describe("Inkframe ↔ Elah timeline adapter", () => {
 
     expect(restored.version).toEqual(version);
     expect(restored.diagnostics).toEqual([]);
+  });
+
+  it("keeps every caption in the single visible text track", () => {
+    const crowdedVersion: VersionTimeline = {
+      ...version,
+      textOverlays: [
+        { ...version.textOverlays[0], id: "make", startFrame: 10, endFrame: 60 },
+        { ...version.textOverlays[0], id: "video", startFrame: 50, endFrame: 100 },
+        { ...version.textOverlays[0], id: "search", startFrame: 110, endFrame: 140 },
+        { ...version.textOverlays[0], id: "find", startFrame: 135, endFrame: 170 },
+      ],
+    };
+
+    const projected = toElahProject(crowdedVersion, { assets });
+    const textTracks = projected.project.tracks.filter((track) => track.kind === "elements");
+    const textClipIds = textTracks.flatMap((track) =>
+      projected.project.clips[track.id].map((clip) => clip.id),
+    );
+
+    expect(textTracks).toHaveLength(1);
+    expect(projected.project.clips[textTracks[0].id].map((clip) => clip.id)).toEqual([
+      "make",
+      "video",
+      "search",
+      "find",
+    ]);
+    expect(textClipIds).toEqual(["make", "video", "search", "find"]);
+    expect(fromElahProject(projected.project, projected.sidecar).version).toEqual(crowdedVersion);
+  });
+
+  it("keeps added video, text, and audio tracks distinct and editable", () => {
+    const multiTrackVersion: VersionTimeline = {
+      ...version,
+      tracks: [
+        ...createDefaultEditorTracks(),
+        { id: "video-2", kind: "video", name: "Video 2", order: 3 },
+        { id: "text-2", kind: "text", name: "Text 2", order: 4 },
+        { id: "audio-2", kind: "audio", name: "Audio 2", order: 5 },
+      ],
+      clips: version.clips.map((clip) => ({ ...clip, trackId: "video-2" })),
+      textOverlays: version.textOverlays.map((overlay) => ({
+        ...overlay,
+        trackId: "text-2",
+      })),
+      audioTracks: version.audioTracks.map((audio) => ({
+        ...audio,
+        trackId: "audio-2",
+      })),
+    };
+
+    const projected = toElahProject(multiTrackVersion, { assets });
+    const visibleTracks = projected.project.tracks.filter((track) => track.height > 0);
+
+    expect(visibleTracks.map((track) => track.name)).toEqual([
+      "Video",
+      "Text",
+      "Audio",
+      "Video 2",
+      "Text 2",
+      "Audio 2",
+    ]);
+    expect(projected.project.clips["video-2"].map((clip) => clip.id)).toEqual([
+      "clip-video",
+      "clip-image",
+    ]);
+    expect(projected.project.clips["text-2"].map((clip) => clip.id)).toEqual([
+      "text-classic",
+      "text-preset",
+    ]);
+    expect(projected.project.clips["audio-2"].map((clip) => clip.id)).toEqual([
+      "audio-main",
+    ]);
+    expect(fromElahProject(projected.project, projected.sidecar).version).toEqual(
+      multiTrackVersion,
+    );
   });
 
   it("accepts Elah text edits while retaining the canonical preset", () => {

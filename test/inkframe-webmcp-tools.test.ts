@@ -21,13 +21,32 @@ describe("Inkframe WebMCP tools", () => {
 
     const capabilities = tools[0];
     const capabilitiesResult = JSON.parse(await capabilities.execute({}, executeOptions));
-    expect(capabilitiesResult.routes.map((route: { path: string }) => route.path)).toContain("/text-motion");
+    expect(capabilitiesResult.routes.map((route: { path: string }) => route.path)).toEqual([
+      "/",
+      "/editor",
+      "/templates",
+    ]);
     expect(capabilitiesResult.routes.map((route: { path: string }) => route.path)).not.toContain("/remote-renderer");
     expect(capabilitiesResult.routes.map((route: { path: string }) => route.path)).not.toContain("https://example.com");
 
     const list = tools[1];
     const result = JSON.parse(await list.execute({ kind: "editor", limit: 20 }, executeOptions));
     expect(result.templates.every((template: { kind: string }) => template.kind === "editor")).toBe(true);
+    expect(result.templates).toEqual([
+      expect.objectContaining({
+        id: "agent-demo-reel",
+        kind: "editor",
+        editable: true,
+        aspect: "reel_9_16",
+      }),
+      expect.objectContaining({
+        id: "one-number",
+        kind: "editor",
+        editable: true,
+        editableTextLayers: 9,
+        durationSeconds: 358 / 30,
+      }),
+    ]);
     expect(result.returned).toBeLessThanOrEqual(20);
     expect((await list.execute({ query: "does-not-exist" }, executeOptions))).toContain('"total":0');
     expect(list.inputSchema).toMatchObject({ type: "object", additionalProperties: false });
@@ -40,6 +59,10 @@ describe("Inkframe WebMCP tools", () => {
 
     await navigateTool.execute({ route: "templates", confirmed: true }, executeOptions);
     expect(navigate).toHaveBeenCalledWith("/templates");
+    await openTemplate.execute({ templateId: "agent-demo-reel", confirmed: true }, executeOptions);
+    expect(navigate).toHaveBeenCalledWith("/editor?template=agent-demo-reel");
+    await openTemplate.execute({ templateId: "one-number", confirmed: true }, executeOptions);
+    expect(navigate).toHaveBeenCalledWith("/editor?template=one-number");
     await expect(openTemplate.execute({ templateId: "documentary-cut", confirmed: true }, executeOptions)).rejects.toThrow();
 
     await expect(navigateTool.execute({ route: "https://example.com", confirmed: true }, executeOptions)).rejects.toThrow();

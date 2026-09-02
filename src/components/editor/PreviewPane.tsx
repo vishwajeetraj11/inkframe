@@ -11,7 +11,7 @@ import { getVersionRenderDurationInFrames } from "@/lib/editor/timeline";
 import type { AspectPreset, VersionTimeline } from "@/lib/editor/types";
 import type { EditorVisualReview } from "@/lib/editor/export-state";
 import { Images, Pause, Play, Redo2, Square, Undo2, X } from "lucide-react";
-import { useMemo, type RefObject } from "react";
+import { useEffect, useMemo, type RefObject } from "react";
 
 interface PreviewPaneProps {
   aspect: AspectPreset;
@@ -72,6 +72,29 @@ export const PreviewPane = ({
   }
 
   const safeDurationInFrames = Math.max(1, toPositiveInt(computedDurationInFrames, 1));
+  const playOrPause = () => {
+    if (!isPlaying && currentFrame >= safeDurationInFrames - 1) {
+      setCurrentFrame(0);
+    }
+    togglePlayPause();
+  };
+
+  useEffect(() => {
+    const unsubscribe = usePlaybackStore.subscribe((state) => {
+      if (state.isPlaying && state.currentFrame >= safeDurationInFrames) {
+        state.pause();
+        state.setCurrentFrame(Math.max(0, safeDurationInFrames - 1));
+      }
+    });
+
+    const state = usePlaybackStore.getState();
+    if (state.currentFrame >= safeDurationInFrames) {
+      state.pause();
+      state.setCurrentFrame(Math.max(0, safeDurationInFrames - 1));
+    }
+
+    return unsubscribe;
+  }, [safeDurationInFrames]);
   const previewDurationSeconds = hasRenderableVisual
     ? (safeDurationInFrames / safeFps).toFixed(2)
     : "0.00";
@@ -158,7 +181,7 @@ export const PreviewPane = ({
                       aria-label={isPlaying ? "Pause" : "Play"}
                       title={isPlaying ? "Pause" : "Play"}
                       aria-pressed={isPlaying}
-                      onClick={togglePlayPause}
+                      onClick={playOrPause}
                       className="grid h-10 w-10 place-items-center text-neutral-100 outline-none transition hover:bg-white/10 focus-visible:ring-2 focus-visible:ring-cyan-300"
                     >
                       {isPlaying ? (
@@ -182,7 +205,7 @@ export const PreviewPane = ({
                     >
                       <Square aria-hidden="true" size={14} fill="currentColor" />
                     </button>
-                    <span className="app-data text-[10px] text-neutral-300">
+                    <span className="app-data ml-auto whitespace-nowrap text-right text-[10px] tabular-nums text-neutral-300">
                       {(currentFrame / safeFps).toFixed(2)} / {(safeDurationInFrames / safeFps).toFixed(2)}s
                     </span>
                   </div>

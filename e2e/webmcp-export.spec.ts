@@ -66,7 +66,12 @@ test("WebMCP composes, inspects, exports, and verifies a playable browser MP4", 
   });
   expect(compose.ok).toBe(true);
 
-  expect((await invoke(page, "editor_add_sound_effect", { effectId: "impact" })).ok).toBe(true);
+  // Import a real local audio asset through the same browser-only media path a
+  // person uses. The retired synthetic sound-effect tool is intentionally not
+  // part of the public WebMCP surface anymore.
+  await page.locator("#media-upload").setInputFiles(
+    "public/starter-assets/agent-demo-reel/piano-synth-loop.mp3",
+  );
   const project = await invoke(page, "editor_get_project", { aspect: "reel_9_16", maxItems: 10 });
   const versions = project.versions as { reel_9_16: { audioTracks: { items: Array<{ id: string }> } } };
   const audioId = versions.reel_9_16.audioTracks.items[0]?.id;
@@ -183,7 +188,9 @@ test("WebMCP composes, inspects, exports, and verifies a playable browser MP4", 
     return new TextDecoder("ascii").decode(bytes.slice(4, 12));
   }, (retained.artifact as { objectUrl: string }).objectUrl);
   expect(retainedHeader).toContain("ftyp");
-  await expect(page.getByLabel("Export verification")).toBeVisible();
+  // Export downloads immediately; the removed verification-preview modal must
+  // not interrupt the editor after a successful render.
+  await expect(page.getByLabel("Export verification")).toHaveCount(0);
   const header = await readFile(downloadPath);
   expect(header.subarray(4, 12).toString("ascii")).toContain("ftyp");
 

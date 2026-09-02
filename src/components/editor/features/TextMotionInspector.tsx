@@ -47,6 +47,8 @@ const controlClassName =
 const labelClassName =
   "app-eyebrow text-[9px] uppercase tracking-[0.18em] text-[#f2ede3]/45";
 
+const displayDuration = (seconds: number): number => Number(seconds.toFixed(2));
+
 export const TextMotionInspector = ({
   textMotion,
   disabled = false,
@@ -120,7 +122,7 @@ export const TextMotionInspector = ({
               }}
               step={0.05}
               type="number"
-              value={textMotion.duration}
+              value={displayDuration(textMotion.duration)}
             />
             <span className="app-data text-[10px] text-[#f2ede3]/35">SEC</span>
           </div>
@@ -131,7 +133,7 @@ export const TextMotionInspector = ({
                 <button
                   key={preset.label}
                   aria-pressed={active}
-                  className={`h-7 border px-1.5 text-[9px] font-semibold uppercase tracking-[0.12em] transition-colors ${
+                  className={`h-8 min-w-0 overflow-hidden border px-2 text-[11px] font-medium normal-case tracking-normal transition-colors ${
                     active
                       ? "border-[#ff4f1f] bg-[#ff4f1f] text-[#0b0907]"
                       : "border-[#f2ede3]/12 text-[#f2ede3]/55 hover:border-[#f2ede3]/35 hover:text-[#f2ede3]"

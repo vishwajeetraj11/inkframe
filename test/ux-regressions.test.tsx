@@ -5,7 +5,6 @@ import { describe, expect, it, vi } from "vitest";
 import { AspectSwitcher } from "@/components/editor/AspectSwitcher";
 import { EditorSidebar } from "@/components/editor/EditorSidebar";
 import { TimelineResizeHandle } from "@/components/editor/TimelineResizeHandle";
-import { TextMotionSceneList } from "@/components/text-motion/TextMotionSceneList";
 
 describe("UX regressions", () => {
   it("keeps responsive aspect controls explicitly named", () => {
@@ -24,38 +23,31 @@ describe("UX regressions", () => {
     ).toHaveAttribute("aria-pressed", "false");
   });
 
-  it("names the compact add-scene control", () => {
-    render(
-      <TextMotionSceneList
-        imageAssets={[]}
-        imagePreviewById={new Map()}
-        onAddScene={vi.fn()}
-        onChangeScene={vi.fn()}
-        onDeleteScene={vi.fn()}
-        scenes={[]}
-      />,
-    );
-
-    expect(screen.getByRole("button", { name: "Add scene" })).toBeEnabled();
-  });
-
   it("does not duplicate text creation in the source rail", () => {
     render(
       <EditorSidebar
         isExporting={false}
         assets={[]}
         onFilesSelected={vi.fn()}
-        onAddSoundEffect={vi.fn()}
         onRemoveAsset={vi.fn()}
       />,
     );
 
     expect(screen.queryByRole("button", { name: /text layer/i })).not.toBeInTheDocument();
-    expect(screen.getByRole("tab", { name: "project" })).toHaveAttribute(
+    expect(screen.getByRole("tab", { name: "Project" })).toHaveAttribute(
       "aria-selected",
       "true",
     );
-    expect(screen.getByRole("tab", { name: "stock" })).toBeInTheDocument();
+    expect(screen.getByRole("tab", { name: "Footage" })).toHaveAttribute(
+      "aria-selected",
+      "false",
+    );
+    fireEvent.click(screen.getByRole("tab", { name: "Sound FX" }));
+    expect(screen.getByRole("tab", { name: "Sound FX" })).toHaveAttribute(
+      "aria-selected",
+      "true",
+    );
+    expect(screen.getByRole("searchbox", { name: "Search stock sound effects" })).toBeInTheDocument();
   });
 
   it("lets keyboard users resize and reset the timeline", () => {

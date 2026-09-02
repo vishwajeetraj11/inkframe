@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { ClarityInit } from "@/components/analytics/ClarityInit";
 import { InkframeWebMcp } from "@/components/webmcp/InkframeWebMcp";
+import { Toaster } from "sonner";
 import {
   Barlow_Condensed,
   Cormorant_Garamond,
@@ -64,6 +65,18 @@ export default function RootLayout({
       >
         {clarityId ? <ClarityInit projectId={clarityId} /> : null}
         <InkframeWebMcp />
+        <Toaster
+          position="top-right"
+          theme="dark"
+          closeButton
+          toastOptions={{
+            classNames: {
+              toast: "rounded-none border border-white/10 border-l-2 border-l-cyan-300 bg-[#1b1813] text-neutral-100 shadow-2xl",
+              title: "text-sm leading-5 text-neutral-100",
+              closeButton: "border-white/10 bg-transparent text-neutral-400 hover:bg-white/10 hover:text-neutral-100",
+            },
+          }}
+        />
         {children}
       </body>
     </html>

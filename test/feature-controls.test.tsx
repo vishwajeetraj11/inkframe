@@ -50,7 +50,10 @@ describe("feature inspectors", () => {
     fireEvent.change(screen.getByRole("combobox", { name: "In motion effect" }), {
       target: { value: "punch" },
     });
-    fireEvent.click(screen.getByRole("button", { name: "Cinematic" }));
+    const cinematicPreset = screen.getByRole("button", { name: "Cinematic" });
+    expect(cinematicPreset).toHaveClass("min-w-0", "overflow-hidden", "normal-case");
+    expect(cinematicPreset).not.toHaveClass("uppercase");
+    fireEvent.click(cinematicPreset);
 
     fireEvent.change(screen.getByRole("combobox", { name: "Out motion effect" }), {
       target: { value: "none" },
@@ -59,6 +62,17 @@ describe("feature inspectors", () => {
     expect(onUpdate).toHaveBeenNthCalledWith(1, { in: "punch" });
     expect(onUpdate).toHaveBeenNthCalledWith(2, { duration: 0.65 });
     expect(onUpdate).toHaveBeenNthCalledWith(3, { out: "none" });
+  });
+
+  it("shows frame-derived durations with readable precision", () => {
+    render(
+      <TextMotionInspector
+        textMotion={{ in: "rise", out: "fade", duration: 14 / 30 }}
+        onUpdate={() => undefined}
+      />,
+    );
+
+    expect(screen.getByRole("spinbutton", { name: "Text motion duration" })).toHaveValue(0.47);
   });
 
   it("updates audio mix controls and exposes mute and delete actions", () => {

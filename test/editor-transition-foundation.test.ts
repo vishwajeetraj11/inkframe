@@ -48,8 +48,8 @@ describe("editor transition foundation", () => {
   it("round-trips Elah-native transitions, text animation, and browser audio fades", () => {
     const projected = toElahProject(version, { assets });
     expect(projected.project.transitions[0]).toMatchObject({ kind: "wipe", direction: "left", easing: "ease-out" });
-    expect(projected.project.clips["inkframe-audio-audio"][0]).toMatchObject({ fadeInFrames: 10, fadeOutFrames: 15 });
-    expect(projected.project.clips["inkframe-elements-title"]?.[0]?.textAnimation).toEqual({ in: "fade", out: "fade", durationFrames: 12 });
+    expect(projected.project.clips["inkframe-audio"].find((clip) => clip.id === "audio")).toMatchObject({ fadeInFrames: 10, fadeOutFrames: 15 });
+    expect(Object.values(projected.project.clips).flat().find((clip) => clip.id === "title")?.textAnimation).toEqual({ in: "fade", out: "fade", durationFrames: 12 });
     expect(fromElahProject(projected.project, projected.sidecar).version).toEqual(version);
   });
 
@@ -65,5 +65,22 @@ describe("editor transition foundation", () => {
     const duplicate = editorReducer(split, { type: "duplicate-clip", aspect: "reel_9_16", clipId: "clip-a-left", newClipId: "clip-copy" });
     expect(duplicate.versions.reel_9_16.clips.map((clip) => clip.id)).toEqual(["clip-a-left", "clip-copy", "clip-a-right", "clip-b"]);
     expect(duplicate.versions.reel_9_16.transitions.every((transition) => transition.fromClipId !== "clip-a-left")).toBe(true);
+  });
+
+  it("starts with three lanes and adds another lane without adding media", () => {
+    const state = createInitialProjectSession();
+    expect(state.versions.reel_9_16.tracks?.map((track) => track.kind)).toEqual([
+      "video",
+      "text",
+      "audio",
+    ]);
+
+    const next = editorReducer(state, {
+      type: "add-track",
+      aspect: "reel_9_16",
+      track: { id: "audio-2", kind: "audio", name: "Audio 2", order: 3 },
+    });
+    expect(next.versions.reel_9_16.tracks).toHaveLength(4);
+    expect(next.versions.reel_9_16.audioTracks).toEqual([]);
   });
 });

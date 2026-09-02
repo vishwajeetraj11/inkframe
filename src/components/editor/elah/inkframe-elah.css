@@ -56,3 +56,8 @@
   --elah-clip-audio-accent: #d8bd78;
   --elah-effect-waveform: #d8bd78;
 }
+
+/* The canvas is an internal render layer, not a user-editable timeline lane. */
+.inkframe-elah div:has(> [title="Canvas"]) {
+  display: none !important;
+}

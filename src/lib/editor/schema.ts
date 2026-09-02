@@ -7,6 +7,7 @@ import {
 import { getTimelineDurationInFrames } from "./timeline";
 import {
   CREATEDALEY_OPENER_TEXTURES,
+  EDITOR_TRACK_KINDS,
   TEXT_OVERLAY_FONT_FAMILIES,
   TEXT_OVERLAY_FONT_STYLES,
   TEXT_OVERLAY_STYLE_PRESETS,
@@ -32,6 +33,7 @@ const clipSchema = z
   .object({
     id: z.string().min(1),
     assetId: z.string().min(1),
+    trackId: z.string().min(1).optional(),
     kind: z.enum(["video", "image"]),
     startFrame: z.number().int().min(0),
     endFrame: z.number().int().min(1),
@@ -60,6 +62,7 @@ const clipSchema = z
 const textOverlaySchema = z
   .object({
     id: z.string().min(1),
+    trackId: z.string().min(1).optional(),
     text: z.string().min(1),
     startFrame: z.number().int().min(0),
     endFrame: z.number().int().min(1),
@@ -100,6 +103,7 @@ const audioTrackSchema = z
   .object({
     id: z.string().min(1),
     assetId: z.string().min(1),
+    trackId: z.string().min(1).optional(),
     startFrame: z.number().int().min(0),
     endFrame: z.number().int().min(1),
     trimStartFrame: z.number().int().min(0),
@@ -158,6 +162,16 @@ const transitionSchema = z.object({
 
 const versionTimelineSchema = z.object({
   aspect: aspectSchema,
+  tracks: z
+    .array(
+      z.object({
+        id: z.string().min(1),
+        kind: z.enum(EDITOR_TRACK_KINDS),
+        name: z.string().min(1).max(80),
+        order: z.number().int().min(0),
+      }),
+    )
+    .optional(),
   clips: z.array(clipSchema),
   textOverlays: z.array(textOverlaySchema),
   audioTracks: z.array(audioTrackSchema),

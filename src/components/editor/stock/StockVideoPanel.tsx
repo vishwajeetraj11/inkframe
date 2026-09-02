@@ -6,6 +6,7 @@ import {
   useRef,
   useState,
 } from "react";
+import { Plus } from "lucide-react";
 import {
   chooseMp4Rendition,
   type PexelsOrientation,
@@ -112,7 +113,7 @@ export const StockVideoPanel = ({
   };
 
   return (
-    <section className="border-t border-white/10 px-3 pb-4 pt-3" aria-label="Stock footage">
+    <section className="px-3 pb-4 pt-3" aria-label="Stock footage">
       <div className="mb-3 flex items-start justify-between gap-3">
         <div>
           <p className="app-eyebrow text-[9px] uppercase tracking-[0.18em] text-neutral-400">
@@ -205,11 +206,17 @@ export const StockVideoPanel = ({
                   {canAdd ? (
                     <button
                       type="button"
+                      aria-label={`Add footage by ${video.photographer}`}
+                      title={isAdding ? "Adding footage" : "Add footage"}
                       disabled={disabled || isAdding}
                       onClick={() => void handleAdd(video)}
-                      className="shrink-0 border border-[#ff4f1f]/55 px-1.5 py-1 text-[9px] font-semibold uppercase tracking-[0.08em] text-[#ffb19a] outline-none transition hover:bg-[#ff4f1f]/10 focus-visible:ring-2 focus-visible:ring-[#ff4f1f] disabled:cursor-wait disabled:opacity-50"
+                      className="grid h-8 w-8 shrink-0 place-items-center border border-[#ff4f1f]/55 text-[#ffb19a] outline-none transition hover:bg-[#ff4f1f]/10 focus-visible:ring-2 focus-visible:ring-[#ff4f1f] disabled:cursor-wait disabled:opacity-50"
                     >
-                      {isAdding ? "…" : "Add"}
+                      {isAdding ? (
+                        <span aria-hidden="true" className="text-sm leading-none">…</span>
+                      ) : (
+                        <Plus aria-hidden="true" size={16} strokeWidth={1.8} />
+                      )}
                     </button>
                   ) : null}
                 </div>

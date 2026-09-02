@@ -7,7 +7,8 @@ import {
   TEMPLATE_DEFINITIONS,
   getTemplateDefinition,
 } from "@/lib/editor/templates";
-import { TEXT_MOTION_TEMPLATE_DEFINITIONS } from "@/lib/text-motion/templates";
+import { FPS } from "@/lib/editor/constants";
+import { getVersionRenderDurationInFrames } from "@/lib/editor/timeline";
 
 const MAX_OUTPUT_LENGTH = 1500;
 const MAX_TEMPLATE_RESULTS = 20;
@@ -31,12 +32,6 @@ export const INKFRAME_ROUTES = [
     label: "Template Library",
     description: "Browse editorial motion templates.",
   },
-  {
-    id: "text-motion",
-    path: "/text-motion",
-    label: "AI Text Motion",
-    description: "Create beat-synced kinetic typography.",
-  },
 ] as const;
 
 type InkframeRouteId = (typeof INKFRAME_ROUTES)[number]["id"];
@@ -47,7 +42,7 @@ const routeSchema = z.enum(
   INKFRAME_ROUTES.map((route) => route.id) as [InkframeRouteId, ...InkframeRouteId[]],
 );
 const editorTemplateIdSchema = z.string().min(1);
-const templateKindSchema = z.enum(["all", "editor", "text-motion"]);
+const templateKindSchema = z.enum(["all", "editor"]);
 
 export interface InkframeWebMcpToolContext {
   /** Navigate only to one of the known, same-origin workspace paths. */
@@ -89,28 +84,24 @@ const tool = <T extends z.ZodType>(
   },
 });
 
-const templateRecords = [
-  ...TEMPLATE_DEFINITIONS.map((template) => ({
+const templateRecords = TEMPLATE_DEFINITIONS.map((template) => ({
     id: template.id,
     name: template.name,
     description: template.description,
     kind: "editor" as const,
     route: "/editor" as const,
     stylePreset: template.stylePreset,
-  })),
-  ...TEXT_MOTION_TEMPLATE_DEFINITIONS.map((template) => ({
-    id: template.id,
-    name: template.label,
-    description: template.statusMessage,
-    kind: "text-motion" as const,
-    route: "/text-motion" as const,
-    stylePreset: undefined,
-  })),
-];
+    aspect: template.aspect ?? template.blueprint?.aspect,
+    editable: Boolean(template.blueprint),
+    editableTextLayers: template.blueprint?.textOverlays.length,
+    durationSeconds: template.blueprint
+      ? getVersionRenderDurationInFrames(template.blueprint) / FPS
+      : undefined,
+  }));
 
 const listTemplates = (input: {
   query?: string;
-  kind?: "all" | "editor" | "text-motion";
+  kind?: "all" | "editor";
   limit?: number;
 }): string => {
   const query = input.query?.toLocaleLowerCase();
@@ -123,14 +114,31 @@ const listTemplates = (input: {
   });
   const requestedLimit = input.limit ?? MAX_TEMPLATE_RESULTS;
   const limited = filtered.slice(0, Math.min(requestedLimit, MAX_TEMPLATE_RESULTS));
-  const records = limited.map(({ id, name, description, kind, route, stylePreset }) => ({
-    id,
-    name,
-    kind,
-    route,
-    ...(stylePreset ? { stylePreset } : {}),
-    description: description.slice(0, 100),
-  }));
+  const records = limited.map(
+    ({
+      id,
+      name,
+      description,
+      kind,
+      route,
+      stylePreset,
+      aspect,
+      editable,
+      editableTextLayers,
+      durationSeconds,
+    }) => ({
+      id,
+      name,
+      kind,
+      route,
+      ...(stylePreset ? { stylePreset } : {}),
+      ...(aspect ? { aspect } : {}),
+      editable,
+      ...(editableTextLayers !== undefined ? { editableTextLayers } : {}),
+      ...(durationSeconds !== undefined ? { durationSeconds } : {}),
+      description: description.slice(0, 100),
+    }),
+  );
 
   // Keep the response useful even if catalog copy grows. Trim records until the
   // normal WebMCP response budget is met instead of returning an unbounded list.
@@ -159,13 +167,13 @@ export const createInkframeWebMcpTools = (
     () => toJson({
       ok: true,
       product: "Inkframe",
-      capabilities: ["media-editor", "ai-text-motion", "motion-templates", "mp4-export"],
+      capabilities: ["media-editor", "motion-templates", "mp4-export"],
       routes: INKFRAME_ROUTES.map(({ id, path, label, description }) => ({ id, path, label, description })),
     }),
   ),
   tool(
     "inkframe_list_templates",
-    "List and filter the bounded Inkframe template catalog.",
+    "List and filter Inkframe templates, including aspect, duration, and editable layer metadata.",
     z.object({
       query: z.string().trim().max(80).optional(),
       kind: templateKindSchema.optional(),

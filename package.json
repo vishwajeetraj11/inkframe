@@ -18,17 +18,15 @@
     "test:e2e": "playwright test"
   },
   "dependencies": {
-    "@ai-sdk/openai": "^3.0.30",
-    "@ai-sdk/react": "^3.0.99",
     "@elah/editor": "0.4.1",
     "@microsoft/clarity": "^1.0.2",
-    "ai": "^6.0.97",
     "d3-geo": "^3.1.1",
     "lucide-react": "^1.39.0",
     "nanoid": "^5.1.6",
     "next": "16.1.6",
     "react": "19.2.3",
     "react-dom": "19.2.3",
+    "sonner": "^2.0.7",
     "topojson-client": "^3.1.0",
     "world-atlas": "^2.0.2",
     "zod": "^4.3.6"

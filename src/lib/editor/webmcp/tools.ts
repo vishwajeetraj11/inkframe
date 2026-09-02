@@ -10,7 +10,6 @@ import { createDefaultClip, createDefaultTextOverlay } from "../defaults";
 import type { EditorHistoryState } from "../history";
 import { getClipDurationInFrames } from "../domain/helpers";
 import { getVersionRenderDurationInFrames } from "../timeline";
-import { getSoundEffectById, SOUND_EFFECT_LIBRARY } from "../sound-effects";
 import type {
   PexelsPhotoSearchResult,
   PexelsVideoSearchResult,
@@ -43,9 +42,6 @@ const aspectSchema = z.enum(["reel_9_16", "widescreen_16_9"]);
 const frameSchema = z.number().int().min(0).max(MAX_DURATION_FRAMES);
 const durationSchema = z.number().int().min(1).max(MAX_DURATION_FRAMES);
 const stylePresetSchema = z.literal("classic");
-const sfxIdSchema = z.enum(
-  SOUND_EFFECT_LIBRARY.map((effect) => effect.id) as [string, ...string[]],
-);
 const textFields = {
   text: z.string().trim().min(1).max(2000).optional(),
   startFrame: frameSchema.optional(),
@@ -99,7 +95,6 @@ const selectInput = z.object({
   aspect: aspectSchema.optional(), itemType: z.enum(["clip", "textOverlay", "audioTrack"]),
   itemId: z.string().trim().min(1).max(128),
 }).strict();
-const sfxInput = z.object({ aspect: aspectSchema.optional(), effectId: sfxIdSchema }).strict();
 const moveClipInput = z.object({ aspect: aspectSchema.optional(), clipId: z.string().trim().min(1).max(128), offset: z.union([z.literal(-1), z.literal(1)]) }).strict();
 const splitClipInput = z.object({
   aspect: aspectSchema.optional(), clipId: z.string().trim().min(1).max(128),
@@ -253,7 +248,6 @@ export interface EditorWebMcpToolContext {
   selectClip?: (clipId: string) => void;
   selectText?: (overlayId: string) => void;
   selectAudio?: (trackId: string) => void;
-  addSoundEffect?: (effectId: (typeof SOUND_EFFECT_LIBRARY)[number]["id"], aspect: AspectPreset, signal: AbortSignal) => void | Promise<void>;
   applyAIEditorActions?: (actions: AIEditorActions, signal: AbortSignal) => EditorWebMcpCallbackResult | Promise<EditorWebMcpCallbackResult>;
   requestExport?: (signal: AbortSignal) => EditorWebMcpCallbackResult | Promise<EditorWebMcpCallbackResult>;
   removeAsset?: (assetId: string, signal: AbortSignal) => void | EditorWebMcpCallbackResult | Promise<void | EditorWebMcpCallbackResult>;
@@ -769,7 +763,6 @@ export const createEditorWebMcpTools = (context: EditorWebMcpToolContext): WebMc
         });
       },
     }),
-    defineTool({ name: "editor_list_sound_effects", title: "List built-in sound effects", description: "List the browser-native sound effects that can be added to a timeline.", schema: emptyInput, readOnly: true, execute: () => json({ ok: true, effects: SOUND_EFFECT_LIBRARY.map(({ id, label, defaultDurationInFrames }) => ({ id, label, defaultDurationInFrames })) }) }),
     defineTool({ name: "editor_search_stock_videos", title: "Search stock videos", description: "Search sanitized Pexels video metadata for the requested canvas.", schema: searchStockInput, readOnly: true, execute: async (input, signal) => { if (!context.searchStockVideos) throw new Error("Stock search is unavailable"); const aspect = input.aspect ?? context.getState().present.activeVersion; const response = await context.searchStockVideos(input.query, aspect, signal) as PexelsVideoSearchResult; return projectResult({ ok: true, aspect, result: sanitizeStockSearch(response) }); } }),
     defineTool({ name: "editor_import_stock_video", title: "Import stock video", description: "Download a selected Pexels video into the browser and append it to both canvas timelines.", schema: importStockInput, readOnly: false, execute: async (input, signal) => { if (!context.importStockVideo) throw new Error("Stock import is unavailable"); const aspect = input.aspect ?? context.getState().present.activeVersion; return callbackResponse(await context.importStockVideo(input.query, input.videoId, aspect, signal), "Stock video imported"); } }),
     defineTool({ name: "editor_search_stock_photos", title: "Search stock photos", description: "Search sanitized Pexels photo metadata for the requested canvas.", schema: searchStockInput, readOnly: true, execute: async (input, signal) => { if (!context.searchStockPhotos) throw new Error("Stock photo search is unavailable"); const aspect = input.aspect ?? context.getState().present.activeVersion; const response = await context.searchStockPhotos(input.query, aspect, signal) as PexelsPhotoSearchResult; return projectResult({ ok: true, aspect, result: sanitizePhotoSearch(response) }); } }),
@@ -1059,7 +1052,6 @@ export const createEditorWebMcpTools = (context: EditorWebMcpToolContext): WebMc
     defineTool({ name: "editor_remove_transition", title: "Remove transition", description: "Remove a transition. Requires explicit confirmation.", schema: removeTransitionInput, readOnly: false, execute: (input) => { const aspect = input.aspect ?? context.getState().present.activeVersion; if (!activeVersion(context.getState(), aspect).transitions.some((transition) => transition.fromClipId === input.fromClipId && transition.toClipId === input.toClipId)) throw new Error("Transition not found"); dispatch({ type: "remove-transition", aspect, fromClipId: input.fromClipId, toClipId: input.toClipId }); return result("Transition removed", { aspect, fromClipId: input.fromClipId, toClipId: input.toClipId }); } }),
     defineTool({ name: "editor_update_audio_track", title: "Update audio track", description: "Update timing, trim, or volume fields on an existing audio track.", schema: updateAudioInput, readOnly: false, execute: (input) => { const state = context.getState(); const aspect = input.aspect ?? state.present.activeVersion; const current = activeVersion(state, aspect).audioTracks.find((item) => item.id === input.trackId); if (!current) throw new Error("Audio track not found"); const { trackId, aspect: _aspect, ...patch } = input; void _aspect; validateRange(patch.startFrame ?? current.startFrame, patch.endFrame ?? current.endFrame); validateRange(patch.trimStartFrame ?? current.trimStartFrame, patch.trimEndFrame ?? current.trimEndFrame); dispatch({ type: "update-audio-track", aspect, trackId, patch }); return result("Audio track updated", { aspect, trackId }); } }),
     defineTool({ name: "editor_remove_audio_track", title: "Remove audio track", description: "Remove an audio track. Requires explicit confirmation.", schema: removeAudioInput, readOnly: false, execute: (input) => { const aspect = input.aspect ?? context.getState().present.activeVersion; if (!activeVersion(context.getState(), aspect).audioTracks.some((item) => item.id === input.trackId)) throw new Error("Audio track not found"); dispatch({ type: "remove-audio-track", aspect, trackId: input.trackId }); return result("Audio track removed", { aspect, trackId: input.trackId }); } }),
-    defineTool({ name: "editor_add_sound_effect", title: "Add built-in sound effect", description: "Add a browser-native sound effect to the active or specified timeline.", schema: sfxInput, readOnly: false, execute: async (input, signal) => { if (!context.addSoundEffect) throw new Error("Sound effects are unavailable"); const aspect = input.aspect ?? context.getState().present.activeVersion; const effect = getSoundEffectById(input.effectId as never); if (!effect) throw new Error("Sound effect not found"); await context.addSoundEffect(effect.id, aspect, signal); throwIfAborted(signal); return result("Sound effect added", { aspect, effectId: effect.id, label: effect.label }); } }),
     defineTool({ name: "editor_apply_ai_editor_actions", title: "Apply structured editor actions", description: "Apply validated structured AI editor actions. Requires explicit confirmation.", schema: applyAIInput, readOnly: false, execute: async (input, signal) => { if (!context.applyAIEditorActions) throw new Error("AI editor actions are unavailable"); return callbackResponse(await context.applyAIEditorActions(input.actions, signal), "AI editor actions applied"); } }),
     defineTool({ name: "editor_request_export", title: "Request validated video export", description: "Validate the active project and request a local browser MP4 download. Requires explicit confirmation because it creates an external artifact.", schema: z.object({ confirmed: z.literal(true) }).strict(), readOnly: false, execute: async (_input, signal) => { if (!context.requestExport) throw new Error("Export is unavailable"); const state = context.getState(); const aspect = state.present.activeVersion; const version = activeVersion(state, aspect); const validation = validateEditorVersion(version, context.getAssets?.() ?? []); if (!validation.readyForExport) throw new Error(`Export blocked: ${validation.issues.filter((item) => item.severity === "error").map((item) => item.message).join(" ")}`); const credits = getAttributionReport(version, context.getAssets?.() ?? [], false); if (!credits.readyToPublish) throw new Error("Export blocked: required stock-media attribution metadata is incomplete"); const response = await context.requestExport(signal); throwIfAborted(signal); if (!response.ok) return json({ ...response, ok: false, error: response.message }); return projectResult({ ...response, ok: true, message: response.message || "Export requested", validation: { readyForExport: true, warnings: validation.counts.warnings }, credits: { readyToPublish: credits.readyToPublish, creditLines: credits.copyableCredits }, nextAction: "Poll editor_get_export_status until completed, then verify and play the downloaded MP4." }); } }),
     defineTool({ name: "editor_cancel_export", title: "Cancel video export", description: "Cancel the active browser export. Requires explicit confirmation.", schema: cancelExportInput, readOnly: false, execute: async (_input, signal) => { if (!context.cancelExport) throw new Error("Export cancellation is unavailable"); return callbackResponse(await context.cancelExport(signal), "Export cancellation requested"); } }),

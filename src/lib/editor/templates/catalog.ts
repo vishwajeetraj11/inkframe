@@ -3,7 +3,12 @@ import {
   instantiateTemplateBlueprint,
   type FlagshipTemplateId,
 } from "./blueprints";
-import type { TextOverlayStylePreset, VersionTimeline } from "../types";
+import type {
+  AspectPreset,
+  AssetRef,
+  TextOverlayStylePreset,
+  VersionTimeline,
+} from "../types";
 
 export interface TemplateDefinition {
   id: string;
@@ -12,6 +17,7 @@ export interface TemplateDefinition {
   description: string;
   sampleText: string;
   accentClass: string;
+  aspect?: AspectPreset;
   /** Elah-native editable starter timeline, when provided. */
   blueprint?: VersionTimeline;
   starterAssets?: {
@@ -19,6 +25,7 @@ export interface TemplateDefinition {
     name: string;
     mimeType: string;
     publicPath: string;
+    attribution?: AssetRef["attribution"];
   }[];
 }
 
@@ -26,6 +33,118 @@ const FLAGSHIP_TEMPLATE_ASSETS: Record<
   FlagshipTemplateId,
   NonNullable<TemplateDefinition["starterAssets"]>
 > = {
+  "agent-demo-reel": [
+    {
+      kind: "video",
+      name: "Projected portrait",
+      mimeType: "video/mp4",
+      publicPath: "/starter-assets/agent-demo-reel/projected-portrait.mp4",
+      attribution: {
+        provider: "pexels",
+        sourceUrl:
+          "https://www.pexels.com/video/young-man-posing-with-colorful-projection-on-face-6491984/",
+        creatorName: "cottonbro studio",
+        creatorUrl: "https://www.pexels.com/@cottonbro",
+        licenseName: "Pexels License",
+        licenseUrl: "https://www.pexels.com/license/",
+        attributionRequired: false,
+      },
+    },
+    {
+      kind: "video",
+      name: "Neon keyboard",
+      mimeType: "video/mp4",
+      publicPath: "/starter-assets/agent-demo-reel/neon-keyboard.mp4",
+      attribution: {
+        provider: "pexels",
+        sourceUrl:
+          "https://www.pexels.com/video/hands-typing-on-rgb-keyboard-in-low-light-35281906/",
+        creatorName: "Azhaan Bashmil",
+        creatorUrl: "https://www.pexels.com/@azhaan-bashmil-728761857",
+        licenseName: "Pexels License",
+        licenseUrl: "https://www.pexels.com/license/",
+        attributionRequired: false,
+      },
+    },
+    {
+      kind: "video",
+      name: "Purple ink",
+      mimeType: "video/mp4",
+      publicPath: "/starter-assets/agent-demo-reel/purple-ink.mp4",
+      attribution: {
+        provider: "pexels",
+        sourceUrl:
+          "https://www.pexels.com/video/purple-ink-mixing-underwater-in-slow-motion-15168379/",
+        creatorName: "Dan Cristian Pădureț",
+        creatorUrl: "https://www.pexels.com/@paduret",
+        licenseName: "Pexels License",
+        licenseUrl: "https://www.pexels.com/license/",
+        attributionRequired: false,
+      },
+    },
+    {
+      kind: "audio",
+      name: "Piano Synth Loop",
+      mimeType: "audio/mpeg",
+      publicPath: "/starter-assets/agent-demo-reel/piano-synth-loop.mp3",
+      attribution: {
+        provider: "freesound",
+        sourceUrl: "https://freesound.org/people/EEE3333E/sounds/854558/",
+        creatorName: "EEE3333E",
+        creatorUrl: "https://freesound.org/people/EEE3333E/",
+        licenseName: "CC0",
+        licenseUrl: "https://creativecommons.org/publicdomain/zero/1.0/",
+        attributionRequired: false,
+      },
+    },
+  ],
+  "one-number": [
+    {
+      kind: "video",
+      name: "Chart review",
+      mimeType: "video/mp4",
+      publicPath: "/starter-assets/one-number/chart-review-graded.mp4",
+      attribution: {
+        provider: "pexels",
+        sourceUrl: "https://www.pexels.com/video/people-looking-at-a-chart-5020446/",
+        creatorName: "Antoni Shkraba",
+        creatorUrl: "https://www.pexels.com/@shkrabaanthony",
+        licenseName: "Pexels License",
+        licenseUrl: "https://www.pexels.com/license/",
+        attributionRequired: false,
+      },
+    },
+    {
+      kind: "video",
+      name: "Team payoff",
+      mimeType: "video/mp4",
+      publicPath: "/starter-assets/one-number/team-payoff-graded.mp4",
+      attribution: {
+        provider: "pexels",
+        sourceUrl: "https://www.pexels.com/video/team-hands-together-9464870/",
+        creatorName: "Monstera Production",
+        creatorUrl: "https://www.pexels.com/@gabby-k",
+        licenseName: "Pexels License",
+        licenseUrl: "https://www.pexels.com/license/",
+        attributionRequired: false,
+      },
+    },
+    {
+      kind: "audio",
+      name: "Neural Patterning",
+      mimeType: "audio/mpeg",
+      publicPath: "/starter-assets/one-number/neural-patterning.mp3",
+      attribution: {
+        provider: "freesound",
+        sourceUrl: "https://freesound.org/people/f-r-a-g-i-l-e/sounds/484045/",
+        creatorName: "f-r-a-g-i-l-e",
+        creatorUrl: "https://freesound.org/people/f-r-a-g-i-l-e/",
+        licenseName: "CC0",
+        licenseUrl: "https://creativecommons.org/publicdomain/zero/1.0/",
+        attributionRequired: false,
+      },
+    },
+  ],
   "editorial-explainer": [
     {
       kind: "image",
@@ -44,12 +163,6 @@ const FLAGSHIP_TEMPLATE_ASSETS: Record<
       name: "Explainer scene 03",
       mimeType: "image/jpeg",
       publicPath: "/starter-assets/berlin-wall/bornholmer-strasse-opening-1989.jpg",
-    },
-    {
-      kind: "audio",
-      name: "Explainer audio bed",
-      mimeType: "audio/mpeg",
-      publicPath: "builtin:sfx:low-hit",
     },
   ],
   "product-reveal": [
@@ -71,12 +184,6 @@ const FLAGSHIP_TEMPLATE_ASSETS: Record<
       mimeType: "image/jpeg",
       publicPath: "/starter-assets/berlin-wall/german-reunification-1990.jpg",
     },
-    {
-      kind: "audio",
-      name: "Product reveal audio bed",
-      mimeType: "audio/mpeg",
-      publicPath: "builtin:sfx:whoosh",
-    },
   ],
   "social-promo": [
     {
@@ -96,12 +203,6 @@ const FLAGSHIP_TEMPLATE_ASSETS: Record<
       name: "Social promo call to action",
       mimeType: "image/jpeg",
       publicPath: "/starter-assets/berlin-wall/german-reunification-1990.jpg",
-    },
-    {
-      kind: "audio",
-      name: "Social promo audio bed",
-      mimeType: "audio/mpeg",
-      publicPath: "builtin:sfx:whip",
     },
   ],
   "documentary-cut": [
@@ -202,6 +303,30 @@ const BERLIN_WALL_TIMELINE_STARTER_ASSETS: NonNullable<
 ];
 
 const TEMPLATE_CATALOG_SOURCE: TemplateDefinition[] = [
+  {
+    id: "agent-demo-reel",
+    stylePreset: "classic",
+    name: "Agent Demo Reel",
+    description:
+      "The WebMCP-created Make the Cut reel rebuilt as editable footage, animated text, and transitions.",
+    sampleText: "MAKE A VIDEO.\nMAKE THE CUT.",
+    accentClass: "text-violet-300",
+    aspect: "reel_9_16",
+    starterAssets: FLAGSHIP_TEMPLATE_ASSETS["agent-demo-reel"],
+    blueprint: FLAGSHIP_TEMPLATE_BLUEPRINTS["agent-demo-reel"],
+  },
+  {
+    id: "one-number",
+    stylePreset: "classic",
+    name: "One Number Changes Everything",
+    description:
+      "One metric becomes context, comparison, and payoff with editable footage, kinetic type, and a full-length soundtrack.",
+    sampleText: "73%\nOF THE GOAL REACHED THIS QUARTER",
+    accentClass: "text-orange-500",
+    aspect: "reel_9_16",
+    starterAssets: FLAGSHIP_TEMPLATE_ASSETS["one-number"],
+    blueprint: FLAGSHIP_TEMPLATE_BLUEPRINTS["one-number"],
+  },
   {
     id: "vox-timeline",
     stylePreset: "vox-timeline",
@@ -412,9 +537,10 @@ const TEMPLATE_CATALOG_SOURCE: TemplateDefinition[] = [
   },
 ];
 
-/** The template library is intentionally empty until new templates are added. */
-void TEMPLATE_CATALOG_SOURCE;
-export const TEMPLATE_DEFINITIONS: TemplateDefinition[] = [];
+/** Only verified, Elah-native templates are published. Retired definitions remain above for migration context. */
+export const TEMPLATE_DEFINITIONS: TemplateDefinition[] = TEMPLATE_CATALOG_SOURCE.filter(
+  (template) => template.id === "agent-demo-reel" || template.id === "one-number",
+);
 
 export type TemplateDefinitionId = (typeof TEMPLATE_DEFINITIONS)[number]["id"];
 

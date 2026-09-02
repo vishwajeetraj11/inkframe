@@ -14,7 +14,6 @@ interface WorkspaceStat {
 interface EditorHeaderProps {
   activeAspect: AspectPreset;
   isExporting: boolean;
-  statusMessage: string | null;
   workspaceStats: WorkspaceStat[];
   canExport: boolean;
   onSwitchAspect: (aspect: AspectPreset) => void;
@@ -26,7 +25,6 @@ interface EditorHeaderProps {
 export const EditorHeader = ({
   activeAspect,
   isExporting,
-  statusMessage,
   workspaceStats,
   canExport,
   onSwitchAspect,
@@ -59,12 +57,6 @@ export const EditorHeader = ({
             className="inline-flex min-h-10 items-center border-b border-transparent px-2.5 text-[9px] font-semibold uppercase tracking-[0.14em] text-neutral-400 transition hover:border-white/20 hover:text-neutral-100 focus-visible:ring-2 focus-visible:ring-cyan-300"
           >
             Templates
-          </Link>
-          <Link
-            href="/text-motion"
-            className="inline-flex min-h-10 items-center border-b border-transparent px-2.5 text-[9px] font-semibold uppercase tracking-[0.14em] text-neutral-400 transition hover:border-white/20 hover:text-neutral-100 focus-visible:ring-2 focus-visible:ring-cyan-300"
-          >
-            Text motion
           </Link>
         </nav>
 
@@ -122,15 +114,6 @@ export const EditorHeader = ({
         </div>
       </div>
 
-      {statusMessage ? (
-        <div
-          role="status"
-          aria-live="polite"
-          className="relative z-30 mb-2 w-full border border-white/10 bg-[#1b1813] px-4 py-3 text-sm text-neutral-100 shadow-2xl xl:absolute xl:left-1/2 xl:top-full xl:mb-0 xl:w-[min(92vw,680px)] xl:-translate-x-1/2"
-        >
-          {statusMessage}
-        </div>
-      ) : null}
     </header>
   );
 };

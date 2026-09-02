@@ -2,6 +2,7 @@ import type {
   AspectPreset,
   AudioTrack,
   Clip,
+  EditorTrack,
   ProjectSession,
   TextOverlay,
   Transition,
@@ -12,6 +13,7 @@ import { sanitizeVersion } from "./timeline";
 export type EditorAction =
   | { type: "switch-aspect"; aspect: AspectPreset }
   | { type: "replace-version"; aspect: AspectPreset; version: VersionTimeline }
+  | { type: "add-track"; aspect: AspectPreset; track: EditorTrack }
   | { type: "add-clip"; aspect: AspectPreset; clip: Clip }
   | {
       type: "update-clip";
@@ -96,6 +98,7 @@ const copyTimelineToAspect = (
   aspect: AspectPreset,
 ): VersionTimeline => ({
   aspect,
+  tracks: version.tracks?.map((track) => ({ ...track })),
   clips: version.clips.map((clip) => ({ ...clip })),
   textOverlays: version.textOverlays.map((overlay) => ({ ...overlay })),
   audioTracks: version.audioTracks.map((track) => ({ ...track })),
@@ -131,6 +134,17 @@ export const editorReducer = (
     }
     case "replace-version": {
       return withUpdatedVersion(state, action.aspect, () => action.version);
+    }
+    case "add-track": {
+      return withUpdatedVersion(state, action.aspect, (version) => {
+        if (version.tracks?.some((track) => track.id === action.track.id)) {
+          return version;
+        }
+        return {
+          ...version,
+          tracks: [...(version.tracks ?? []), action.track],
+        };
+      });
     }
     case "add-clip": {
       return withUpdatedVersion(state, action.aspect, (version) => ({

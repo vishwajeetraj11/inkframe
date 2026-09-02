@@ -3,7 +3,6 @@
 import { useWebMcpTools, type WebMcpToolFactory } from "@/components/webmcp/use-webmcp-tools";
 import type { AIEditorActions } from "@/lib/editor/ai-actions";
 import type { EditorHistoryState } from "@/lib/editor/history";
-import type { SoundEffectId } from "@/lib/editor/sound-effects";
 import type { EditorAction } from "@/lib/editor/reducer";
 import type { AspectPreset, AssetRef } from "@/lib/editor/types";
 import type {
@@ -34,7 +33,6 @@ export interface EditorWebMcpBridge {
   selectClip: (clipId: string) => void;
   selectText: (overlayId: string) => void;
   selectAudio: (trackId: string) => void;
-  addSoundEffect: (effectId: SoundEffectId, aspect: AspectPreset) => void;
   applyAIEditorActions: (actions: AIEditorActions) => Promise<{ ok: boolean; message: string }>;
   requestExport: () => EditorWebMcpCallbackResult;
   getExportState: () => EditorExportState;
@@ -103,15 +101,6 @@ const createTools: WebMcpToolFactory<EditorWebMcpBridge> = (getCurrent) =>
     selectClip: (clipId) => flushSync(() => getCurrent().selectClip(clipId)),
     selectText: (overlayId) => flushSync(() => getCurrent().selectText(overlayId)),
     selectAudio: (trackId) => flushSync(() => getCurrent().selectAudio(trackId)),
-    addSoundEffect: (effectId, aspect, signal) => {
-      if (signal.aborted) throw signal.reason;
-      flushSync(() => {
-        if (getCurrent().history.present.activeVersion !== aspect) {
-          getCurrent().dispatch({ type: "switch-aspect", aspect });
-        }
-        getCurrent().addSoundEffect(effectId, aspect);
-      });
-    },
     applyAIEditorActions: async (actions, signal) => {
       if (signal.aborted) throw signal.reason;
       const result = await getCurrent().applyAIEditorActions(actions);

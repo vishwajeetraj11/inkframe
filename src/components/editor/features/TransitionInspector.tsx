@@ -33,6 +33,8 @@ const controlClassName =
 const labelClassName =
   "app-eyebrow text-[9px] uppercase tracking-[0.18em] text-[#f2ede3]/45";
 
+const displayDuration = (seconds: number): number => Number(seconds.toFixed(2));
+
 export const TransitionInspector = ({
   transition,
   disabled = false,
@@ -142,7 +144,7 @@ export const TransitionInspector = ({
               }}
               step={0.05}
               type="number"
-              value={transition.duration}
+              value={displayDuration(transition.duration)}
             />
             <span className="app-data text-[10px] text-[#f2ede3]/35">SEC</span>
           </div>

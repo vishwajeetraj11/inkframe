@@ -5,19 +5,50 @@ import {
   useSelectionStore,
   useTimelineEngine,
 } from "@elah/editor";
-import { Copy, Magnet, Scissors, Trash2, Type } from "lucide-react";
+import {
+  ChevronDown,
+  Copy,
+  Film,
+  Magnet,
+  Music2,
+  Plus,
+  Scissors,
+  Trash2,
+  Type,
+} from "lucide-react";
+import { useEffect, useRef, useState } from "react";
+import type { EditorTrackKind } from "@/lib/editor/types";
 
 interface TimelineActionBarProps {
   disabled?: boolean;
-  onAddText: () => void;
+  onAddText: (trackId?: string) => void;
+  onAddTrack: (kind: EditorTrackKind) => string | void;
 }
 
 const actionClass =
   "grid h-9 w-9 place-items-center border-l border-white/10 text-neutral-300 outline-none transition hover:bg-white/[0.05] hover:text-neutral-50 focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[#ff4f1f] disabled:cursor-not-allowed disabled:opacity-30";
 
-export const TimelineActionBar = ({ disabled, onAddText }: TimelineActionBarProps) => {
+const trackOptions: Array<{
+  kind: EditorTrackKind;
+  label: string;
+  icon: typeof Film;
+}> = [
+  { kind: "video", label: "Video track", icon: Film },
+  { kind: "text", label: "Text track", icon: Type },
+  { kind: "audio", label: "Audio track", icon: Music2 },
+];
+
+export const TimelineActionBar = ({
+  disabled,
+  onAddText,
+  onAddTrack,
+}: TimelineActionBarProps) => {
   const engine = useTimelineEngine();
+  const [trackMenuOpen, setTrackMenuOpen] = useState(false);
+  const trackMenuRef = useRef<HTMLDivElement>(null);
   const selectedClipIds = useSelectionStore((state) => state.selectedClipIds);
+  const activeTrackId = useSelectionStore((state) => state.activeTrackId);
+  const setActiveTrack = useSelectionStore((state) => state.setActiveTrack);
   const selectClips = useSelectionStore((state) => state.selectClips);
   const clearSelection = useSelectionStore((state) => state.clearSelection);
   const currentFrame = usePlaybackStore((state) => state.currentFrame);
@@ -33,6 +64,24 @@ export const TimelineActionBar = ({ disabled, onAddText }: TimelineActionBarProp
       currentFrame > splitTarget.clip.startFrame &&
       currentFrame < splitTarget.clip.startFrame + splitTarget.clip.durationFrames,
   );
+
+  useEffect(() => {
+    if (!trackMenuOpen) return;
+    const closeOnPointerDown = (event: PointerEvent) => {
+      if (!trackMenuRef.current?.contains(event.target as Node)) {
+        setTrackMenuOpen(false);
+      }
+    };
+    const closeOnEscape = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setTrackMenuOpen(false);
+    };
+    document.addEventListener("pointerdown", closeOnPointerDown);
+    document.addEventListener("keydown", closeOnEscape);
+    return () => {
+      document.removeEventListener("pointerdown", closeOnPointerDown);
+      document.removeEventListener("keydown", closeOnEscape);
+    };
+  }, [trackMenuOpen]);
 
   const split = () => {
     if (!splitTarget || !canSplit) return;
@@ -69,11 +118,56 @@ export const TimelineActionBar = ({ disabled, onAddText }: TimelineActionBarProp
 
   return (
     <div className="ml-auto flex items-center border-r border-white/10" aria-label="Timeline actions">
+      <div className="relative" ref={trackMenuRef}>
+        <button
+          type="button"
+          className="inline-flex h-9 items-center gap-1.5 border-l border-white/10 px-3 text-[9px] font-semibold uppercase tracking-[0.12em] text-neutral-200 outline-none transition hover:bg-white/[0.05] hover:text-white focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[#ff4f1f] disabled:opacity-30"
+          disabled={disabled}
+          onClick={() => setTrackMenuOpen((open) => !open)}
+          aria-haspopup="menu"
+          aria-expanded={trackMenuOpen}
+          title="Add timeline track"
+        >
+          <Plus aria-hidden="true" size={14} strokeWidth={1.8} />
+          Track
+          <ChevronDown aria-hidden="true" size={11} strokeWidth={1.8} />
+        </button>
+        {trackMenuOpen ? (
+          <div
+            className="absolute right-0 top-full z-50 min-w-40 border border-white/15 bg-[#171410] py-1 shadow-2xl"
+            role="menu"
+            aria-label="Add track"
+          >
+            {trackOptions.map((option) => {
+              const Icon = option.icon;
+              return (
+                <button
+                  key={option.kind}
+                  type="button"
+                  className="flex h-9 w-full items-center gap-2 px-3 text-left text-[10px] font-medium text-neutral-200 outline-none hover:bg-white/[0.06] focus-visible:bg-white/[0.06] focus-visible:text-white"
+                  role="menuitem"
+                  onClick={() => {
+                    const trackId = onAddTrack(option.kind);
+                    if (trackId) setActiveTrack(trackId);
+                    setTrackMenuOpen(false);
+                  }}
+                >
+                  <Icon aria-hidden="true" size={14} strokeWidth={1.8} />
+                  {option.label}
+                </button>
+              );
+            })}
+          </div>
+        ) : null}
+      </div>
       <button
         type="button"
         className="inline-flex h-9 items-center gap-2 border-l border-white/10 px-3 text-[9px] font-semibold uppercase tracking-[0.12em] text-neutral-200 outline-none transition hover:bg-white/[0.05] hover:text-white focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[#ff4f1f] disabled:opacity-30"
         disabled={disabled}
-        onClick={onAddText}
+        onClick={() => {
+          const activeTrack = activeTrackId ? engine.getTrack(activeTrackId) : undefined;
+          onAddText(activeTrack?.kind === "elements" ? activeTrack.id : undefined);
+        }}
         title="Add text layer"
       >
         <Type aria-hidden="true" size={14} strokeWidth={1.8} />

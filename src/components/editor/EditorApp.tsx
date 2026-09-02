@@ -1,6 +1,5 @@
 "use client";
 
-import { AIChatDrawer } from "@/components/editor/AIChatDrawer";
 import { EditorHeader } from "@/components/editor/EditorHeader";
 import { EditorSidebar } from "@/components/editor/EditorSidebar";
 import { EditorRightSidebar } from "@/components/editor/EditorRightSidebar";
@@ -11,29 +10,42 @@ import {
   ElahTimelineDock,
 } from "@/components/editor/elah";
 import { createDefaultTextOverlay } from "@/lib/editor/defaults";
+import {
+  DEFAULT_TEXT_TRACK_ID,
+  createEditorTrack,
+  ensureEditorTracks,
+} from "@/lib/editor/tracks";
+import type { EditorTrackKind } from "@/lib/editor/types";
 import type { EditorFrameCapture, EditorVisualReview } from "@/lib/editor/export-state";
 import { analyzeFrameContrast } from "@/lib/editor/webmcp/contrast";
 import { usePlaybackStore, type PreviewHandle } from "@elah/editor";
 import { nanoid } from "nanoid";
-import { useRef, useState, type CSSProperties } from "react";
+import { toast } from "sonner";
+import { useEffect, useRef, useState, type CSSProperties } from "react";
 import { useEditorWebMcp } from "./hooks/use-editor-webmcp";
 import { useEditorSession } from "./hooks/use-editor-session";
-
-interface EditorAppProps {
-  enableAIChat: boolean;
-}
 
 const DEFAULT_TIMELINE_HEIGHT = 188;
 const MIN_TIMELINE_HEIGHT = 140;
 const MAX_TIMELINE_HEIGHT = 360;
 
-export const EditorApp = ({
-  enableAIChat,
-}: EditorAppProps) => {
+export const EditorApp = () => {
   const session = useEditorSession();
   const [timelineHeight, setTimelineHeight] = useState(DEFAULT_TIMELINE_HEIGHT);
   const [visualReview, setVisualReview] = useState<EditorVisualReview | null>(null);
   const previewRef = useRef<PreviewHandle | null>(null);
+
+  useEffect(() => {
+    if (!session.statusMessage) {
+      toast.dismiss("editor-status");
+      return;
+    }
+
+    toast(session.statusMessage, {
+      id: "editor-status",
+      duration: 4500,
+    });
+  }, [session.statusMessage]);
 
   const capturePreviewFrame = async (frame: number, includeImage: boolean) => {
     const playback = usePlaybackStore.getState();
@@ -105,7 +117,6 @@ export const EditorApp = ({
     selectClip: (clipId) => selectClip(clipId),
     selectText: (overlayId) => selectText(overlayId),
     selectAudio: (trackId) => selectAudio(trackId),
-    addSoundEffect: session.onAddSoundEffect,
     applyAIEditorActions: session.onApplyEditorActions,
     requestExport: () => session.onRequestExport(),
     getExportState: () => session.exportState,
@@ -151,14 +162,33 @@ export const EditorApp = ({
     session.activeVersion.clips.length > 0 ||
     session.activeVersion.textOverlays.length > 0;
 
-  const handleAddText = () => {
+  const handleAddText = (trackId?: string) => {
     const overlayId = nanoid(10);
+    const textTrackId = ensureEditorTracks(session.activeVersion).some(
+      (track) => track.id === trackId && track.kind === "text",
+    )
+      ? trackId
+      : DEFAULT_TEXT_TRACK_ID;
     selectText(overlayId);
     session.dispatch({
       type: "add-text-overlay",
       aspect: session.activeAspect,
-      overlay: createDefaultTextOverlay(overlayId),
+      overlay: {
+        ...createDefaultTextOverlay(overlayId),
+        trackId: textTrackId,
+      },
     });
+  };
+
+  const handleAddTrack = (kind: EditorTrackKind) => {
+    const trackId = `inkframe-track-${nanoid(10)}`;
+    const existing = ensureEditorTracks(session.activeVersion);
+    session.dispatch({
+      type: "add-track",
+      aspect: session.activeAspect,
+      track: createEditorTrack(trackId, kind, existing),
+    });
+    return trackId;
   };
 
   return (
@@ -166,7 +196,6 @@ export const EditorApp = ({
       <EditorHeader
         activeAspect={session.activeAspect}
         isExporting={session.isExporting}
-        statusMessage={session.statusMessage}
         workspaceStats={workspaceStats}
         canExport={canExport}
         onSwitchAspect={session.switchAspect}
@@ -201,9 +230,15 @@ export const EditorApp = ({
             isExporting={session.isExporting}
             assets={session.assetList}
             onFilesSelected={session.onFilesSelected}
-            onAddSoundEffect={session.onAddSoundEffect}
             onRemoveAsset={session.onRemoveAsset}
             onAddStockVideo={session.onImportStockVideo}
+            onAddStockSoundEffect={(query, audio) =>
+              session.onImportLicensedSoundEffect({
+                query,
+                audioId: audio.id,
+                aspect: session.activeAspect,
+              })
+            }
           />
         </div>
 
@@ -269,7 +304,8 @@ export const EditorApp = ({
           />
           <ElahTimelineDock
             version={session.activeVersion}
-            onAddTrack={handleAddText}
+            onAddText={handleAddText}
+            onAddTrack={handleAddTrack}
             onSelectClip={selectClip}
             onSelectText={selectText}
             onSelectAudio={selectAudio}
@@ -278,13 +314,6 @@ export const EditorApp = ({
         </main>
       </ElahEditorWorkspace>
 
-      {enableAIChat ? (
-        <AIChatDrawer
-          editorContext={session.editorChatContext}
-          onApplyEditorActions={session.onApplyEditorActions}
-          onRenderVideoRequest={session.onExport}
-        />
-      ) : null}
     </div>
   );
 };

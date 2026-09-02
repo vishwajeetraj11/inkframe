@@ -5,7 +5,7 @@ import {
   useSelectionStore,
 } from "@elah/editor";
 import { useEffect, useMemo } from "react";
-import type { VersionTimeline } from "@/lib/editor/types";
+import type { EditorTrackKind, VersionTimeline } from "@/lib/editor/types";
 import { detectElahBrowserCapabilities } from "@/lib/editor/elah-browser-capabilities";
 import "./inkframe-elah.css";
 import { TimelineActionBar } from "@/components/editor/timeline/TimelineActionBar";
@@ -15,7 +15,8 @@ interface ElahTimelineDockProps {
   onSelectClip: (clipId: string | null) => void;
   onSelectText: (overlayId: string | null) => void;
   onSelectAudio: (trackId: string | null) => void;
-  onAddTrack: () => void;
+  onAddText: (trackId?: string) => void;
+  onAddTrack: (kind: EditorTrackKind) => string | void;
 }
 
 const SelectionBridge = ({
@@ -51,6 +52,7 @@ export const ElahTimelineDock = ({
   onSelectText,
   onSelectAudio,
   onAddTrack,
+  onAddText,
 }: ElahTimelineDockProps) => {
   const capabilities = useMemo(() => detectElahBrowserCapabilities(), []);
 
@@ -77,7 +79,7 @@ export const ElahTimelineDock = ({
             Elah interactive timeline
           </span>
         </div>
-        <TimelineActionBar onAddText={onAddTrack} />
+        <TimelineActionBar onAddText={onAddText} onAddTrack={onAddTrack} />
       </div>
       <div className="min-h-0 flex-1 overflow-hidden">
         <ElahTimeline compactSidebar sidebarWidth={136} />

@@ -32,6 +32,8 @@ const getTemplateVideoPreviews = async (): Promise<
 };
 
 const getTemplateDiscipline = (templateId: string) => {
+  if (templateId.includes("agent")) return "Agent-made";
+  if (templateId.includes("one-number")) return "Data story";
   if (templateId.includes("timeline")) return "Chronology";
   if (templateId.includes("map") || templateId.includes("location")) return "Cartography";
   if (
@@ -154,6 +156,7 @@ export default async function TemplatesPage() {
               {orderedTemplates.map((template, index) => {
                 const previewVideo = templateVideoPreviews[template.id];
                 const assetCount = template.starterAssets?.length ?? 0;
+                const isReel = template.aspect === "reel_9_16";
 
               return (
                 <li key={template.id} className="border-b border-[#16130f]/30">
@@ -171,7 +174,7 @@ export default async function TemplatesPage() {
                         <span className={`h-1.5 w-1.5 bg-current ${template.accentClass}`} />
                         <span>{getTemplateDiscipline(template.id)}</span>
                         <span aria-hidden="true">/</span>
-                        <span>16:9</span>
+                        <span>{isReel ? "9:16" : "16:9"}</span>
                       </div>
                       <h3 className="font-[family-name:var(--font-condensed)] text-[clamp(2.3rem,5vw,5rem)] font-semibold uppercase leading-[0.86] tracking-[-0.045em] transition-transform duration-300 ease-out group-hover:translate-x-1.5 group-focus-visible:translate-x-1.5">
                         {template.name}
@@ -181,7 +184,11 @@ export default async function TemplatesPage() {
                     <div className="col-span-2 row-start-2 overflow-hidden bg-[#16130f] sm:col-start-2 sm:col-span-1 lg:col-span-3 lg:col-start-6 lg:row-start-1">
                       <div className="relative aspect-video">
                         {previewVideo ? (
-                          <TemplateMotionPreview src={previewVideo} eager={index < 3} />
+                          <TemplateMotionPreview
+                            src={previewVideo}
+                            eager={index < 3}
+                            fit={isReel ? "contain" : "cover"}
+                          />
                         ) : (
                           <div className="absolute inset-0 flex items-center justify-center bg-[linear-gradient(135deg,#211d18_0%,#211d18_49%,#e7441b_50%,#e7441b_51%,#211d18_52%,#211d18_100%)] px-5 text-center font-[family-name:var(--font-mono)] text-[9px] uppercase tracking-[0.16em] text-[#e9e3d7]">
                             Preview in editor
@@ -198,7 +205,11 @@ export default async function TemplatesPage() {
                         {template.description}
                       </p>
                       <div className="mt-5 flex flex-wrap items-center gap-x-4 gap-y-2 font-[family-name:var(--font-mono)] text-[9px] font-medium uppercase tracking-[0.12em] text-[#766d62]">
-                        <span>Editable copy</span>
+                        <span>
+                          {template.blueprint?.textOverlays.length
+                            ? "Editable copy"
+                            : "Editable timeline"}
+                        </span>
                         {assetCount > 0 ? (
                           <>
                             <span aria-hidden="true" className="h-0.5 w-0.5 rounded-full bg-current" />

@@ -10,11 +10,13 @@ import type {
   TextOverlay,
   VersionTimeline,
 } from "./types";
+import { createDefaultEditorTracks } from "./tracks";
 
 export const createEmptyVersionTimeline = (
   aspect: AspectPreset,
 ): VersionTimeline => ({
   aspect,
+  tracks: createDefaultEditorTracks(),
   clips: [],
   textOverlays: [],
   audioTracks: [],

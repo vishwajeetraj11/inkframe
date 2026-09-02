@@ -3,17 +3,15 @@
 ## Boundaries
 
 - `src/lib/editor`: pure editor-domain logic and Elah project conversion. Avoid React and DOM imports here.
-- `src/lib/text-motion`: pure text-motion domain logic only.
-- `src/components/editor` and `src/components/text-motion`: UI composition and hooks.
+- `src/components/editor`: editor UI composition and hooks.
 - `src/lib/export`: client-side Elah export and browser download helpers.
-- `src/server/services`: OpenAI generation and chat orchestration only.
+- `src/server`: stock-provider HTTP helpers and shared request guards.
 
 ## Naming rules
 
 - New editor visual presets must keep a stable `stylePreset` literal in `src/lib/editor/types.ts`.
 - New editor gallery cards belong in `src/lib/editor/templates/catalog.ts`.
 - Structured overlay presets should get their own parser module under `src/lib/editor/parsers/`.
-- New text-motion templates belong in `src/lib/text-motion/templates.ts` and must preserve `TextMotionTemplate` literals.
 - API routes should stay thin and delegate orchestration to `src/server/services/`.
 
 ## Rendering direction

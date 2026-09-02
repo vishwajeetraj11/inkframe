@@ -5,9 +5,14 @@ import { useEffect, useRef, useState } from "react";
 interface TemplateMotionPreviewProps {
   src: string;
   eager?: boolean;
+  fit?: "cover" | "contain";
 }
 
-export const TemplateMotionPreview = ({ src, eager = false }: TemplateMotionPreviewProps) => {
+export const TemplateMotionPreview = ({
+  src,
+  eager = false,
+  fit = "cover",
+}: TemplateMotionPreviewProps) => {
   const videoRef = useRef<HTMLVideoElement>(null);
   const [isPlaying, setIsPlaying] = useState(false);
   const [reduceMotion, setReduceMotion] = useState(false);
@@ -53,7 +58,7 @@ export const TemplateMotionPreview = ({ src, eager = false }: TemplateMotionPrev
         onPause={() => setIsPlaying(false)}
         preload={eager ? "metadata" : "none"}
         aria-hidden="true"
-        className="h-full w-full object-cover opacity-85 saturate-[0.8] transition duration-500 ease-out group-hover:scale-[1.025] group-hover:opacity-100 group-hover:saturate-100 group-focus-visible:opacity-100"
+        className={`h-full w-full ${fit === "contain" ? "object-contain" : "object-cover"} opacity-85 saturate-[0.8] transition duration-500 ease-out group-hover:scale-[1.025] group-hover:opacity-100 group-hover:saturate-100 group-focus-visible:opacity-100`}
       />
       <span className="absolute bottom-2 right-2 bg-[#16130f]/85 px-1.5 py-1 font-[family-name:var(--font-mono)] text-[8px] uppercase tracking-[0.1em] text-[#e9e3d7]">
         {reduceMotion ? (
