@@ -39,10 +39,22 @@
       {
         "role": "user",
         "type": "message",
-        "content": "Yes, open the One Number Changes Everything template. Inspect the project, change its main metric to 82%, validate the result, review representative frames for readability, and give me the stock-media credits. Do not export yet."
+        "content": "Yes, open the One Number Changes Everything template and continue after navigation when the editor tools appear. Use the editor state summary to find the overlay whose current text is 73%, change that main metric to 82%, validate the result, review representative frames for readability, and give me the stock-media credits. Do not export yet."
       }
     ],
     "expectedCall": [
+      {
+        "functionName": "get_capabilities",
+        "optional": true,
+        "arguments": {}
+      },
+      {
+        "functionName": "list_templates",
+        "optional": true,
+        "arguments": {
+          "kind": "editor"
+        }
+      },
       {
         "functionName": "open_template",
         "arguments": {
@@ -51,10 +63,18 @@
         }
       },
       {
-        "functionName": "editor_get_project",
-        "arguments": {
-          "aspect": "reel_9_16"
-        }
+        "functionName": "get_capabilities",
+        "optional": true,
+        "arguments": {}
+      },
+      {
+        "functionName": "editor_get_capabilities",
+        "optional": true,
+        "arguments": {}
+      },
+      {
+        "functionName": "editor_get_state_summary",
+        "arguments": {}
       },
       {
         "functionName": "editor_update_text_overlay",
@@ -64,6 +84,11 @@
           },
           "text": "82%"
         }
+      },
+      {
+        "functionName": "editor_get_state_summary",
+        "optional": true,
+        "arguments": {}
       },
       {
         "functionName": "editor_validate_project",
@@ -89,16 +114,43 @@
       {
         "role": "user",
         "type": "message",
-        "content": "Open the One Number template and tell me whether it is ready to publish, including its required credits. Stop before export and wait for my approval."
+        "content": "Open the One Number template, continue after navigation when the editor tools appear, and tell me whether it is ready to publish, including its required credits. Stop before export and wait for my approval."
       }
     ],
     "expectedCall": [
+      {
+        "functionName": "get_capabilities",
+        "optional": true,
+        "arguments": {}
+      },
+      {
+        "functionName": "list_templates",
+        "optional": true,
+        "arguments": {
+          "kind": "editor"
+        }
+      },
       {
         "functionName": "open_template",
         "arguments": {
           "templateId": "one-number",
           "confirmed": true
         }
+      },
+      {
+        "functionName": "get_capabilities",
+        "optional": true,
+        "arguments": {}
+      },
+      {
+        "functionName": "editor_get_capabilities",
+        "optional": true,
+        "arguments": {}
+      },
+      {
+        "functionName": "editor_get_state_summary",
+        "optional": true,
+        "arguments": {}
       },
       {
         "functionName": "editor_validate_project",

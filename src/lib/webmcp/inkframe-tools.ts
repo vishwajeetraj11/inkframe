@@ -169,6 +169,10 @@ export const createInkframeWebMcpTools = (
       product: "Inkframe",
       capabilities: ["media-editor", "motion-templates", "mp4-export"],
       routes: INKFRAME_ROUTES.map(({ id, path, label, description }) => ({ id, path, label, description })),
+      editorTools: {
+        availableOn: "/editor",
+        nextAction: "After navigating to the editor, continue with the editor_* tools registered by that page.",
+      },
     }),
   ),
   tool(
@@ -195,13 +199,18 @@ export const createInkframeWebMcpTools = (
   ),
   tool(
     "open_template",
-    "Open a validated editor template in the Inkframe media editor. Explicit confirmation is required because navigation can discard unsaved work.",
+    "Open a validated template. After navigation, continue the requested workflow with the editor_* tools registered by the destination page. Explicit confirmation is required because navigation can discard unsaved work.",
     z.object({ templateId: editorTemplateIdSchema, confirmed: z.literal(true) }).strict(),
     async ({ templateId }) => {
       if (!getTemplateDefinition(templateId)) throw new Error("Unknown editor template");
       const path = `/editor?template=${templateId}` as const;
       await context.navigate(path);
-      return toJson({ ok: true, templateId, path });
+      return toJson({
+        ok: true,
+        templateId,
+        path,
+        nextAction: "Continue on the destination page with editor_* tools; do not stop after opening the template.",
+      });
     },
     false,
   ),

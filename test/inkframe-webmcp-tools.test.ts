@@ -21,6 +21,7 @@ describe("Inkframe WebMCP tools", () => {
 
     const capabilities = tools[0];
     const capabilitiesResult = JSON.parse(await capabilities.execute({}, executeOptions));
+    expect(capabilitiesResult.editorTools.availableOn).toBe("/editor");
     expect(capabilitiesResult.routes.map((route: { path: string }) => route.path)).toEqual([
       "/",
       "/editor",
@@ -61,8 +62,11 @@ describe("Inkframe WebMCP tools", () => {
     expect(navigate).toHaveBeenCalledWith("/templates");
     await openTemplate.execute({ templateId: "agent-demo-reel", confirmed: true }, executeOptions);
     expect(navigate).toHaveBeenCalledWith("/editor?template=agent-demo-reel");
-    await openTemplate.execute({ templateId: "one-number", confirmed: true }, executeOptions);
+    const openResult = JSON.parse(
+      await openTemplate.execute({ templateId: "one-number", confirmed: true }, executeOptions),
+    );
     expect(navigate).toHaveBeenCalledWith("/editor?template=one-number");
+    expect(openResult.nextAction).toContain("editor_* tools");
     await expect(openTemplate.execute({ templateId: "documentary-cut", confirmed: true }, executeOptions)).rejects.toThrow();
 
     await expect(navigateTool.execute({ route: "https://example.com", confirmed: true }, executeOptions)).rejects.toThrow();
