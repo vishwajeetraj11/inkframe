@@ -22,6 +22,7 @@ describe("Inkframe WebMCP tools", () => {
     const capabilities = tools[0];
     const capabilitiesResult = JSON.parse(await capabilities.execute({}, executeOptions));
     expect(capabilitiesResult.routes.map((route: { path: string }) => route.path)).toContain("/text-motion");
+    expect(capabilitiesResult.routes.map((route: { path: string }) => route.path)).not.toContain("/remote-renderer");
     expect(capabilitiesResult.routes.map((route: { path: string }) => route.path)).not.toContain("https://example.com");
 
     const list = tools[1];

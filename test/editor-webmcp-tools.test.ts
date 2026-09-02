@@ -16,7 +16,7 @@ const setup = () => {
     state = { ...state, present: editorReducer(state.present, action) };
   };
   const callbacks = {
-    addRemotionSfx: async () => undefined,
+    addSoundEffect: async () => undefined,
     applyAIEditorActions: async () => ({ ok: true, message: "Applied" }),
     requestExport: vi.fn(async () => ({ ok: true, message: "Exported" })),
     removeAsset: async () => ({ ok: true, message: "Removed" }),
@@ -48,7 +48,7 @@ describe("editor WebMCP tools", () => {
       "editor_get_project",
       "editor_list_style_presets",
       "editor_list_assets",
-      "editor_list_remotion_sfx",
+      "editor_list_sound_effects",
       "editor_request_media_picker",
       "editor_switch_canvas",
       "editor_select_timeline_item",
@@ -62,7 +62,7 @@ describe("editor WebMCP tools", () => {
       "editor_remove_crossfade",
       "editor_update_audio_track",
       "editor_remove_audio_track",
-      "editor_add_remotion_sfx",
+      "editor_add_sound_effect",
       "editor_apply_ai_editor_actions",
       "editor_request_export",
       "editor_remove_asset",

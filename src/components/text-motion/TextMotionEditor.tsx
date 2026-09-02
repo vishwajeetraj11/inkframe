@@ -3,14 +3,13 @@
 import Link from "next/link";
 import { Download, Film, ImagePlus, Trash2 } from "lucide-react";
 import { ASPECT_PRESETS } from "@/lib/editor/constants";
-import { TextMotionComposition } from "@/remotion/TextMotionComposition";
-import { Player } from "@remotion/player";
 import { TextMotionThemePanel } from "./TextMotionThemePanel";
 import { TextMotionToolbar } from "./TextMotionToolbar";
 import { ALEXANDER_DEMO_PROMPT } from "./constants";
 import { TextMotionSceneList } from "./TextMotionSceneList";
 import { useTextMotionProject } from "./hooks/use-text-motion-project";
 import { useTextMotionWebMcp } from "./hooks/use-text-motion-webmcp";
+import { ElahTextMotionPreview } from "./ElahTextMotionPreview";
 
 export const TextMotionEditor = () => {
   const project = useTextMotionProject();
@@ -136,19 +135,7 @@ export const TextMotionEditor = () => {
                       : "min(100%, 62rem)",
                 }}
               >
-                <Player
-                  component={TextMotionComposition}
-                  inputProps={project.inputProps}
-                  durationInFrames={project.durationInFrames}
-                  compositionWidth={preset.width}
-                  compositionHeight={preset.height}
-                  fps={preset.fps}
-                  acknowledgeRemotionLicense
-                  controls
-                  loop
-                  initialFrame={Math.min(10, Math.max(0, project.durationInFrames - 1))}
-                  style={{ width: "100%", height: "100%" }}
-                />
+                <ElahTextMotionPreview project={project.safeProject} />
               </div>
             </div>
 

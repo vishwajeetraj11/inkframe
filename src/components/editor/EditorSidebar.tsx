@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import type { RemotionSfxId } from "@/lib/editor/remotion-sfx";
+import type { SoundEffectId } from "@/lib/editor/sound-effects";
 import type { AssetKind } from "@/lib/editor/types";
 import { MediaLibrary } from "@/components/editor/MediaLibrary";
 
@@ -16,7 +16,7 @@ interface EditorSidebarProps {
   isExporting: boolean;
   assets: MediaLibraryAsset[];
   onFilesSelected: (files: FileList | null) => void;
-  onAddRemotionSfx: (effectId: RemotionSfxId) => void;
+  onAddSoundEffect: (effectId: SoundEffectId) => void;
   onRemoveAsset: (assetId: string) => void;
 }
 
@@ -24,7 +24,7 @@ export const EditorSidebar = ({
   isExporting,
   assets,
   onFilesSelected,
-  onAddRemotionSfx,
+  onAddSoundEffect,
   onRemoveAsset,
 }: EditorSidebarProps) => {
   return (
@@ -58,7 +58,7 @@ export const EditorSidebar = ({
           assets={assets}
           disabled={isExporting}
           onFilesSelected={onFilesSelected}
-          onAddRemotionSfx={onAddRemotionSfx}
+          onAddSoundEffect={onAddSoundEffect}
           onRemoveAsset={onRemoveAsset}
         />
       </div>

@@ -2,9 +2,9 @@
 
 import { useRef } from "react";
 import {
-  REMOTION_SFX_LIBRARY,
-  type RemotionSfxId,
-} from "@/lib/editor/remotion-sfx";
+  SOUND_EFFECT_LIBRARY,
+  type SoundEffectId,
+} from "@/lib/editor/sound-effects";
 import type { AssetKind } from "@/lib/editor/types";
 
 interface MediaLibraryAsset {
@@ -18,7 +18,7 @@ interface MediaLibraryAsset {
 interface MediaLibraryProps {
   assets: MediaLibraryAsset[];
   onFilesSelected: (files: FileList | null) => void;
-  onAddRemotionSfx: (effectId: RemotionSfxId) => void;
+  onAddSoundEffect: (effectId: SoundEffectId) => void;
   onRemoveAsset: (assetId: string) => void;
   disabled?: boolean;
 }
@@ -38,7 +38,7 @@ const kindLabel: Record<AssetKind, string> = {
 export const MediaLibrary = ({
   assets,
   onFilesSelected,
-  onAddRemotionSfx,
+  onAddSoundEffect,
   onRemoveAsset,
   disabled,
 }: MediaLibraryProps) => {
@@ -148,12 +148,12 @@ export const MediaLibrary = ({
           Add a short cue at the current end of the sequence.
         </p>
         <div className="grid grid-cols-2 gap-1.5 pb-3">
-          {REMOTION_SFX_LIBRARY.map((effect) => (
+          {SOUND_EFFECT_LIBRARY.map((effect) => (
             <button
               key={effect.id}
               type="button"
               disabled={disabled}
-              onClick={() => onAddRemotionSfx(effect.id)}
+              onClick={() => onAddSoundEffect(effect.id)}
               className="min-h-12 border border-white/10 px-2 py-2 text-left text-[11px] font-medium text-neutral-200 outline-none transition hover:border-amber-300/40 hover:bg-amber-300/[0.06] focus-visible:ring-2 focus-visible:ring-cyan-300 disabled:cursor-not-allowed disabled:opacity-50"
             >
               {effect.label}

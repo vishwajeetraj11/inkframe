@@ -6,7 +6,10 @@ import { EditorSidebar } from "@/components/editor/EditorSidebar";
 import { EditorRightSidebar } from "@/components/editor/EditorRightSidebar";
 import { PreviewPane } from "@/components/editor/PreviewPane";
 import { TimelineResizeHandle } from "@/components/editor/TimelineResizeHandle";
-import { ElahTimelineDock } from "@/components/editor/elah";
+import {
+  ElahEditorWorkspace,
+  ElahTimelineDock,
+} from "@/components/editor/elah";
 import { createDefaultTextOverlay } from "@/lib/editor/defaults";
 import { nanoid } from "nanoid";
 import { useState, type CSSProperties } from "react";
@@ -15,7 +18,6 @@ import { useEditorSession } from "./hooks/use-editor-session";
 
 interface EditorAppProps {
   enableAIChat: boolean;
-  isVercelDeployment: boolean;
 }
 
 const DEFAULT_TIMELINE_HEIGHT = 188;
@@ -24,9 +26,8 @@ const MAX_TIMELINE_HEIGHT = 360;
 
 export const EditorApp = ({
   enableAIChat,
-  isVercelDeployment,
 }: EditorAppProps) => {
-  const session = useEditorSession({ isVercelDeployment });
+  const session = useEditorSession();
   const [timelineHeight, setTimelineHeight] = useState(DEFAULT_TIMELINE_HEIGHT);
 
   const selectClip = (clipId: string | null) => {
@@ -56,7 +57,7 @@ export const EditorApp = ({
     selectClip: (clipId) => selectClip(clipId),
     selectText: (overlayId) => selectText(overlayId),
     selectAudio: (trackId) => selectAudio(trackId),
-    addRemotionSfx: session.onAddRemotionSfx,
+    addSoundEffect: session.onAddSoundEffect,
     applyAIEditorActions: session.onApplyEditorActions,
     requestExport: (signal) => session.onExport(signal),
     removeAsset: session.onRemoveAsset,
@@ -112,16 +113,28 @@ export const EditorApp = ({
         }}
       />
 
-      <main
-        className="mx-auto grid w-full max-w-[1800px] xl:h-[calc(100dvh-54px)] xl:grid-cols-[264px_minmax(0,1fr)_320px] xl:grid-rows-[minmax(0,1fr)_var(--timeline-height)]"
-        style={{ "--timeline-height": `${timelineHeight}px` } as CSSProperties}
+      <ElahEditorWorkspace
+        version={session.activeVersion}
+        assets={session.assetList}
+        assetSources={session.previewAssetSources}
+        onVersionChange={(version) => {
+          session.dispatch({
+            type: "replace-version",
+            aspect: session.activeAspect,
+            version,
+          });
+        }}
       >
+        <main
+          className="mx-auto grid w-full max-w-[1800px] xl:h-[calc(100dvh-54px)] xl:grid-cols-[264px_minmax(0,1fr)_320px] xl:grid-rows-[minmax(0,1fr)_var(--timeline-height)]"
+          style={{ "--timeline-height": `${timelineHeight}px` } as CSSProperties}
+        >
         <div className="order-1 min-h-0 xl:order-none xl:col-start-1 xl:row-start-1">
           <EditorSidebar
             isExporting={session.isExporting}
             assets={session.assetList}
             onFilesSelected={session.onFilesSelected}
-            onAddRemotionSfx={session.onAddRemotionSfx}
+            onAddSoundEffect={session.onAddSoundEffect}
             onRemoveAsset={session.onRemoveAsset}
           />
         </div>
@@ -130,7 +143,6 @@ export const EditorApp = ({
           <PreviewPane
             aspect={session.activeAspect}
             version={session.activeVersion}
-            assetSources={session.previewAssetSources}
           />
         </div>
 
@@ -181,8 +193,6 @@ export const EditorApp = ({
           />
           <ElahTimelineDock
             version={session.activeVersion}
-            assets={session.assetList}
-            assetSources={session.previewAssetSources}
             canUndo={session.canUndo}
             canRedo={session.canRedo}
             onUndo={session.undo}
@@ -191,16 +201,10 @@ export const EditorApp = ({
             onSelectClip={selectClip}
             onSelectText={selectText}
             onSelectAudio={selectAudio}
-            onVersionChange={(version) => {
-              session.dispatch({
-                type: "replace-version",
-                aspect: session.activeAspect,
-                version,
-              });
-            }}
           />
         </div>
-      </main>
+        </main>
+      </ElahEditorWorkspace>
 
       {enableAIChat ? (
         <AIChatDrawer

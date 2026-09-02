@@ -123,13 +123,22 @@ describe("Inkframe ↔ Elah timeline adapter", () => {
       version: 1,
     });
     expect(projected.project.tracks.every((track) => track.height === 40)).toBe(true);
-    expect(nativeClips.map((clip) => clip.type)).toEqual([
+    expect(
+      nativeClips
+        .filter((clip) => !clip.id.startsWith("inkframe-background"))
+        .map((clip) => clip.type),
+    ).toEqual([
       "video",
       "image",
       "text",
       "text",
       "audio",
     ]);
+    expect(nativeClips.find((clip) => clip.id === "inkframe-background-base")).toMatchObject({
+      type: "shape",
+      shapeKind: "rect",
+      shapeStrokeWidth: 0,
+    });
     expect(projected.project.transitions).toEqual([
       expect.objectContaining({
         id: "transition-fade",

@@ -7,14 +7,6 @@ const nextConfig: NextConfig = {
     "@elah/react",
     "@elah/timeline",
   ],
-  serverExternalPackages: [
-    "@remotion/bundler",
-    "@remotion/renderer",
-    "@remotion/vercel",
-    "@vercel/blob",
-    "@vercel/sandbox",
-    "remotion",
-  ],
   turbopack: {
     root: process.cwd(),
   },

@@ -389,7 +389,7 @@ export const createTextMotionWebMcpTools = (
       if (!context.exportProject) throw new Error("Export is unavailable");
       await context.exportProject(signal);
       assertNotAborted(signal);
-      return output({ ok: true, message: "Text motion video exported" });
+      return output({ ok: true, message: "Text motion export started; the MP4 will download when local rendering completes" });
     },
     mutation,
   ),

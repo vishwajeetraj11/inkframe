@@ -3,25 +3,14 @@
 import {
   Timeline as ElahTimeline,
   useSelectionStore,
-  type Project as ElahProject,
 } from "@elah/editor";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import type { AssetRef, VersionTimeline } from "@/lib/editor/types";
-import { sanitizeVersion } from "@/lib/editor/timeline";
-import {
-  fromElahProject,
-  toElahProject,
-  type InkframeElahSidecar,
-} from "@/lib/editor/elah-adapter";
+import { useEffect, useMemo } from "react";
+import type { VersionTimeline } from "@/lib/editor/types";
 import { detectElahBrowserCapabilities } from "@/lib/editor/elah-browser-capabilities";
-import { ElahEditorProvider } from "./ElahEditorProvider";
 import "./inkframe-elah.css";
 
 interface ElahTimelineDockProps {
   version: VersionTimeline;
-  assets: readonly AssetRef[];
-  assetSources: Readonly<Record<string, string>>;
-  onVersionChange: (version: VersionTimeline) => void;
   onSelectClip: (clipId: string | null) => void;
   onSelectText: (overlayId: string | null) => void;
   onSelectAudio: (trackId: string | null) => void;
@@ -89,9 +78,6 @@ const ElahHistoryControls = ({
 
 export const ElahTimelineDock = ({
   version,
-  assets,
-  assetSources,
-  onVersionChange,
   onSelectClip,
   onSelectText,
   onSelectAudio,
@@ -102,72 +88,17 @@ export const ElahTimelineDock = ({
   onAddTrack,
 }: ElahTimelineDockProps) => {
   const capabilities = useMemo(() => detectElahBrowserCapabilities(), []);
-  const versionSignature = useMemo(() => JSON.stringify(version), [version]);
-  const sourceSignature = useMemo(
-    () =>
-      JSON.stringify({
-        assets: assets.map(({ assetId, externalUrl }) => ({ assetId, externalUrl })),
-        assetSources,
-      }),
-    [assetSources, assets],
-  );
-  const projection = useMemo(
-    () =>
-      toElahProject(version, {
-        assets,
-        assetSources,
-        projectId: `inkframe-${version.aspect}`,
-      }),
-    [assetSources, assets, version],
-  );
-  const sidecarRef = useRef<InkframeElahSidecar>(projection.sidecar);
-  const [elahEcho, setElahEcho] = useState<{
-    project: ElahProject;
-    syncSignature: string;
-  } | null>(null);
-
-  useEffect(() => {
-    sidecarRef.current = projection.sidecar;
-  }, [projection.sidecar]);
-
-  const handleProjectChange = useCallback(
-    (project: ElahProject) => {
-      const next = fromElahProject(project, sidecarRef.current);
-      const sanitizedVersion = sanitizeVersion(next.version);
-      if (!sanitizedVersion) return;
-      sidecarRef.current = {
-        ...sidecarRef.current,
-        canonicalVersion: sanitizedVersion,
-      };
-      setElahEcho({
-        project,
-        syncSignature: `${JSON.stringify(sanitizedVersion)}:${sourceSignature}`,
-      });
-      onVersionChange(sanitizedVersion);
-    },
-    [onVersionChange, sourceSignature],
-  );
-
-  // Keep Elah's own project object after an Elah-originated edit. Reloading the
-  // freshly projected echo would churn the engine while session history remains canonical.
-  const syncSignature = `${versionSignature}:${sourceSignature}`;
-  const projectForProvider =
-    elahEcho?.syncSignature === syncSignature ? elahEcho.project : projection.project;
 
   if (!capabilities.ready.timeline) {
     return (
       <div className="flex min-h-40 items-center justify-center border border-dashed border-white/15 p-6 text-center text-sm text-neutral-400">
-        This browser cannot start the interactive timeline. The Remotion editor remains available.
+        This browser cannot start the interactive Elah timeline.
       </div>
     );
   }
 
   return (
-    <ElahEditorProvider
-      className="inkframe-elah flex h-full min-h-[240px] flex-col xl:min-h-0"
-      project={projectForProvider}
-      onProjectChange={handleProjectChange}
-    >
+    <div className="inkframe-elah flex h-full min-h-[240px] flex-col xl:min-h-0">
       <SelectionBridge
         version={version}
         onSelectClip={onSelectClip}
@@ -196,8 +127,8 @@ export const ElahTimelineDock = ({
         />
       </div>
       <div className="min-h-0 flex-1 overflow-hidden">
-        <ElahTimeline fps={projectForProvider.fps} compactSidebar sidebarWidth={136} />
+        <ElahTimeline compactSidebar sidebarWidth={136} />
       </div>
-    </ElahEditorProvider>
+    </div>
   );
 };

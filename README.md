@@ -4,16 +4,16 @@
 
 [Live app](https://inkframe-eta.vercel.app/) · [Open the editor](https://inkframe-eta.vercel.app/editor) · [WebMCP tool reference](./docs/webmcp.md)
 
-Inkframe combines Next.js, Remotion, Elah, and WebMCP to make short-form video creation a shared human-agent workflow. A browser agent can inspect the current project, compose structured scenes, adjust timeline items, switch aspect ratios, add sound effects, and request export through typed tools. The same edits stay visible and editable in the human interface.
+Inkframe combines Next.js, Elah, and WebMCP to make short-form video creation a shared human-agent workflow. A browser agent can inspect the current project, compose structured scenes, adjust timeline items, switch aspect ratios, add sound effects, and request a local browser export through typed tools. The same edits stay visible and editable in the human interface.
 
 ## The WebMCP moment
 
 Most browser agents must reverse-engineer a video editor by inspecting the DOM and clicking controls. Inkframe gives the agent the editor's real actions instead:
 
 1. **Compose:** the agent creates or edits scenes through strict, state-aware WebMCP tools.
-2. **Review:** every result appears in the same Elah timeline and Remotion preview the person uses.
+2. **Review:** every result appears in the same Elah timeline and WebGL preview the person uses.
 3. **Confirm:** destructive actions, generation, navigation, and MP4 export require explicit confirmation.
-4. **Deliver:** Remotion renders the active 9:16 or 16:9 composition and starts the download.
+4. **Deliver:** Elah renders and encodes the active 9:16 or 16:9 composition entirely in the browser, then starts the download.
 
 ### Try the judge flow
 
@@ -38,14 +38,14 @@ All WebMCP integration work was added on September 1, 2026, during the challenge
 
 - `Editor`: upload image, video, and audio assets; build clip timelines; add structured text presets; export MP4.
 - `Templates`: browse preset-driven caption and explainer layouts and deep-link into `/editor?template=<id>`.
-- `Text Motion`: generate kinetic typography storyboards with OpenAI, preview them in Remotion, and export MP4.
-- `API routes`: chat, editor export, text-motion generation, and text-motion export.
+- `Text Motion`: generate kinetic typography storyboards with OpenAI, preview them in Elah, and export MP4 locally.
+- `API routes`: AI chat and text-motion generation only; media preview and export stay in the browser.
 
 ## Main entrypoints
 
 - `/templates`: preset gallery for the editor workflow.
 - `/editor`: timeline editor with asset library, preview, inspector, and AI chat drawer.
-- `/text-motion`: AI text-motion editor and Remotion preview.
+- `/text-motion`: AI text-motion editor with Elah preview and browser-native export.
 
 ## Presets
 
@@ -81,18 +81,17 @@ Available `stylePreset` values (registered in `src/lib/editor/types.ts`):
   - Editor UI panels plus `hooks/use-editor-session.ts` for reducer state, asset lifecycle, template hydration, export, and AI-apply actions.
 - `src/components/text-motion`
   - Text-motion UI panels plus `hooks/use-text-motion-project.ts` for project state, image assets, template loading, generation, and export.
+- `src/lib/export`
+  - Elah browser-export bridge and local Blob download handling.
 - `src/server/services`
-  - Route-free orchestration for export, generation, temp-dir lifecycle, and chat context handling.
-- `src/remotion`
-  - Remotion compositions for the editor and text-motion experiences.
-  - `editor-presets/` holds one renderer file per preset; `EditorComposition.tsx` routes to them by `stylePreset`.
+  - AI generation and chat context handling only.
 
-Additional notes are in [docs/architecture.md](./docs/architecture.md). If you want a guided onboarding path, see [docs/remotion-30-day-learning-plan.md](./docs/remotion-30-day-learning-plan.md).
+Additional notes are in [docs/architecture.md](./docs/architecture.md).
 
 ## Commands
 
 - `npm run dev`: start the Next.js app locally.
-- `npm run build`: production build + create Remotion snapshot.
+- `npm run build`: production Next.js build.
 - `npm run lint`: ESLint checks.
 - `npm run typecheck`: TypeScript checks.
 - `npm run test:run`: run Vitest once.
@@ -107,22 +106,21 @@ The current safety net covers:
 - AI editor action parsing and session application
 - text-motion project sanitization
 - chat-service context parsing
-- route validation for export endpoints
-- export filename generation
+- Elah project conversion for editor and Text Motion timelines
 - film-frame-gallery data helpers
 - inspector routing for split sub-inspectors
 - regional-map-focus helpers
 - vox-timeline data helpers
-- remotion SFX helpers
-- default editor composition props
+- browser-native sound effect generation
 - route-aware WebMCP registration and cleanup
 - editor, Text Motion, and site-wide WebMCP contracts
 - browser-host compatibility for tool calls with or without cancellation context
 
 ## Runtime and data handling
 
-- Editor assets live in browser memory until export.
-- Server exports use per-request temp directories under the system temp root and clean them up after the response.
+- Editor assets stay in browser memory through preview and export.
+- Elah renders in a Web Worker and MediaBunny encodes the MP4 locally.
+- Export downloads a browser-created Blob; source media is never sent to Inkframe's server.
 - No project persistence layer is configured.
 
 ## Environment
@@ -131,10 +129,6 @@ The AI routes require:
 
 - `OPENAI_API_KEY`
 
-Vercel-hosted exports additionally require:
-
-- `new_READ_WRITE_TOKEN`
-
-On Vercel, the build creates a Remotion sandbox snapshot and stores the snapshot ID in Vercel Blob. Runtime exports restore that snapshot, render, and upload the result to Blob for download. Large editor exports that POST more than about 4.5 MB of source media to a function still need a direct-upload/blob-backed asset flow.
+No storage or render-service credentials are required for export.
 
 Optional local artifacts and generated media are kept under the workspace `artifacts/` directory when present.

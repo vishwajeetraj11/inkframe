@@ -6,7 +6,7 @@ This file provides guidance to Codex (Codex.ai/code) when working with code in t
 
 ```bash
 npm run dev          # Start Next.js dev server (Turbopack)
-npm run build        # Production build + create Remotion snapshot
+npm run build        # Production Next.js build
 npm run lint         # Run ESLint
 npm run typecheck    # Run TypeScript compiler (no emit)
 npm run test         # Run Vitest in watch mode
@@ -24,12 +24,11 @@ Tests live flat in `test/` (jsdom environment, setup in `test/setup.ts`). The `@
 
 ## Architecture
 
-**Inkframe** is a browser-based video composition tool: users assemble clips, images, audio, and text overlays into a timeline, then export as MP4. The project has four routes:
+**Inkframe** is a browser-based video composition tool: users assemble clips, images, audio, and text overlays into a timeline, then export as MP4. The project has three routes:
 
 1. **`/editor`** — Timeline-based editor (primary)
 2. **`/templates`** — Preset gallery; deep-links into `/editor?template=<id>`
 3. **`/text-motion`** — AI-generated kinetic typography composer
-4. **`/remote-renderer`** — Second entry point into `EditorShell`, used for the Vercel Sandbox render environment
 
 ### State Management
 
@@ -45,28 +44,24 @@ Each `VersionTimeline` holds `clips[]`, `textOverlays[]`, `audioTracks[]`, and `
 
 ### Preset System
 
-Text overlays use a `stylePreset` field (e.g., `"vox-timeline"`, `"editorial-stat-ring"`). Each preset is a plugin composed of:
+Text overlays use a `stylePreset` field (e.g., `"vox-timeline"`, `"editorial-stat-ring"`). Each preset is composed of:
 
 | Layer | Location |
 |---|---|
-| Remotion renderer | `src/remotion/editor-presets/{preset}.tsx` |
+| Elah projection | `src/lib/editor/elah-adapter.ts` |
 | Structured data parser (optional) | `src/lib/editor/parsers/{preset}.ts` |
 | Inspector panel (optional) | `src/components/editor/inspector/preset-inspectors/{preset}Inspector.tsx` |
 
-To add a new preset: add the string literal to `TextOverlayStylePreset` in `types.ts`, create the renderer, register it in `EditorComposition.tsx`, add it to the template catalog if needed.
+To add a new preset: add the string literal to `TextOverlayStylePreset` in `types.ts`, define its Elah-compatible typography defaults, and add it to the template catalog if needed.
 
 ### Export Pipeline
 
-Export is a server-side operation triggered via `POST /api/export` (FormData with project JSON + uploaded files). The flow:
+Export is a browser-side operation powered by Elah. The flow:
 
-1. `editor-export-service.ts` — validates assets, stages files to temp dir, inlines images as base64
-2. `render-service.ts` — dispatches to local or Vercel render path based on `shouldUseVercelSandboxRender()` (true when `VERCEL=1` + `NODE_ENV=production`)
-3. **Local**: Remotion bundler runs in-process; output written to temp file
-4. **Vercel**: A pre-built Remotion snapshot (uploaded to Blob during `npm run build`) is restored into a `@vercel/sandbox` Firecracker VM via `renderMediaOnVercel`; output is uploaded to Vercel Blob and a download URL is returned
-
-If export fails on Vercel with "No Remotion sandbox snapshot found", a redeploy is required to regenerate the snapshot.
-
-`EditorComposition.tsx` is the Remotion top-level composition that receives asset sources and routes each overlay to its preset renderer.
+1. `elah-adapter.ts` projects the active Inkframe timeline and browser asset URLs into an Elah `Project`.
+2. `elah-browser.ts` invokes Elah's lazy Web Worker exporter.
+3. Elah renders frames with its browser renderer and MediaBunny encodes MP4 locally.
+4. The resulting Blob is downloaded directly; source media never passes through an Inkframe server route.
 
 ### AI Chat Protocol
 
@@ -80,13 +75,13 @@ These are parsed by `src/lib/editor/ai-actions.ts` and applied via `applyAIEdito
 
 ### Domain Logic vs. UI
 
-`src/lib/editor/` is pure TypeScript — no React, no Remotion. It contains:
+`src/lib/editor/` is pure TypeScript — no React or DOM. It contains:
 - `types.ts` / `schema.ts` / `reducer.ts` / `constants.ts` — core editor domain
 - `domain/` — generic helpers (assets, version, render, helpers)
 - `parsers/` — per-preset structured-text parsers (parse raw text content into typed preset data)
 - Per-preset domain files (e.g. `vox-timeline.ts`, `chart-card.ts`, `editorial-stat-ring.ts`) — preset-specific business logic, co-located with but separate from the generic domain
 
-`src/components/editor/` contains all React UI. `src/remotion/` contains all Remotion rendering logic. `src/server/` contains all server-side services.
+`src/components/editor/` contains the React UI and Elah preview workspace. `src/lib/export/` contains the browser download/export bridge. `src/server/` is limited to AI services.
 
 ### Text Motion (separate workflow)
 
@@ -94,8 +89,8 @@ These are parsed by `src/lib/editor/ai-actions.ts` and applied via `applyAIEdito
 
 - `src/lib/text-motion/` — project types, defaults, Zod schema, template catalog, sanitization (pure TS, mirrors the `src/lib/editor/` split)
 - `src/components/text-motion/hooks/use-text-motion-project.ts` — the state hook (analogous to `useEditorSession`)
-- `src/remotion/TextMotionComposition.tsx` + `src/remotion/text-motion/` — scene renderers
-- `POST /api/text-motion/generate` (OpenAI storyboard generation) and `POST /api/text-motion/export` — backed by `text-motion-generate-service.ts` / `text-motion-export-service.ts` in `src/server/services/`
+- `src/lib/text-motion/elah-adapter.ts` — converts storyboards into Elah projects for preview and MP4 export
+- `POST /api/text-motion/generate` — OpenAI storyboard generation backed by `text-motion-generate-service.ts`
 
 ### Constants
 
@@ -107,4 +102,3 @@ Key values in `src/lib/editor/constants.ts`:
 ### Environment Variables
 
 - `OPENAI_API_KEY` — required for AI chat and text-motion generation
-- `new_READ_WRITE_TOKEN` — Vercel Blob token (the literal env var name; also accepted as `BLOB_READ_WRITE_TOKEN`). Required for Vercel export and snapshot storage.

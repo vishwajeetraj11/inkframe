@@ -3,7 +3,7 @@
 import { useWebMcpTools, type WebMcpToolFactory } from "@/components/webmcp/use-webmcp-tools";
 import type { AIEditorActions } from "@/lib/editor/ai-actions";
 import type { EditorHistoryState } from "@/lib/editor/history";
-import type { RemotionSfxId } from "@/lib/editor/remotion-sfx";
+import type { SoundEffectId } from "@/lib/editor/sound-effects";
 import type { EditorAction } from "@/lib/editor/reducer";
 import type { AspectPreset, AssetRef } from "@/lib/editor/types";
 import { createEditorWebMcpTools } from "@/lib/editor/webmcp/tools";
@@ -19,7 +19,7 @@ export interface EditorWebMcpBridge {
   selectClip: (clipId: string) => void;
   selectText: (overlayId: string) => void;
   selectAudio: (trackId: string) => void;
-  addRemotionSfx: (effectId: RemotionSfxId, aspect: AspectPreset) => void;
+  addSoundEffect: (effectId: SoundEffectId, aspect: AspectPreset) => void;
   applyAIEditorActions: (actions: AIEditorActions) => Promise<{ ok: boolean; message: string }>;
   requestExport: (signal: AbortSignal) => Promise<{ ok: boolean; message: string }>;
   removeAsset: (assetId: string) => void;
@@ -47,13 +47,13 @@ const createTools: WebMcpToolFactory<EditorWebMcpBridge> = (getCurrent) =>
     selectClip: (clipId) => flushSync(() => getCurrent().selectClip(clipId)),
     selectText: (overlayId) => flushSync(() => getCurrent().selectText(overlayId)),
     selectAudio: (trackId) => flushSync(() => getCurrent().selectAudio(trackId)),
-    addRemotionSfx: (effectId, aspect, signal) => {
+    addSoundEffect: (effectId, aspect, signal) => {
       if (signal.aborted) throw signal.reason;
       flushSync(() => {
         if (getCurrent().history.present.activeVersion !== aspect) {
           getCurrent().dispatch({ type: "switch-aspect", aspect });
         }
-        getCurrent().addRemotionSfx(effectId, aspect);
+        getCurrent().addSoundEffect(effectId, aspect);
       });
     },
     applyAIEditorActions: async (actions, signal) => {

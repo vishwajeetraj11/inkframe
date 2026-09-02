@@ -18,6 +18,7 @@ import type {
 
 const ELah_SCHEMA_VERSION = 1;
 const ELah_TRACK_HEIGHT = 40;
+const BACKGROUND_TRACK_ID = "inkframe-background";
 const VIDEO_TRACK_ID = "inkframe-video";
 
 export type ElahAdapterDiagnosticCode =
@@ -88,6 +89,35 @@ const durationOf = (startFrame: number, endFrame: number): number =>
 
 const clampVolume = (volume: number | undefined, fallback = 1): number =>
   Math.min(1, Math.max(0, volume ?? fallback));
+
+const backgroundPalette = (
+  preset: TextOverlay["stylePreset"],
+): { from: string; to: string; accent: string } => {
+  if (preset === "editorial-mono" || preset === "news-clipping") {
+    return { from: "#f3efe4", to: "#d8d0bf", accent: "#ff4f1f" };
+  }
+  if (preset === "sticker-cutout") {
+    return { from: "#ffd84d", to: "#ff8a4c", accent: "#14120f" };
+  }
+  if (preset.includes("map") || preset.includes("chart") || preset.includes("stat")) {
+    return { from: "#dbe4d2", to: "#b7c6a7", accent: "#244c3a" };
+  }
+  if (preset.includes("vox") || preset === "createdaley-opener") {
+    return { from: "#efe4d0", to: "#d8c6aa", accent: "#ff4f1f" };
+  }
+  return { from: "#111827", to: "#202a3d", accent: "#22d3ee" };
+};
+
+const backgroundTransform = (
+  width: number,
+  height: number,
+): ElahTransform => ({
+  x: 0.5,
+  y: 0.5,
+  scale: Math.max(width, height) / Math.min(width, height),
+  rotation: 0,
+  anchor: { x: 0.5, y: 0.5 },
+});
 
 const transformForOverlay = (overlay: TextOverlay): ElahTransform => ({
   x: overlay.x / 100,
@@ -164,6 +194,59 @@ export const toElahProject = (
   const mappedAudioTrackIds: string[] = [];
   const mappedTextOverlayIds: string[] = [];
   const mappedTransitionIds: string[] = [];
+
+  const preset = ASPECT_PRESETS[version.aspect];
+  const totalFrames = Math.max(
+    1,
+    ...version.clips.map((clip) => clip.endFrame),
+    ...version.textOverlays.map((overlay) => overlay.endFrame),
+    ...version.audioTracks.map((track) => track.endFrame),
+  );
+  const backgroundTrack = createTrack(
+    BACKGROUND_TRACK_ID,
+    "Canvas",
+    "video",
+    tracks.length,
+  );
+  tracks.push(backgroundTrack);
+  clipsByTrack[backgroundTrack.id] = [
+    {
+      id: "inkframe-background-base",
+      trackId: backgroundTrack.id,
+      type: "shape",
+      name: "Canvas background",
+      startFrame: 0,
+      durationFrames: totalFrames,
+      sourceStartFrame: 0,
+      sourceDurationFrames: totalFrames,
+      shapeKind: "rect",
+      shapeFill: backgroundPalette("classic").from,
+      shapeStrokeWidth: 0,
+      transform: backgroundTransform(preset.width, preset.height),
+      volume: 1,
+      opacity: 1,
+      locked: true,
+      disabled: false,
+    },
+    ...version.textOverlays.map((overlay) => ({
+      id: `inkframe-background-${overlay.id}`,
+      trackId: backgroundTrack.id,
+      type: "shape" as const,
+      name: `${overlay.stylePreset} background`,
+      startFrame: overlay.startFrame,
+      durationFrames: durationOf(overlay.startFrame, overlay.endFrame),
+      sourceStartFrame: 0,
+      sourceDurationFrames: durationOf(overlay.startFrame, overlay.endFrame),
+      shapeKind: "rect" as const,
+      shapeFill: backgroundPalette(overlay.stylePreset).from,
+      shapeStrokeWidth: 0,
+      transform: backgroundTransform(preset.width, preset.height),
+      volume: 1,
+      opacity: 1,
+      locked: true,
+      disabled: false,
+    })),
+  ];
 
   const videoTrack = createTrack(VIDEO_TRACK_ID, "Video", "video", tracks.length);
   tracks.push(videoTrack);
@@ -302,7 +385,6 @@ export const toElahProject = (
     mappedTransitionIds.push(transition.id);
   }
 
-  const preset = ASPECT_PRESETS[version.aspect];
   return {
     project: {
       id: options.projectId ?? `inkframe-${version.aspect}`,
@@ -406,6 +488,13 @@ export const fromElahProject = (
   const textById = new Map<string, TextOverlay>();
 
   for (const native of nativeClips) {
+    if (
+      native.trackId === BACKGROUND_TRACK_ID &&
+      native.id.startsWith("inkframe-background-")
+    ) {
+      continue;
+    }
+
     if (native.type === "video" || native.type === "image") {
       const original = canonicalClipById.get(native.id);
       const assetId = native.assetId ?? original?.assetId;

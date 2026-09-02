@@ -17,6 +17,12 @@ export interface TextMotionWebMcpBridge {
   requestImagePicker: () => void;
 }
 
+export const startTextMotionWebMcpExport = (
+  exportProject: () => Promise<{ ok: boolean; message: string }>,
+): void => {
+  void exportProject().catch(() => undefined);
+};
+
 const createTools: WebMcpToolFactory<TextMotionWebMcpBridge> = (getCurrent) =>
   createTextMotionWebMcpTools({
     getProject: () => getCurrent().project,
@@ -28,10 +34,10 @@ const createTools: WebMcpToolFactory<TextMotionWebMcpBridge> = (getCurrent) =>
       const result = await getCurrent().generate(prompt, signal);
       if (!result.ok) throw new Error(result.message);
     },
-    exportProject: async (signal) => {
-      const result = await getCurrent().exportProject(signal);
-      if (!result.ok) throw new Error(result.message);
-    },
+    exportProject: () =>
+      startTextMotionWebMcpExport(() =>
+        getCurrent().exportProject(new AbortController().signal),
+      ),
     requestImagePicker: () => getCurrent().requestImagePicker(),
   });
 

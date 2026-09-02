@@ -47,7 +47,7 @@ const barlowCondensed = Barlow_Condensed({
 
 export const metadata: Metadata = {
   title: "Inkframe Video Editor",
-  description: "Next.js + Remotion video editor for 9:16 and 16:9 exports",
+  description: "Browser-native Elah video editor for 9:16 and 16:9 exports",
 };
 
 export default function RootLayout({

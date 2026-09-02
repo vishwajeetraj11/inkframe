@@ -1,27 +1,29 @@
 "use client";
 
-import { Player } from "@remotion/player";
+import {
+  Preview as ElahPreview,
+  createDefaultDemuxerFactory,
+  usePlaybackStore,
+} from "@elah/editor";
 import { ASPECT_PRESETS } from "@/lib/editor/constants";
 import { getVersionRenderDurationInFrames } from "@/lib/editor/timeline";
 import type { AspectPreset, VersionTimeline } from "@/lib/editor/types";
-import {
-  EditorComposition,
-  type EditorCompositionProps,
-} from "@/remotion/EditorComposition";
 import { useMemo } from "react";
 
 interface PreviewPaneProps {
   aspect: AspectPreset;
   version: VersionTimeline;
-  assetSources: Record<string, string>;
 }
 
 export const PreviewPane = ({
   aspect,
   version,
-  assetSources,
 }: PreviewPaneProps) => {
   const preset = ASPECT_PRESETS[aspect] ?? ASPECT_PRESETS.reel_9_16;
+  const demuxerFactory = useMemo(() => createDefaultDemuxerFactory(), []);
+  const currentFrame = usePlaybackStore((state) => state.currentFrame);
+  const isPlaying = usePlaybackStore((state) => state.isPlaying);
+  const togglePlayPause = usePlaybackStore((state) => state.togglePlayPause);
 
   const toPositiveInt = (value: unknown, fallback: number): number => {
     const numeric = typeof value === "number" ? value : Number(value);
@@ -45,26 +47,7 @@ export const PreviewPane = ({
     computedDurationInFrames = 1;
   }
 
-  // Remotion's seek bar divides by (durationInFrames - 1); a 1-frame duration
-  // would produce NaN widths, so the player needs at least 2 frames.
-  const safeDurationInFrames = Math.max(2, toPositiveInt(computedDurationInFrames, 1));
-
-  const aspectRatioCandidate = safeWidth / safeHeight;
-  const safeAspectRatio = Number.isFinite(aspectRatioCandidate) && aspectRatioCandidate > 0
-    ? aspectRatioCandidate
-    : 1080 / 1920;
-  const safePaddingTopPercent = Number.isFinite(safeAspectRatio) && safeAspectRatio > 0
-    ? `${(1 / safeAspectRatio) * 100}%`
-    : `${(1920 / 1080) * 100}%`;
-
-  const inputProps = useMemo<EditorCompositionProps>(
-    () => ({
-      version,
-      assetSources,
-      renderMode: "preview",
-    }),
-    [version, assetSources],
-  );
+  const safeDurationInFrames = Math.max(1, toPositiveInt(computedDurationInFrames, 1));
   const previewDurationSeconds = hasRenderableVisual
     ? (safeDurationInFrames / safeFps).toFixed(2)
     : "0.00";
@@ -107,38 +90,32 @@ export const PreviewPane = ({
             maxWidth: stageMaxWidth,
           }}
         >
-          <div
-            style={{
-              position: "relative",
-              width: "100%",
-              paddingTop: safePaddingTopPercent,
-            }}
-          >
-            <div
-              style={{
-                position: "absolute",
-                inset: 0,
-              }}
-            >
+          <div className="relative w-full" style={{ aspectRatio: `${safeWidth} / ${safeHeight}` }}>
+            <div className="absolute inset-0">
               {hasRenderableVisual ? (
-                <Player
-                  key={`${safeWidth}x${safeHeight}@${safeFps}`}
-                  component={EditorComposition}
-                  inputProps={inputProps}
-                  durationInFrames={safeDurationInFrames}
-                  compositionWidth={safeWidth}
-                  compositionHeight={safeHeight}
-                  fps={safeFps}
-                  acknowledgeRemotionLicense
-                  style={{
-                    width: "100%",
-                    height: "100%",
-                    backgroundColor: "black",
-                  }}
-                  controls
-                  autoPlay={false}
-                  loop
-                />
+                <>
+                  <ElahPreview
+                    demuxerFactory={demuxerFactory}
+                    clearColor={[0.02, 0.02, 0.025, 1]}
+                    className="h-full w-full"
+                    style={{ width: "100%", height: "100%" }}
+                  />
+                  <div className="absolute inset-x-0 bottom-0 z-20 flex min-h-10 items-center gap-3 border-t border-white/10 bg-black/75 px-3 backdrop-blur-sm">
+                    <button
+                      type="button"
+                      onClick={togglePlayPause}
+                      className="min-h-9 px-2 text-[10px] font-semibold uppercase tracking-[0.1em] text-neutral-100 outline-none hover:bg-white/10 focus-visible:ring-2 focus-visible:ring-cyan-300"
+                    >
+                      {isPlaying ? "Pause" : "Play"}
+                    </button>
+                    <span className="app-data text-[10px] text-neutral-300">
+                      {(currentFrame / safeFps).toFixed(2)} / {(safeDurationInFrames / safeFps).toFixed(2)}s
+                    </span>
+                    <span className="ml-auto app-data text-[9px] uppercase tracking-[0.1em] text-cyan-200">
+                      Browser preview
+                    </span>
+                  </div>
+                </>
               ) : (
                 <div className="grid h-full place-items-center bg-[radial-gradient(circle_at_50%_38%,#263047,#111827_72%)] px-6 text-center">
                   <div>

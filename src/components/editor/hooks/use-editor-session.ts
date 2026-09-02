@@ -12,20 +12,22 @@ import {
   createDefaultClip,
   createDefaultTextOverlay,
 } from "@/lib/editor/defaults";
-import {
-  getFilenameFromContentDisposition,
-  isExportDownloadPayload,
-  triggerBrowserDownload,
-} from "@/lib/export/download";
+import { exportElahProjectInBrowser } from "@/lib/export/elah-browser";
+import { toElahProject } from "@/lib/editor/elah-adapter";
+import { detectElahBrowserCapabilities } from "@/lib/editor/elah-browser-capabilities";
 import {
   createInitialEditorHistory,
   editorHistoryReducer,
 } from "@/lib/editor/history";
-import { getRemotionSfxById, type RemotionSfxId } from "@/lib/editor/remotion-sfx";
+import {
+  getSoundEffectById,
+  getSoundEffectDataUrl,
+  type SoundEffectId,
+} from "@/lib/editor/sound-effects";
 import { isSupportedImageMimeType, assetKindFromMimeType } from "@/lib/editor/schema";
 import { getTemplateDefinition } from "@/lib/editor/templates";
 import { collectUsedAssetIds, getTimelineDurationInFrames } from "@/lib/editor/timeline";
-import type { AspectPreset, ExportProject } from "@/lib/editor/types";
+import type { AspectPreset } from "@/lib/editor/types";
 import { useSearchParams } from "next/navigation";
 import { nanoid } from "nanoid";
 import { useEffect, useMemo, useReducer, useRef, useState } from "react";
@@ -33,26 +35,18 @@ import { flushSync } from "react-dom";
 import { applyAIEditorActions } from "./editor-session-ai";
 import {
   ALL_ASPECTS,
-  bytesToLabel,
   getAssetTooLargeMessage,
   OVERLAY_DEFAULTS_BY_PRESET,
   sanitizeUploadFilename,
-  toAssetRef,
 } from "./editor-session-config";
 import type { ExportActionResult, LocalAsset } from "./editor-session-types";
-
-const VERCEL_FUNCTION_BODY_LIMIT_BYTES = 4_500_000;
 
 const getStarterAssetFilename = (publicPath: string): string => {
   const filename = publicPath.split("/").filter(Boolean).pop();
   return filename ? sanitizeUploadFilename(filename) : "starter-asset";
 };
 
-export const useEditorSession = ({
-  isVercelDeployment = false,
-}: {
-  isVercelDeployment?: boolean;
-} = {}) => {
+export const useEditorSession = () => {
   const searchParams = useSearchParams();
   const [history, dispatch] = useReducer(
     editorHistoryReducer,
@@ -406,18 +400,18 @@ export const useEditorSession = ({
     setStatusMessage(rejectedMessages.length > 0 ? rejectedMessages.join(" ") : null);
   };
 
-  const onAddRemotionSfx = (
-    effectId: RemotionSfxId,
+  const onAddSoundEffect = (
+    effectId: SoundEffectId,
     targetAspect: AspectPreset = activeAspect,
   ): void => {
     if (isExporting) {
       return;
     }
 
-    const effect = getRemotionSfxById(effectId);
+    const effect = getSoundEffectById(effectId);
 
     if (!effect) {
-      setStatusMessage("Could not find that Remotion sound effect.");
+      setStatusMessage("Could not find that sound effect.");
       return;
     }
 
@@ -432,7 +426,7 @@ export const useEditorSession = ({
         mimeType: "audio/wav",
         name: effect.label,
         size: 0,
-        externalUrl: effect.url,
+        externalUrl: getSoundEffectDataUrl(effect),
       },
     }));
 
@@ -449,7 +443,7 @@ export const useEditorSession = ({
     setSelectedAudioId(trackId);
     setSelectedClipId(null);
     setSelectedTextId(null);
-    setStatusMessage(`Added ${effect.label} from Remotion SFX.`);
+    setStatusMessage(`Added ${effect.label}.`);
   };
 
   const onExport = async (signal?: AbortSignal): Promise<ExportActionResult> => {
@@ -484,86 +478,40 @@ export const useEditorSession = ({
     setStatusMessage(null);
 
     try {
-      const usedAssets = Array.from(usedAssetIds, (assetId) => currentAssets[assetId]).filter(
-        (asset): asset is LocalAsset => Boolean(asset),
-      );
-      const uploadedAssets = usedAssets.filter(
-        (asset): asset is LocalAsset & { file: File } => Boolean(asset.file),
-      );
-      const totalUploadBytes = uploadedAssets.reduce((sum, asset) => sum + asset.file.size, 0);
-
-      if (
-        isVercelDeployment &&
-        totalUploadBytes > VERCEL_FUNCTION_BODY_LIMIT_BYTES
-      ) {
-        const message = `This export includes ${bytesToLabel(
-          totalUploadBytes,
-        )} of media, but Vercel Functions only accept about 4.5 MB per request. Export locally for now, or move source uploads to Blob-backed storage.`;
-        setStatusMessage(message);
-        return { ok: false, message };
-      }
-
-      const payload: ExportProject = {
-        activeVersion: currentProject.activeVersion,
-        versions: currentProject.versions,
-        assets: Object.values(currentAssets).map(toAssetRef),
-      };
-
-      const formData = new FormData();
-      formData.append("project", JSON.stringify(payload));
-
-      for (const asset of uploadedAssets) {
-        formData.append(
-          "assets",
-          asset.file,
-          `${asset.assetId}__${sanitizeUploadFilename(asset.name)}`,
+      const capabilities = detectElahBrowserCapabilities();
+      if (!capabilities.ready.videoExport) {
+        throw new Error(
+          `This browser cannot export video yet. Missing: ${capabilities.missing.videoExport.join(", ")}.`,
         );
       }
 
-      const response = await fetch("/api/export", {
-        method: "POST",
-        body: formData,
+      const assetSources = Object.fromEntries(
+        Object.values(currentAssets)
+          .map((asset) => [asset.assetId, asset.objectUrl ?? asset.externalUrl] as const)
+          .filter((entry): entry is readonly [string, string] => Boolean(entry[1])),
+      );
+      const projection = toElahProject(currentVersion, {
+        assets: Object.values(currentAssets),
+        assetSources,
+        projectId: `inkframe-export-${currentAspect}`,
+      });
+      const missingSources = projection.diagnostics.filter(
+        (diagnostic) => diagnostic.code === "missing-asset-source",
+      );
+      if (missingSources.length > 0) {
+        throw new Error(missingSources[0]?.message ?? "A media source is unavailable.");
+      }
+
+      await exportElahProjectInBrowser(projection.project, {
+        filename: `inkframe-${currentAspect}-${Date.now()}.mp4`,
         signal,
+        onProgress: ({ frame, totalFrames }) => {
+          const percent = totalFrames > 0 ? Math.round((frame / totalFrames) * 100) : 0;
+          setStatusMessage(`Rendering locally in Elah… ${percent}%`);
+        },
       });
 
-      if (!response.ok) {
-        const errorPayload = await response.json().catch(() => null);
-        const message =
-          errorPayload && typeof errorPayload.error === "string"
-            ? errorPayload.error
-            : "Export failed.";
-
-        throw new Error(message);
-      }
-
-      const contentType = response.headers.get("Content-Type") ?? "";
-
-      if (contentType.includes("application/json")) {
-        const payload = await response.json().catch(() => null);
-
-        if (!isExportDownloadPayload(payload)) {
-          throw new Error("Export finished, but the download link was malformed.");
-        }
-
-        triggerBrowserDownload({
-          url: payload.downloadUrl,
-          filename: payload.filename,
-        });
-      } else {
-        const renderedVideo = await response.blob();
-        const url = URL.createObjectURL(renderedVideo);
-        const filename =
-          getFilenameFromContentDisposition(
-            response.headers.get("Content-Disposition"),
-          ) ?? `${currentProject.activeVersion}.mp4`;
-        triggerBrowserDownload({
-          url,
-          filename,
-        });
-        URL.revokeObjectURL(url);
-      }
-
-      const message = "Video rendered successfully and download started.";
+      const message = "Video rendered locally and download started.";
       setStatusMessage(message);
       return { ok: true, message };
     } catch (error) {
@@ -721,7 +669,7 @@ export const useEditorSession = ({
     canRedo: history.future.length > 0,
     canUndo: history.past.length > 0,
     onApplyEditorActions,
-    onAddRemotionSfx,
+    onAddSoundEffect,
     onExport,
     onFilesSelected,
     onRemoveAsset,

@@ -45,7 +45,7 @@ describe("UX regressions", () => {
         isExporting={false}
         assets={[]}
         onFilesSelected={vi.fn()}
-        onAddRemotionSfx={vi.fn()}
+        onAddSoundEffect={vi.fn()}
         onRemoveAsset={vi.fn()}
       />,
     );

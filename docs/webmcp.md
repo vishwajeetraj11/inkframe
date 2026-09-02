@@ -25,7 +25,7 @@ Discovery and inspection:
 - `editor_get_project`
 - `editor_list_assets`
 - `editor_list_style_presets`
-- `editor_list_remotion_sfx`
+- `editor_list_sound_effects`
 
 Workspace and timeline actions:
 
@@ -42,7 +42,7 @@ Workspace and timeline actions:
 - `editor_remove_crossfade`
 - `editor_update_audio_track`
 - `editor_remove_audio_track`
-- `editor_add_remotion_sfx`
+- `editor_add_sound_effect`
 - `editor_apply_ai_editor_actions`
 - `editor_request_export`
 - `editor_remove_asset`
@@ -77,7 +77,7 @@ page unregisters its tools with an `AbortController` when it unmounts. Local
 media never crosses the structured WebMCP boundary: picker tools open the
 existing browser file controls and the user chooses files directly.
 
-Navigation, deletion, structured AI replacement, generation, and export tools require a
+Navigation, deletion, structured AI replacement, generation, and browser export tools require a
 strict `confirmed: true` input. This explicit guard supplements the current
 WebMCP draft while its native elicitation contract remains unsettled.
 

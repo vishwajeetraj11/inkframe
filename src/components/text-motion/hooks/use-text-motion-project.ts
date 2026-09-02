@@ -1,10 +1,8 @@
 "use client";
 
-import {
-  getFilenameFromContentDisposition,
-  isExportDownloadPayload,
-  triggerBrowserDownload,
-} from "@/lib/export/download";
+import { exportElahProjectInBrowser } from "@/lib/export/elah-browser";
+import { detectElahBrowserCapabilities } from "@/lib/editor/elah-browser-capabilities";
+import { toElahTextMotionProject } from "@/lib/text-motion/elah-adapter";
 import { createDefaultTextMotionProject } from "@/lib/text-motion/defaults";
 import {
   MAX_TEXT_MOTION_DURATION_FRAMES,
@@ -18,7 +16,6 @@ import {
   TEXT_MOTION_TEMPLATE_DEFINITIONS,
 } from "@/lib/text-motion/templates";
 import { useMemo, useState } from "react";
-import type { TextMotionCompositionProps } from "@/remotion/TextMotionComposition";
 import {
   createImageAssetsFromFiles,
   createTextMotionScene,
@@ -44,10 +41,6 @@ export const useTextMotionProject = () => {
 
   const safeProject = useMemo(() => sanitizeTextMotionProject(project), [project]);
   const durationInFrames = getTextMotionDurationInFrames(safeProject);
-  const inputProps = useMemo<TextMotionCompositionProps>(
-    () => ({ project: safeProject }),
-    [safeProject],
-  );
   const imageAssetMap = useMemo(
     () => new Map(safeProject.imageAssets.map((asset) => [asset.id, asset])),
     [safeProject.imageAssets],
@@ -188,50 +181,21 @@ export const useTextMotionProject = () => {
     setStatusMessage(null);
 
     try {
-      const response = await fetch("/api/text-motion/export", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ project: safeProject }),
-        signal,
-      });
-
-      if (!response.ok) {
-        const payload = await response.json().catch(() => null);
+      const capabilities = detectElahBrowserCapabilities();
+      if (!capabilities.ready.videoExport) {
         throw new Error(
-          payload && typeof payload.error === "string"
-            ? payload.error
-            : "Failed to export text motion video.",
+          `This browser cannot export video yet. Missing: ${capabilities.missing.videoExport.join(", ")}.`,
         );
       }
 
-      const contentType = response.headers.get("Content-Type") ?? "";
-
-      if (contentType.includes("application/json")) {
-        const payload = await response.json().catch(() => null);
-
-        if (!isExportDownloadPayload(payload)) {
-          throw new Error("Export finished, but the download link was malformed.");
-        }
-
-        triggerBrowserDownload({
-          url: payload.downloadUrl,
-          filename: payload.filename,
-        });
-      } else {
-        const blob = await response.blob();
-        const url = URL.createObjectURL(blob);
-        const filename =
-          getFilenameFromContentDisposition(
-            response.headers.get("Content-Disposition"),
-          ) ?? `text-motion-${safeProject.aspect}.mp4`;
-        triggerBrowserDownload({
-          url,
-          filename,
-        });
-        URL.revokeObjectURL(url);
-      }
+      await exportElahProjectInBrowser(toElahTextMotionProject(safeProject), {
+        filename: `text-motion-${safeProject.aspect}-${Date.now()}.mp4`,
+        signal,
+        onProgress: ({ frame, totalFrames }) => {
+          const percent = totalFrames > 0 ? Math.round((frame / totalFrames) * 100) : 0;
+          setStatusMessage(`Rendering locally in Elah… ${percent}%`);
+        },
+      });
 
       const message = "Text motion video exported.";
       setStatusMessage(message);
@@ -300,7 +264,6 @@ export const useTextMotionProject = () => {
   return {
     durationInFrames,
     imageAssetMap,
-    inputProps,
     isExporting,
     isGenerating,
     loadTemplate,

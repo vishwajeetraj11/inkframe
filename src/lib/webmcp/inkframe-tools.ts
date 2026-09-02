@@ -37,12 +37,6 @@ export const INKFRAME_ROUTES = [
     label: "AI Text Motion",
     description: "Create beat-synced kinetic typography.",
   },
-  {
-    id: "remote-renderer",
-    path: "/remote-renderer",
-    label: "Remote Renderer",
-    description: "Renderer entry point used by the export environment.",
-  },
 ] as const;
 
 type InkframeRouteId = (typeof INKFRAME_ROUTES)[number]["id"];

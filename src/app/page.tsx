@@ -312,7 +312,7 @@ function AgentProofSection() {
           <p className="mt-6 max-w-lg text-sm leading-6 sm:text-base" style={{ color: `${BONE}a6` }}>
             Inkframe exposes real editing actions to browser agents. The agent builds in the
             same visible timeline you use; you keep creative control and explicitly confirm
-            export before Remotion renders the MP4.
+            export before Elah renders the MP4 locally in your browser.
           </p>
         </div>
 
@@ -442,7 +442,12 @@ export default function Home() {
             <HeroLine delay={0.1}>Every word</HeroLine>
             <HeroLine
               delay={0.22}
-              style={{ WebkitTextStroke: `1.5px ${BONE}`, color: "transparent" }}
+              style={{
+                WebkitTextStroke: `1px ${BONE}`,
+                WebkitTextFillColor: INK,
+                paintOrder: "stroke fill",
+                letterSpacing: "0.01em",
+              }}
             >
               earns its
             </HeroLine>
@@ -525,7 +530,7 @@ export default function Home() {
             fps 30 / max 60s / 1800 frames
           </span>
           <span className="app-data text-[11px] uppercase" style={{ color: `${BONE}59` }}>
-            next.js + remotion
+            next.js + elah
           </span>
         </footer>
       </div>
