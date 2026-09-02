@@ -5,16 +5,8 @@ import {
 } from "@/lib/editor/templates";
 
 describe("editor template catalog", () => {
-  it("only exposes templates with complete Elah-native timelines", () => {
-    expect(TEMPLATE_DEFINITIONS.map((template) => template.id)).toEqual([
-      "editorial-explainer",
-      "product-reveal",
-      "social-promo",
-      "documentary-cut",
-      "data-pulse",
-      "quote-reel",
-    ]);
-    expect(TEMPLATE_DEFINITIONS.every((template) => template.blueprint)).toBe(true);
+  it("exposes an empty catalog while the library is being rebuilt", () => {
+    expect(TEMPLATE_DEFINITIONS).toEqual([]);
   });
 
   it("returns null for unknown templates", () => {
@@ -39,12 +31,4 @@ describe("editor template catalog", () => {
     expect(getTemplateDefinition("film-frame-gallery")).toBeNull();
   });
 
-  it("resolves the replacement native templates with starter media", () => {
-    expect(getTemplateDefinition("documentary-cut")).toMatchObject({
-      name: "Documentary Cut",
-      stylePreset: "classic",
-    });
-    expect(getTemplateDefinition("data-pulse")?.starterAssets).toHaveLength(3);
-    expect(getTemplateDefinition("quote-reel")?.starterAssets).toHaveLength(3);
-  });
 });

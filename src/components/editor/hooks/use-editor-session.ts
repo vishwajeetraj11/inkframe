@@ -17,6 +17,7 @@ import {
   ELAH_BROWSER_EXPORT_PROFILE,
   exportElahProjectInBrowser,
 } from "@/lib/export/elah-browser";
+import { verifyBrowserVideo } from "@/lib/export/verify-browser-video";
 import { toElahProject } from "@/lib/editor/elah-adapter";
 import { detectElahBrowserCapabilities } from "@/lib/editor/elah-browser-capabilities";
 import {
@@ -35,7 +36,11 @@ import {
   getTimelineDurationInFrames,
   getVersionRenderDurationInFrames,
 } from "@/lib/editor/timeline";
-import { loadProjectSnapshot, saveProjectSnapshot } from "@/lib/editor/project-storage";
+import {
+  getProjectStorageErrorMessage,
+  loadProjectSnapshot,
+  saveProjectSnapshot,
+} from "@/lib/editor/project-storage";
 import type { AspectPreset } from "@/lib/editor/types";
 import type { AudioUrlImportInput } from "@/lib/editor/webmcp/tools";
 import type { LicensedAudioImportInput } from "@/lib/editor/webmcp/tools";
@@ -66,6 +71,7 @@ import {
 } from "./editor-session-config";
 import type {
   EditorExportState,
+  EditorStorageStatus,
   ExportActionResult,
   LocalAsset,
 } from "./editor-session-types";
@@ -101,15 +107,18 @@ export const useEditorSession = () => {
   const [isExporting, setIsExporting] = useState(false);
   const [exportState, setExportState] = useState<EditorExportState>(EMPTY_EXPORT_STATE);
   const [isStorageReady, setIsStorageReady] = useState(false);
+  const [storageStatus, setStorageStatus] = useState<EditorStorageStatus>("loading");
 
   const objectUrlsRef = useRef<Set<string>>(new Set());
   const hydratedTemplateIdRef = useRef<string | null>(null);
-  const hasHydratedStorageRef = useRef(false);
   const projectRef = useRef(project);
   const assetsRef = useRef(assets);
   const exportStateRef = useRef<EditorExportState>(EMPTY_EXPORT_STATE);
   const exportControllerRef = useRef<AbortController | null>(null);
   const exportInFlightRef = useRef(false);
+  const exportArtifactUrlRef = useRef<string | null>(null);
+  const saveQueueRef = useRef<Promise<unknown>>(Promise.resolve());
+  const saveGenerationRef = useRef(0);
 
   projectRef.current = project;
   assetsRef.current = assets;
@@ -132,12 +141,19 @@ export const useEditorSession = () => {
         URL.revokeObjectURL(url);
       }
       objectUrls.clear();
+      if (exportArtifactUrlRef.current) {
+        URL.revokeObjectURL(exportArtifactUrlRef.current);
+        exportArtifactUrlRef.current = null;
+      }
     };
   }, []);
 
   useEffect(() => {
-    if (templateParam || hasHydratedStorageRef.current) return;
-    hasHydratedStorageRef.current = true;
+    if (templateParam) {
+      setStorageStatus("saved");
+      setIsStorageReady(true);
+      return;
+    }
     let cancelled = false;
 
     void loadProjectSnapshot()
@@ -179,8 +195,13 @@ export const useEditorSession = () => {
         setAssets(restoredAssets);
         setStatusMessage("Restored your last local project.");
       })
-      .catch(() => {
-        // Storage may be disabled in private browsing. Editing remains available.
+      .then(() => {
+        if (!cancelled) setStorageStatus("saved");
+      })
+      .catch((error) => {
+        if (cancelled) return;
+        setStorageStatus("unavailable");
+        setStatusMessage(getProjectStorageErrorMessage(error));
       })
       .finally(() => {
         if (!cancelled) setIsStorageReady(true);
@@ -194,13 +215,39 @@ export const useEditorSession = () => {
   useEffect(() => {
     if (!isStorageReady || templateParam) return;
     const timeout = window.setTimeout(() => {
-      void saveProjectSnapshot(project, Object.values(assets)).catch(() => {
-        // Autosave is best-effort; large browser assets may exceed local quota.
-      });
+      const generation = ++saveGenerationRef.current;
+      setStorageStatus("saving");
+      const save = () => saveProjectSnapshot(project, Object.values(assets));
+      saveQueueRef.current = saveQueueRef.current
+        .catch(() => undefined)
+        .then(save)
+        .then(() => {
+          if (generation === saveGenerationRef.current) setStorageStatus("saved");
+        })
+        .catch((error) => {
+          if (generation === saveGenerationRef.current) {
+            setStorageStatus("error");
+            setStatusMessage(getProjectStorageErrorMessage(error));
+          }
+          return undefined;
+        });
     }, 500);
 
     return () => window.clearTimeout(timeout);
   }, [assets, isStorageReady, project, templateParam]);
+
+  const retryProjectSave = async (): Promise<void> => {
+    ++saveGenerationRef.current;
+    setStorageStatus("saving");
+    try {
+      await saveProjectSnapshot(projectRef.current, Object.values(assetsRef.current));
+      setStorageStatus("saved");
+      setStatusMessage("Project saved locally.");
+    } catch (error) {
+      setStorageStatus("error");
+      setStatusMessage(getProjectStorageErrorMessage(error));
+    }
+  };
 
   useEffect(() => {
     if (!initialTemplate) {
@@ -1146,6 +1193,10 @@ export const useEditorSession = () => {
     }
 
     exportInFlightRef.current = true;
+    if (exportArtifactUrlRef.current) {
+      URL.revokeObjectURL(exportArtifactUrlRef.current);
+      exportArtifactUrlRef.current = null;
+    }
     const startedAt = new Date().toISOString();
     commitExportState({
       jobId,
@@ -1235,7 +1286,12 @@ export const useEditorSession = () => {
         },
       });
 
-      const message = "Video rendered locally and download started.";
+      const objectUrl = URL.createObjectURL(blob);
+      exportArtifactUrlRef.current = objectUrl;
+      const verification = await verifyBrowserVideo(blob, objectUrl);
+      const message = verification.playable && verification.containerSignature === "mp4"
+        ? "Video rendered, verified in this browser, and downloaded."
+        : "Video rendered and downloaded, but browser playback verification needs review.";
       const completedAt = new Date().toISOString();
       const artifact = {
         jobId,
@@ -1255,6 +1311,17 @@ export const useEditorSession = () => {
         height: ASPECT_PRESETS[currentAspect].height,
         fps: FPS,
         completedAt,
+        objectUrl,
+        retainedUntil: "next-export-or-page-close" as const,
+        sha256: verification.sha256,
+        verification: {
+          playable: verification.playable,
+          containerSignature: verification.containerSignature,
+          durationSeconds: verification.durationSeconds,
+          width: verification.width,
+          height: verification.height,
+          error: verification.error,
+        },
       };
       setStatusMessage(message);
       commitExportState((current) => ({
@@ -1530,6 +1597,8 @@ export const useEditorSession = () => {
     setSelectedClipId,
     setSelectedTextId,
     statusMessage,
+    storageStatus,
+    retryProjectSave,
     searchStockVideos,
     searchStockPhotos,
     searchLicensedMusic,

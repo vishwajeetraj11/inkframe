@@ -1,6 +1,6 @@
 # Inkframe
 
-**An agent-native motion studio: prompt an editable video timeline, inspect every change, and explicitly approve the final MP4 render.**
+**An agent-native motion studio: compose an editable video timeline, inspect every change, and explicitly approve the final MP4 render.**
 
 [Live app](https://inkframe-eta.vercel.app/) · [Open the editor](https://inkframe-eta.vercel.app/editor) · [WebMCP tool reference](./docs/webmcp.md)
 
@@ -42,8 +42,8 @@ All WebMCP integration work was added on September 1, 2026, during the challenge
 
 - `Editor`: import local or Pexels image/video/audio assets; trim, split, duplicate, transition, mix, and export MP4.
 - `Templates`: browse complete Elah-native multi-scene timelines and deep-link into `/editor?template=<id>`.
-- `Text Motion`: generate kinetic typography storyboards with OpenAI, preview them in Elah, and export MP4 locally.
-- `API routes`: AI chat and text-motion generation only; media preview and export stay in the browser.
+- `Text Motion`: compose kinetic typography storyboards, preview them in Elah, and export MP4 locally.
+- `API routes`: licensed stock-search proxies; media preview, project storage, and export stay in the browser.
 
 ## Main entrypoints
 
@@ -56,7 +56,7 @@ All WebMCP integration work was added on September 1, 2026, during the challenge
 The template gallery exposes six complete Elah-native projects: `editorial-explainer`,
 `product-reveal`, `social-promo`, `documentary-cut`, `data-pulse`, and `quote-reel`.
 Older structured style identifiers remain readable for project compatibility, but are no
-longer presented as templates because their original visual renderers depended on Remotion.
+longer presented as templates because they belong to the retired server-rendered pipeline.
 
 Available `stylePreset` values (registered in `src/lib/editor/types.ts`):
 
@@ -89,11 +89,11 @@ Available `stylePreset` values (registered in `src/lib/editor/types.ts`):
 - `src/components/editor`
   - Editor UI panels plus `hooks/use-editor-session.ts` for reducer state, asset lifecycle, template hydration, export, and AI-apply actions.
 - `src/components/text-motion`
-  - Text-motion UI panels plus `hooks/use-text-motion-project.ts` for project state, image assets, template loading, generation, and export.
+  - Text-motion UI panels plus `hooks/use-text-motion-project.ts` for project state, image assets, template loading, and export.
 - `src/lib/export`
   - Elah browser-export bridge and local Blob download handling.
 - `src/server/services`
-  - AI generation and chat context handling only.
+  - AI chat context handling only.
 
 Additional notes are in [docs/architecture.md](./docs/architecture.md).
 

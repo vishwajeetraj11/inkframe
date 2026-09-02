@@ -4,6 +4,8 @@ export interface WebMCPCapabilities {
   modelContext: boolean;
   registerTool: boolean;
   unregisterTool: boolean;
+  getTools: boolean;
+  executeTool: boolean;
 }
 
 export function getWebMCPModelContext(
@@ -25,6 +27,8 @@ export function detectWebMCPCapabilities(
     modelContext: context !== null,
     registerTool: context !== null,
     unregisterTool: context?.unregisterTool !== undefined,
+    getTools: typeof context?.getTools === "function",
+    executeTool: typeof context?.executeTool === "function",
   };
 }
 

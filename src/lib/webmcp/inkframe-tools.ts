@@ -46,10 +46,7 @@ const routeById = new Map(INKFRAME_ROUTES.map((route) => [route.id, route]));
 const routeSchema = z.enum(
   INKFRAME_ROUTES.map((route) => route.id) as [InkframeRouteId, ...InkframeRouteId[]],
 );
-const editorTemplateIds = TEMPLATE_DEFINITIONS.map((template) => template.id);
-const editorTemplateIdSchema = z.enum(
-  editorTemplateIds as [string, ...string[]],
-);
+const editorTemplateIdSchema = z.string().min(1);
 const templateKindSchema = z.enum(["all", "editor", "text-motion"]);
 
 export interface InkframeWebMcpToolContext {

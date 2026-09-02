@@ -34,22 +34,14 @@ test("WebMCP composes, inspects, exports, and verifies a playable browser MP4", 
     });
   });
 
-  await page.goto("/");
-  await page.evaluate(async () => {
-    localStorage.clear();
-    sessionStorage.clear();
-    await new Promise<void>((resolve) => {
-      const request = indexedDB.deleteDatabase("inkframe-editor");
-      request.onsuccess = () => resolve();
-      request.onerror = () => resolve();
-      request.onblocked = () => resolve();
-    });
-  });
   await page.goto("/editor");
   await page.waitForFunction(() => {
     const tools = (window as typeof window & { __inkframeWebMcpTools?: Map<string, unknown> }).__inkframeWebMcpTools;
     return tools?.has("editor_compose_storyboard") && tools.has("editor_request_export");
   });
+  await page.locator("#media-upload").setInputFiles(
+    "public/starter-assets/berlin-wall/brandenburg-gate-crowds-1989.jpg",
+  );
 
   const storyboard = {
     aspect: "reel_9_16",
@@ -85,12 +77,56 @@ test("WebMCP composes, inspects, exports, and verifies a playable browser MP4", 
     fadeOutFrames: 8,
   })).ok).toBe(true);
 
+  await page.waitForTimeout(900);
+  const persistence = await page.evaluate(async () => {
+    const database = await new Promise<IDBDatabase>((resolve, reject) => {
+      const request = indexedDB.open("inkframe-editor", 2);
+      request.onsuccess = () => resolve(request.result);
+      request.onerror = () => reject(request.error);
+    });
+    try {
+      const transaction = database.transaction(["projects", "assets"], "readonly");
+      const read = <T,>(request: IDBRequest<T>) => new Promise<T>((resolve, reject) => {
+        request.onsuccess = () => resolve(request.result);
+        request.onerror = () => reject(request.error);
+      });
+      const [project, blobs] = await Promise.all([
+        read(transaction.objectStore("projects").get("latest")) as Promise<{
+          schemaVersion: number;
+          assets: Array<Record<string, unknown>>;
+        } | undefined>,
+        read(transaction.objectStore("assets").getAll()) as Promise<Array<{ blob?: Blob }>>,
+      ]);
+      if (!project) throw new Error("Autosave did not create a project snapshot.");
+      return {
+        stores: Array.from(database.objectStoreNames),
+        schemaVersion: project.schemaVersion,
+        metadataContainsBlob: project.assets.some((asset) => "blob" in asset),
+        assetBlobCount: blobs.filter((asset) => asset.blob instanceof Blob).length,
+      };
+    } finally {
+      database.close();
+    }
+  });
+  expect(persistence).toMatchObject({
+    stores: expect.arrayContaining(["projects", "assets"]),
+    schemaVersion: 2,
+    metadataContainsBlob: false,
+  });
+  expect(persistence.assetBlobCount).toBeGreaterThan(0);
+
   const validation = await invoke(page, "editor_validate_project", {});
   expect((validation.report as { readyForExport: boolean }).readyForExport).toBe(true);
   const capture = await invoke(page, "editor_capture_frame", { frame: 18, includeImage: false });
   const contrastChecks = (capture.capture as { contrastChecks: Array<{ passes: boolean; contrastRatio: number }> }).contrastChecks;
   expect(contrastChecks.length).toBeGreaterThan(0);
   expect(contrastChecks[0]?.contrastRatio).toBeGreaterThan(0);
+  const contactSheet = await invoke(page, "editor_capture_contact_sheet", {
+    frames: [0, 18, 54, 90],
+    includeImages: true,
+  });
+  expect((contactSheet.review as { summary: { framesCaptured: number } }).summary.framesCaptured).toBe(4);
+  await expect(page.getByLabel("Agent visual review")).toBeVisible();
 
   const corrected = await invoke(page, "editor_auto_fix_project", {
     confirmed: true,
@@ -127,8 +163,27 @@ test("WebMCP composes, inspects, exports, and verifies a playable browser MP4", 
     width: 1080,
     height: 1920,
     fps: 30,
+    retainedUntil: "next-export-or-page-close",
+    verification: expect.objectContaining({
+      playable: true,
+      containerSignature: "mp4",
+      width: 1080,
+      height: 1920,
+    }),
   });
 
+  const retained = await invoke(page, "editor_get_export_artifact", {});
+  expect(retained.artifact).toMatchObject({
+    filename: download.suggestedFilename(),
+    objectUrl: expect.stringMatching(/^blob:/),
+    verification: expect.objectContaining({ playable: true, containerSignature: "mp4" }),
+  });
+  const retainedHeader = await page.evaluate(async (objectUrl) => {
+    const bytes = new Uint8Array(await (await fetch(objectUrl)).arrayBuffer());
+    return new TextDecoder("ascii").decode(bytes.slice(4, 12));
+  }, (retained.artifact as { objectUrl: string }).objectUrl);
+  expect(retainedHeader).toContain("ftyp");
+  await expect(page.getByLabel("Export verification")).toBeVisible();
   const header = await readFile(downloadPath);
   expect(header.subarray(4, 12).toString("ascii")).toContain("ftyp");
 

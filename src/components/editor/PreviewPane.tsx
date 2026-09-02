@@ -9,7 +9,8 @@ import {
 import { ASPECT_PRESETS } from "@/lib/editor/constants";
 import { getVersionRenderDurationInFrames } from "@/lib/editor/timeline";
 import type { AspectPreset, VersionTimeline } from "@/lib/editor/types";
-import { Pause, Play, Redo2, Square, Undo2 } from "lucide-react";
+import type { EditorVisualReview } from "@/lib/editor/export-state";
+import { Images, Pause, Play, Redo2, Square, Undo2, X } from "lucide-react";
 import { useMemo, type RefObject } from "react";
 
 interface PreviewPaneProps {
@@ -20,6 +21,8 @@ interface PreviewPaneProps {
   onUndo: () => void;
   onRedo: () => void;
   previewRef?: RefObject<PreviewHandle | null>;
+  visualReview?: EditorVisualReview | null;
+  onDismissVisualReview?: () => void;
 }
 
 export const PreviewPane = ({
@@ -30,13 +33,15 @@ export const PreviewPane = ({
   onUndo,
   onRedo,
   previewRef,
+  visualReview,
+  onDismissVisualReview,
 }: PreviewPaneProps) => {
   const preset = ASPECT_PRESETS[aspect] ?? ASPECT_PRESETS.reel_9_16;
   const demuxerFactory = useMemo(() => createDefaultDemuxerFactory(), []);
   const currentFrame = usePlaybackStore((state) => state.currentFrame);
   const isPlaying = usePlaybackStore((state) => state.isPlaying);
-  const play = usePlaybackStore((state) => state.play);
   const pause = usePlaybackStore((state) => state.pause);
+  const togglePlayPause = usePlaybackStore((state) => state.togglePlayPause);
   const setCurrentFrame = usePlaybackStore((state) => state.setCurrentFrame);
 
   const stop = () => {
@@ -150,23 +155,22 @@ export const PreviewPane = ({
                   <div className="absolute inset-x-0 bottom-0 z-20 flex min-h-10 items-center gap-2 border-t border-white/10 bg-black/75 px-2 backdrop-blur-sm">
                     <button
                       type="button"
-                      aria-label="Play"
-                      title="Play"
-                      disabled={isPlaying}
-                      onClick={play}
-                      className="grid h-10 w-10 place-items-center text-neutral-100 outline-none transition hover:bg-white/10 focus-visible:ring-2 focus-visible:ring-cyan-300 disabled:cursor-not-allowed disabled:opacity-30"
+                      aria-label={isPlaying ? "Pause" : "Play"}
+                      title={isPlaying ? "Pause" : "Play"}
+                      aria-pressed={isPlaying}
+                      onClick={togglePlayPause}
+                      className="grid h-10 w-10 place-items-center text-neutral-100 outline-none transition hover:bg-white/10 focus-visible:ring-2 focus-visible:ring-cyan-300"
                     >
-                      <Play aria-hidden="true" className="translate-x-px" size={17} fill="currentColor" />
-                    </button>
-                    <button
-                      type="button"
-                      aria-label="Pause"
-                      title="Pause"
-                      disabled={!isPlaying}
-                      onClick={pause}
-                      className="grid h-10 w-10 place-items-center text-neutral-100 outline-none transition hover:bg-white/10 focus-visible:ring-2 focus-visible:ring-cyan-300 disabled:cursor-not-allowed disabled:opacity-30"
-                    >
-                      <Pause aria-hidden="true" size={17} fill="currentColor" />
+                      {isPlaying ? (
+                        <Pause aria-hidden="true" size={17} fill="currentColor" />
+                      ) : (
+                        <Play
+                          aria-hidden="true"
+                          className="translate-x-px"
+                          size={17}
+                          fill="currentColor"
+                        />
+                      )}
                     </button>
                     <button
                       type="button"
@@ -180,9 +184,6 @@ export const PreviewPane = ({
                     </button>
                     <span className="app-data text-[10px] text-neutral-300">
                       {(currentFrame / safeFps).toFixed(2)} / {(safeDurationInFrames / safeFps).toFixed(2)}s
-                    </span>
-                    <span className="ml-auto app-data text-[9px] uppercase tracking-[0.1em] text-cyan-200">
-                      Browser preview
                     </span>
                   </div>
                 </>
@@ -201,6 +202,51 @@ export const PreviewPane = ({
             </div>
           </div>
         </div>
+        {visualReview ? (
+          <aside
+            aria-label="Agent visual review"
+            className="absolute bottom-3 right-3 z-30 w-[min(340px,calc(100%-24px))] border border-white/15 bg-[#17140f]/95 shadow-[0_20px_60px_rgba(0,0,0,0.55)] backdrop-blur"
+          >
+            <div className="flex min-h-9 items-center gap-2 border-b border-white/10 px-2.5">
+              <Images aria-hidden="true" size={14} className="text-cyan-300" />
+              <p className="app-eyebrow flex-1 text-[9px] uppercase tracking-[0.14em] text-neutral-300">
+                Agent contact sheet · {visualReview.summary.framesCaptured} frames
+              </p>
+              <button
+                type="button"
+                aria-label="Dismiss visual review"
+                onClick={onDismissVisualReview}
+                className="grid h-8 w-8 place-items-center text-neutral-400 outline-none hover:bg-white/[0.06] hover:text-neutral-100 focus-visible:ring-2 focus-visible:ring-cyan-300"
+              >
+                <X aria-hidden="true" size={14} />
+              </button>
+            </div>
+            <div className="grid grid-cols-4 gap-px bg-white/10">
+              {visualReview.captures.slice(0, 8).map((capture) => (
+                <div key={capture.frame} className="relative aspect-video min-w-0 bg-[#0b0a08]">
+                  {capture.dataUrl ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img
+                      src={capture.dataUrl}
+                      alt={`Frame ${capture.frame}`}
+                      className="h-full w-full object-contain"
+                    />
+                  ) : (
+                    <span className="grid h-full place-items-center text-[9px] text-neutral-500">No image</span>
+                  )}
+                  <span className="app-data absolute bottom-0 left-0 bg-black/75 px-1 text-[8px] text-neutral-200">
+                    f{capture.frame}
+                  </span>
+                </div>
+              ))}
+            </div>
+            {(visualReview.summary.failedContrastChecks > 0 || visualReview.summary.imageFailures > 0) ? (
+              <p className="px-2.5 py-2 text-[10px] text-amber-200">
+                {visualReview.summary.failedContrastChecks} contrast issue(s) · {visualReview.summary.imageFailures} capture error(s)
+              </p>
+            ) : null}
+          </aside>
+        ) : null}
       </div>
     </section>
   );

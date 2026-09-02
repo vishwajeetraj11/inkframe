@@ -30,15 +30,10 @@ export interface TextMotionWebMcpContext {
   getProject: () => TextMotionProject;
   /** Replace the current project after a validated, sanitized mutation. */
   setProject: (project: TextMotionProject) => void;
-  /** Read/write the prompt held outside the project object. */
-  getPrompt?: () => string;
-  setPrompt?: (prompt: string) => void;
   /** Load a template through the UI's real merge path (including image handling). */
   loadTemplate?: (template: TextMotionTemplate) => void | Promise<void>;
   /** Request the browser's native image file picker. Files never cross the WebMCP boundary. */
   requestImagePicker?: () => void | Promise<void>;
-  /** Run the existing AI generation flow for a prompt. */
-  generate?: (prompt: string, signal: AbortSignal) => void | Promise<void>;
   /** Run the existing MP4 export flow. */
   exportProject?: (signal: AbortSignal) => void | Promise<void>;
 }
@@ -124,9 +119,8 @@ export const createTextMotionWebMcpTools = (
         "aspect_and_template",
         "scene_editing",
         "theme_editing",
-        "prompt_and_title",
+        "title_editing",
         "image_metadata_and_assignment",
-        "confirmed_generation",
         "confirmed_export",
         "native_image_picker",
       ],
@@ -200,17 +194,6 @@ export const createTextMotionWebMcpTools = (
       }
       assertNotAborted(signal);
       return output({ ok: true, message: "Template loaded", template: input.template, project: summary(sanitizeTextMotionProject(context.getProject())) });
-    },
-    mutation,
-  ),
-  tool(
-    "text_motion_set_prompt",
-    "Set the current Text Motion generation prompt.",
-    z.object({ prompt: z.string().trim().min(3).max(2000) }).strict(),
-    (input) => {
-      if (!context.setPrompt) throw new Error("Prompt updates are unavailable");
-      context.setPrompt(input.prompt);
-      return output({ ok: true, message: "Prompt updated", promptLength: input.prompt.length });
     },
     mutation,
   ),
@@ -365,20 +348,6 @@ export const createTextMotionWebMcpTools = (
       }
       return { ...project, scenes: project.scenes.filter((scene) => scene.id !== input.sceneId) };
     }),
-    mutation,
-  ),
-  tool(
-    "text_motion_generate",
-    "Generate a new storyboard from the current or supplied prompt; explicit confirmation is required.",
-    z.object({ prompt: z.string().trim().min(3).max(2000).optional(), confirmed: z.literal(true) }).strict(),
-    async (input, signal) => {
-      if (!context.generate) throw new Error("Generation is unavailable");
-      const prompt = input.prompt ?? context.getPrompt?.().trim() ?? "";
-      if (prompt.length < 3) throw new Error("A prompt of at least 3 characters is required");
-      await context.generate(prompt, signal);
-      assertNotAborted(signal);
-      return output({ ok: true, message: "Text motion storyboard generated", project: summary(sanitizeTextMotionProject(context.getProject())) });
-    },
     mutation,
   ),
   tool(

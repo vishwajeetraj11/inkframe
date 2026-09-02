@@ -17,6 +17,8 @@ describe("WebMCP runtime", () => {
       modelContext: false,
       registerTool: false,
       unregisterTool: false,
+      getTools: false,
+      executeTool: false,
     });
     expect(isWebMCPSupported(null)).toBe(false);
   });

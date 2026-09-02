@@ -47,6 +47,17 @@ const setup = () => {
         height: 1920,
         fps: 30,
         completedAt: "2026-09-02T00:00:01.000Z",
+        objectUrl: "blob:https://inkframe.test/export-1",
+        retainedUntil: "next-export-or-page-close" as const,
+        sha256: "abc123",
+        verification: {
+          playable: true,
+          containerSignature: "mp4" as const,
+          durationSeconds: 3,
+          width: 1080,
+          height: 1920,
+          error: null,
+        },
       },
     }),
     cancelExport: vi.fn(() => ({ ok: true, message: "Cancelled" })),
@@ -63,6 +74,7 @@ const setup = () => {
         : {}),
     })),
     getRenderDiagnostics: () => ({ adapter: [], browser: { ready: { videoExport: true } } }),
+    publishVisualReview: vi.fn(),
     removeAsset: async () => ({ ok: true, message: "Removed" }),
     requestMediaPicker: async () => undefined,
     importAudioFromUrl: vi.fn(async () => ({ ok: true, message: "Imported audio" })),
@@ -117,7 +129,9 @@ describe("editor WebMCP tools", () => {
       "editor_validate_project",
       "editor_get_render_diagnostics",
       "editor_capture_frame",
+      "editor_capture_contact_sheet",
       "editor_get_export_status",
+      "editor_get_export_artifact",
       "editor_list_style_presets",
       "editor_list_assets",
       "editor_get_attribution_report",
@@ -135,6 +149,10 @@ describe("editor WebMCP tools", () => {
       "editor_plan_storyboard",
       "editor_auto_fix_project",
       "editor_compose_storyboard",
+      "editor_list_variants",
+      "editor_create_variant",
+      "editor_apply_variant",
+      "editor_delete_variant",
       "editor_switch_canvas",
       "editor_select_timeline_item",
       "editor_add_text_overlay",
@@ -178,14 +196,14 @@ describe("editor WebMCP tools", () => {
       ok: true,
       recommendedStart: expect.stringContaining("editor_plan_storyboard"),
       safeguards: {
-        storyboardApprovalToken: true,
+        expiringOneUseStoryboardApprovalToken: true,
         confirmedDestructiveActions: true,
       },
     });
     expect(guide.workflows[0].steps).toEqual(
       expect.arrayContaining([
         "editor_plan_storyboard",
-        "editor_capture_frame",
+        "editor_capture_contact_sheet",
         "editor_get_attribution_report",
         "editor_request_export",
       ]),
@@ -319,6 +337,73 @@ describe("editor WebMCP tools", () => {
     expect(frame.inspection.activeTextOverlays[0].text).toBe("A strong opening");
     expect(frame.capture.dataUrl).toBe("data:image/jpeg;base64,frame");
     expect(callbacks.captureFrame).toHaveBeenCalledWith(10, true, expect.any(AbortSignal));
+
+    await expect(
+      compose.execute(
+        { ...storyboard, confirmed: true, approvalToken: planned.approvalToken },
+        executeOptions,
+      ),
+    ).rejects.toThrow("already used");
+  });
+
+  it("captures a visible contact sheet without switching canvases", async () => {
+    const { tools, callbacks, getState } = setup();
+    await tools.find((tool) => tool.name === "editor_add_text_overlay")!.execute(
+      { text: "Review me", endFrame: 90 },
+      executeOptions,
+    );
+    const activeBefore = getState().present.activeVersion;
+    await expect(
+      tools.find((tool) => tool.name === "editor_capture_frame")!.execute(
+        { aspect: "widescreen_16_9", frame: 0 },
+        executeOptions,
+      ),
+    ).rejects.toThrow("read-only");
+
+    const sheet = JSON.parse(
+      await tools.find((tool) => tool.name === "editor_capture_contact_sheet")!.execute(
+        { frames: [0, 30, 60], includeImages: true },
+        executeOptions,
+      ),
+    );
+    expect(sheet.review.summary.framesCaptured).toBe(3);
+    expect(callbacks.captureFrame).toHaveBeenCalledTimes(3);
+    expect(callbacks.publishVisualReview).toHaveBeenCalledWith(
+      expect.objectContaining({ aspect: "reel_9_16", captures: expect.any(Array) }),
+    );
+    expect(getState().present.activeVersion).toBe(activeBefore);
+  });
+
+  it("composes isolated variants and applies only the chosen draft", async () => {
+    const { tools, getState } = setup();
+    const storyboard = {
+      scenes: [{ text: "Variant headline", durationSeconds: 2 }],
+      variantName: "Bold hook",
+    };
+    const planned = JSON.parse(
+      await tools.find((tool) => tool.name === "editor_plan_storyboard")!.execute(
+        storyboard,
+        executeOptions,
+      ),
+    );
+    const composed = JSON.parse(
+      await tools.find((tool) => tool.name === "editor_compose_storyboard")!.execute(
+        { ...storyboard, confirmed: true, approvalToken: planned.approvalToken },
+        executeOptions,
+      ),
+    );
+    expect(composed.variant).toMatchObject({ name: "Bold hook", aspect: "reel_9_16" });
+    expect(getState().present.versions.reel_9_16.textOverlays).toHaveLength(0);
+
+    const variants = JSON.parse(
+      await tools.find((tool) => tool.name === "editor_list_variants")!.execute({}, executeOptions),
+    );
+    expect(variants.variants).toHaveLength(1);
+    await tools.find((tool) => tool.name === "editor_apply_variant")!.execute(
+      { variantId: composed.variant.id, confirmed: true },
+      executeOptions,
+    );
+    expect(getState().present.versions.reel_9_16.textOverlays[0].text).toBe("Variant headline");
   });
 
   it("invalidates storyboard approval when project state changes", async () => {
@@ -443,7 +528,13 @@ describe("editor WebMCP tools", () => {
       container: "mp4",
       videoCodec: "h264",
       audioCodec: "aac",
+      objectUrl: "blob:https://inkframe.test/export-1",
+      verification: { playable: true, containerSignature: "mp4" },
     });
+    const artifact = JSON.parse(
+      await tools.find((tool) => tool.name === "editor_get_export_artifact")!.execute({}, executeOptions),
+    );
+    expect(artifact.artifact).toMatchObject({ objectUrl: "blob:https://inkframe.test/export-1", sha256: "abc123" });
 
     await expect(
       tools.find((tool) => tool.name === "editor_cancel_export")!.execute({}, executeOptions),

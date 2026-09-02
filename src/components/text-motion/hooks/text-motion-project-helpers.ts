@@ -3,7 +3,6 @@ import type {
   TextMotionImageAsset,
   TextMotionProject,
   TextMotionScene,
-  TextMotionTemplate,
 } from "@/lib/text-motion/types";
 import { sanitizeTextMotionProject } from "@/lib/text-motion/utils";
 
@@ -40,28 +39,6 @@ export const mergeTemplateProject = ({
       ...scene,
       imageAssetId:
         applyFirstImageToAllScenes && firstImageAssetId ? firstImageAssetId : scene.imageAssetId,
-    })),
-  });
-};
-
-export const mergeGeneratedProject = ({
-  generatedProject,
-  safeProject,
-  template,
-}: {
-  generatedProject: TextMotionProject;
-  safeProject: TextMotionProject;
-  template: TextMotionTemplate;
-}): TextMotionProject => {
-  const firstImageAssetId = safeProject.imageAssets[0]?.id;
-  return sanitizeTextMotionProject({
-    ...generatedProject,
-    template,
-    imageAssets: safeProject.imageAssets,
-    scenes: generatedProject.scenes.map((scene) => ({
-      ...scene,
-      imageAssetId:
-        template === "photo-card" && firstImageAssetId ? firstImageAssetId : scene.imageAssetId,
     })),
   });
 };

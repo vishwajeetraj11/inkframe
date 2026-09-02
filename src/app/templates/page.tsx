@@ -5,11 +5,6 @@ import { readdir } from "node:fs/promises";
 import path from "node:path";
 
 const TEMPLATE_PREVIEW_DIR = path.join(process.cwd(), "public", "template-previews");
-const BOTTOM_TEMPLATE_IDS = new Set([
-  "documentary-cut",
-  "data-pulse",
-  "quote-reel",
-] satisfies (typeof TEMPLATE_DEFINITIONS)[number]["id"][]);
 
 const getTemplatePreviewCandidates = (templateId: (typeof TEMPLATE_DEFINITIONS)[number]["id"]) => [
   `widescreen_16_9-${templateId}.mp4`,
@@ -59,14 +54,7 @@ const Arrow = ({ className = "" }: { className?: string }) => (
 
 export default async function TemplatesPage() {
   const templateVideoPreviews = await getTemplateVideoPreviews();
-  const orderedTemplates = [...TEMPLATE_DEFINITIONS].sort((left, right) => {
-    const leftBottom = BOTTOM_TEMPLATE_IDS.has(left.id);
-    const rightBottom = BOTTOM_TEMPLATE_IDS.has(right.id);
-
-    if (leftBottom === rightBottom) return 0;
-
-    return leftBottom ? 1 : -1;
-  });
+  const orderedTemplates = [...TEMPLATE_DEFINITIONS];
 
   return (
     <main className="min-h-screen overflow-hidden bg-[#e9e3d7] text-[#16130f]">
@@ -151,10 +139,21 @@ export default async function TemplatesPage() {
             </p>
           </div>
 
-          <ol>
-            {orderedTemplates.map((template, index) => {
-              const previewVideo = templateVideoPreviews[template.id];
-              const assetCount = template.starterAssets?.length ?? 0;
+          {orderedTemplates.length === 0 ? (
+            <div className="border-b border-[#16130f]/30 py-20 text-center sm:py-28">
+              <p className="font-[family-name:var(--font-mono)] text-[10px] font-semibold uppercase tracking-[0.16em] text-[#e7441b]">
+                No templates yet
+              </p>
+              <p className="mx-auto mt-4 max-w-md font-[family-name:var(--font-serif)] text-2xl leading-tight sm:text-3xl">
+                The library is still being cut. Start with a blank project while we build the
+                first collection.
+              </p>
+            </div>
+          ) : (
+            <ol>
+              {orderedTemplates.map((template, index) => {
+                const previewVideo = templateVideoPreviews[template.id];
+                const assetCount = template.starterAssets?.length ?? 0;
 
               return (
                 <li key={template.id} className="border-b border-[#16130f]/30">
@@ -222,8 +221,9 @@ export default async function TemplatesPage() {
                   </Link>
                 </li>
               );
-            })}
-          </ol>
+              })}
+            </ol>
+          )}
 
           <div className="grid gap-8 border-b border-[#16130f]/30 py-10 sm:grid-cols-2 sm:items-center lg:grid-cols-12">
             <p className="font-[family-name:var(--font-serif)] text-2xl leading-tight sm:text-3xl lg:col-span-7 lg:max-w-2xl">

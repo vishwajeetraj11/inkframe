@@ -1,25 +1,19 @@
 "use client";
 
 import Link from "next/link";
-import { Download, Film, ImagePlus, Trash2 } from "lucide-react";
-import { ASPECT_PRESETS } from "@/lib/editor/constants";
+import { Download, ImagePlus, Trash2 } from "lucide-react";
 import { TextMotionThemePanel } from "./TextMotionThemePanel";
 import { TextMotionToolbar } from "./TextMotionToolbar";
-import { ALEXANDER_DEMO_PROMPT } from "./constants";
 import { TextMotionSceneList } from "./TextMotionSceneList";
 import { useTextMotionProject } from "./hooks/use-text-motion-project";
 import { useTextMotionWebMcp } from "./hooks/use-text-motion-webmcp";
-import { ElahTextMotionPreview } from "./ElahTextMotionPreview";
 
 export const TextMotionEditor = () => {
   const project = useTextMotionProject();
   useTextMotionWebMcp({
     project: project.safeProject,
     setProject: (nextProject) => project.setProject(nextProject),
-    prompt: project.prompt,
-    setPrompt: project.setPrompt,
     loadTemplate: project.loadTemplate,
-    generate: (prompt, signal) => project.onGenerate(prompt, signal),
     exportProject: (signal) => project.onExport(signal),
     requestImagePicker: () => {
       const input = document.getElementById("text-motion-image-upload");
@@ -29,8 +23,6 @@ export const TextMotionEditor = () => {
       input.click();
     },
   });
-  const preset =
-    ASPECT_PRESETS[project.safeProject.aspect] ?? ASPECT_PRESETS.reel_9_16;
   const imagePreviewById = new Map(
     project.safeProject.imageAssets.map((asset) => [asset.id, asset.dataUrl]),
   );
@@ -53,7 +45,9 @@ export const TextMotionEditor = () => {
               <p className="app-eyebrow truncate text-[10px] uppercase tracking-[0.18em] text-[#f2ede3]/42">
                 Text motion / {project.safeProject.aspect === "reel_9_16" ? "9:16" : "16:9"}
               </p>
-              <p className="truncate text-xs text-[#f2ede3]/72">{project.safeProject.title}</p>
+              {project.safeProject.title !== "Text Motion" ? (
+                <p className="truncate text-xs text-[#f2ede3]/72">{project.safeProject.title}</p>
+              ) : null}
             </div>
           </div>
 
@@ -65,12 +59,11 @@ export const TextMotionEditor = () => {
             <button
               type="button"
               onClick={() => void project.onExport()}
-              disabled={project.isGenerating || project.isExporting}
-              className="flex min-h-11 items-center gap-2 border border-[#f2ede3]/25 px-3 text-xs font-bold uppercase tracking-[0.08em] text-[#f2ede3] motion-safe:transition-colors hover:border-[#ff4f1f] hover:bg-[#ff4f1f] hover:text-[#0f0d0a] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#ff4f1f] focus-visible:ring-offset-2 focus-visible:ring-offset-[#0f0d0a] disabled:cursor-not-allowed disabled:opacity-45 sm:px-4"
+              disabled={project.isExporting}
+              className="flex min-h-11 items-center gap-2 bg-[#ff4f1f] px-3 text-xs font-bold uppercase tracking-[0.08em] text-[#0f0d0a] motion-safe:transition-colors hover:bg-[#ff6a42] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#f2ede3] focus-visible:ring-offset-2 focus-visible:ring-offset-[#0f0d0a] disabled:cursor-not-allowed disabled:opacity-45 sm:px-4"
             >
               <Download aria-hidden="true" className={`h-4 w-4 ${project.isExporting ? "motion-safe:animate-pulse" : ""}`} />
-              <span className="hidden sm:inline">{project.isExporting ? "Rendering film" : "Export MP4"}</span>
-              <span className="sm:hidden">{project.isExporting ? "Rendering" : "Export"}</span>
+              <span>{project.isExporting ? "Rendering" : "Export"}</span>
             </button>
           </div>
         </div>
@@ -81,64 +74,20 @@ export const TextMotionEditor = () => {
           <div className="order-1 lg:sticky lg:top-24">
             <TextMotionToolbar
               isExporting={project.isExporting}
-              isGenerating={project.isGenerating}
               onAspectChange={(aspect) => {
                 project.setProject((previous) => ({
                   ...previous,
                   aspect,
                 }));
               }}
-              onGenerate={() => {
-                void project.onGenerate();
-              }}
               onLoadTemplate={project.loadTemplate}
-              onPromptChange={project.setPrompt}
-              onUseAlexanderDemo={() => {
-                project.setPrompt(ALEXANDER_DEMO_PROMPT);
-                project.setStatusMessage(
-                  "Example brief loaded. Generate to replace the current storyboard.",
-                );
-              }}
               project={project.safeProject}
-              prompt={project.prompt}
               statusMessage={project.statusMessage}
               templateDefinitions={project.templateDefinitions}
             />
           </div>
 
-          <section aria-labelledby="preview-heading" className="order-2 min-w-0">
-            <div className="flex items-end justify-between border-b border-[#f2ede3]/15 pb-3">
-              <div>
-                <p className="app-eyebrow text-[10px] uppercase tracking-[0.22em] text-[#ff4f1f]">Live cut</p>
-                <h2 id="preview-heading" className="app-title mt-1 text-2xl font-semibold uppercase tracking-[-0.015em]">
-                  Program monitor
-                </h2>
-              </div>
-              <div className="app-data flex items-center gap-2 text-[10px] uppercase tracking-[0.14em] text-[#f2ede3]/45">
-                <Film aria-hidden="true" className="h-3.5 w-3.5" />
-                {preset.width} × {preset.height} / {preset.fps} fps
-              </div>
-            </div>
-
-            <div className="relative flex min-h-[23rem] items-center justify-center overflow-hidden border-b border-[#f2ede3]/15 bg-[#080706] p-3 sm:min-h-[32rem] sm:p-6 lg:min-h-[min(66vh,46rem)]">
-              <div
-                aria-hidden="true"
-                className="pointer-events-none absolute inset-0 opacity-30 [background-image:linear-gradient(rgba(242,237,227,0.05)_1px,transparent_1px),linear-gradient(90deg,rgba(242,237,227,0.05)_1px,transparent_1px)] [background-size:40px_40px]"
-              />
-              <div
-                className="relative w-full overflow-hidden border border-[#f2ede3]/20 bg-black shadow-[0_24px_80px_rgba(0,0,0,0.45)]"
-                style={{
-                  aspectRatio: `${preset.width} / ${preset.height}`,
-                  maxWidth:
-                    project.safeProject.aspect === "reel_9_16"
-                      ? `min(100%, calc(64vh * ${preset.width} / ${preset.height}))`
-                      : "min(100%, 62rem)",
-                }}
-              >
-                <ElahTextMotionPreview project={project.safeProject} />
-              </div>
-            </div>
-
+          <div className="order-2 min-w-0">
             <div className="grid border-b border-[#f2ede3]/15 xl:grid-cols-2">
               <TextMotionThemePanel theme={project.safeProject.theme} onChange={project.updateTheme} />
 
@@ -163,7 +112,7 @@ export const TextMotionEditor = () => {
                       accept="image/*"
                       multiple
                       className="sr-only"
-                      disabled={project.isGenerating || project.isExporting}
+                      disabled={project.isExporting}
                       onChange={(event) => {
                         void project.onImageFilesSelected(event.currentTarget.files);
                         event.currentTarget.value = "";
@@ -203,7 +152,7 @@ export const TextMotionEditor = () => {
                 ) : null}
               </section>
             </div>
-          </section>
+          </div>
         </div>
 
         <div className="mt-12 lg:mt-16">

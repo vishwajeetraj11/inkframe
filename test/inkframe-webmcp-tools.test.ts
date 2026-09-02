@@ -40,8 +40,7 @@ describe("Inkframe WebMCP tools", () => {
 
     await navigateTool.execute({ route: "templates", confirmed: true }, executeOptions);
     expect(navigate).toHaveBeenCalledWith("/templates");
-    await openTemplate.execute({ templateId: "documentary-cut", confirmed: true }, executeOptions);
-    expect(navigate).toHaveBeenCalledWith("/editor?template=documentary-cut");
+    await expect(openTemplate.execute({ templateId: "documentary-cut", confirmed: true }, executeOptions)).rejects.toThrow();
 
     await expect(navigateTool.execute({ route: "https://example.com", confirmed: true }, executeOptions)).rejects.toThrow();
     await expect(openTemplate.execute({ templateId: "../../admin", confirmed: true }, executeOptions)).rejects.toThrow();

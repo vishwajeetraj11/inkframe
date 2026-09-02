@@ -17,7 +17,11 @@ import type {
 } from "@/lib/pexels";
 import type { LicensedAudioSearchResult } from "@/lib/stock-audio";
 import type { EditorAction } from "../reducer";
-import type { EditorExportState, EditorFrameCapture } from "../export-state";
+import type {
+  EditorExportState,
+  EditorFrameCapture,
+  EditorVisualReview,
+} from "../export-state";
 import {
   autoFixEditorVersion,
   inspectEditorFrame,
@@ -32,6 +36,7 @@ import {
   type Clip,
   type TextOverlay,
   type Transition,
+  type VersionTimeline,
 } from "../types";
 
 const aspectSchema = z.enum(["reel_9_16", "widescreen_16_9"]);
@@ -165,6 +170,11 @@ const captureFrameInput = z.object({
   frame: frameSchema,
   includeImage: z.boolean().default(false),
 }).strict();
+const captureContactSheetInput = z.object({
+  aspect: aspectSchema.optional(),
+  frames: z.array(frameSchema).min(2).max(8).optional(),
+  includeImages: z.boolean().default(false),
+}).strict();
 const cancelExportInput = z.object({ confirmed: z.literal(true) }).strict();
 const attributionReportInput = z.object({
   aspect: aspectSchema.optional(),
@@ -205,12 +215,22 @@ const storyboardSpecSchema = z.object({
     durationSeconds: 0.4,
   }),
   preserveAudio: z.boolean().default(true),
+  variantName: z.string().trim().min(1).max(80).optional(),
 }).strict();
 const planStoryboardInput = storyboardSpecSchema;
 const composeStoryboardInput = storyboardSpecSchema.extend({
   approvalToken: z.string().trim().min(8).max(80),
   confirmed: z.literal(true),
 }).strict();
+const createVariantInput = z.object({
+  name: z.string().trim().min(1).max(80),
+  aspect: aspectSchema.optional(),
+}).strict();
+const applyVariantInput = z.object({
+  variantId: z.string().trim().min(1).max(128),
+  confirmed: z.literal(true),
+}).strict();
+const deleteVariantInput = applyVariantInput;
 
 type StoryboardSpec = z.infer<typeof storyboardSpecSchema>;
 
@@ -250,6 +270,7 @@ export interface EditorWebMcpToolContext {
   getExportState?: () => EditorExportState;
   cancelExport?: (signal: AbortSignal) => EditorWebMcpCallbackResult | Promise<EditorWebMcpCallbackResult>;
   captureFrame?: (frame: number, includeImage: boolean, signal: AbortSignal) => EditorFrameCapture | Promise<EditorFrameCapture>;
+  publishVisualReview?: (review: EditorVisualReview) => void;
   getRenderDiagnostics?: (aspect: AspectPreset) => unknown;
 }
 
@@ -257,6 +278,7 @@ export type LicensedAudioImportInput = Omit<z.infer<typeof importLicensedAudioIn
 
 const MAX_SUMMARY_CHARS = 1500;
 const MAX_PROJECT_CHARS = 12000;
+const MAX_CONTACT_SHEET_CHARS = 1_500_000;
 const json = (value: unknown, maxChars = MAX_SUMMARY_CHARS): string => {
   const serialized = JSON.stringify(value);
   return serialized.length <= maxChars ? serialized : JSON.stringify({ ok: false, error: "Response too large" });
@@ -354,44 +376,19 @@ const storyboardBaseline = (
   version: ReturnType<typeof activeVersion>,
   assets: readonly AssetRef[],
 ) => ({
-  aspect: version.aspect,
-  clips: version.clips.map(({ id, assetId, startFrame, endFrame }) => ({
-    id,
-    assetId,
-    startFrame,
-    endFrame,
-  })),
-  textOverlays: version.textOverlays.map(({ id, startFrame, endFrame }) => ({
-    id,
-    startFrame,
-    endFrame,
-  })),
-  audioTracks: version.audioTracks.map(({ id, assetId, startFrame, endFrame }) => ({
-    id,
-    assetId,
-    startFrame,
-    endFrame,
-  })),
-  transitions: version.transitions.map(({ id, fromClipId, toClipId }) => ({
-    id,
-    fromClipId,
-    toClipId,
-  })),
-  assetIds: assets.map((asset) => asset.assetId).sort(),
+  version,
+  assets: assets.map(sanitizeAsset).sort((a, b) => a.assetId.localeCompare(b.assetId)),
 });
 
-const storyboardApprovalToken = (
-  spec: StoryboardSpec,
-  baseline: ReturnType<typeof storyboardBaseline>,
-): string => {
-  const serialized = JSON.stringify({ spec, baseline });
-  let hash = 0x811c9dc5;
-  for (let index = 0; index < serialized.length; index += 1) {
-    hash ^= serialized.charCodeAt(index);
-    hash = Math.imul(hash, 0x01000193);
-  }
-  return `storyboard-${(hash >>> 0).toString(16).padStart(8, "0")}-${serialized.length}`;
+const secureToken = (): string => {
+  const bytes = new Uint8Array(18);
+  if (globalThis.crypto?.getRandomValues) globalThis.crypto.getRandomValues(bytes);
+  else for (let index = 0; index < bytes.length; index += 1) bytes[index] = Math.floor(Math.random() * 256);
+  return `storyboard-${Array.from(bytes, (value) => value.toString(16).padStart(2, "0")).join("")}`;
 };
+
+const cloneVersion = (version: VersionTimeline): VersionTimeline =>
+  JSON.parse(JSON.stringify(version)) as VersionTimeline;
 
 const createStoryboardVersion = ({
   spec,
@@ -603,6 +600,28 @@ const defineTool = <T extends z.ZodType>({ name, title, description, schema, rea
 });
 
 export const createEditorWebMcpTools = (context: EditorWebMcpToolContext): WebMcpTool[] => {
+  const approvals = new Map<string, { fingerprint: string; expiresAt: number }>();
+  const variants = new Map<string, {
+    id: string;
+    name: string;
+    aspect: AspectPreset;
+    version: VersionTimeline;
+    createdAt: string;
+  }>();
+  let variantSequence = 0;
+  const saveVariant = (name: string, version: VersionTimeline) => {
+    if (variants.size >= 12) throw new Error("Variant limit reached. Delete an older variant first.");
+    const id = `variant-${Date.now().toString(36)}-${++variantSequence}`;
+    const variant = {
+      id,
+      name,
+      aspect: version.aspect,
+      version: cloneVersion(version),
+      createdAt: new Date().toISOString(),
+    };
+    variants.set(id, variant);
+    return variant;
+  };
   const dispatch = (action: EditorAction) => { if (!context.dispatch) throw new Error("Editor mutations are unavailable"); context.dispatch(action); };
   const requireItem = (aspect: AspectPreset, itemType: string, itemId: string) => {
     const version = activeVersion(context.getState(), aspect);
@@ -631,11 +650,12 @@ export const createEditorWebMcpTools = (context: EditorWebMcpToolContext): WebMc
               "editor_plan_storyboard",
               "editor_compose_storyboard",
               "editor_validate_project",
-              "editor_capture_frame",
+              "editor_capture_contact_sheet",
               "editor_auto_fix_project",
               "editor_get_attribution_report",
               "editor_request_export",
               "editor_get_export_status",
+              "editor_get_export_artifact",
             ],
           },
           {
@@ -652,15 +672,16 @@ export const createEditorWebMcpTools = (context: EditorWebMcpToolContext): WebMc
         ],
         toolGroups: {
           discover: ["editor_get_capabilities", "editor_get_state_summary", "editor_list_assets"],
-          compose: ["editor_plan_storyboard", "editor_compose_storyboard"],
-          inspect: ["editor_validate_project", "editor_get_render_diagnostics", "editor_capture_frame", "editor_get_attribution_report"],
+          compose: ["editor_plan_storyboard", "editor_compose_storyboard", "editor_create_variant", "editor_apply_variant"],
+          inspect: ["editor_validate_project", "editor_get_render_diagnostics", "editor_capture_frame", "editor_capture_contact_sheet", "editor_get_attribution_report"],
           correct: ["editor_auto_fix_project", "editor_update_text_overlay", "editor_update_clip", "editor_update_audio_track"],
-          deliver: ["editor_request_export", "editor_get_export_status", "editor_cancel_export"],
+          deliver: ["editor_request_export", "editor_get_export_status", "editor_get_export_artifact", "editor_cancel_export"],
         },
         safeguards: {
-          storyboardApprovalToken: true,
+          expiringOneUseStoryboardApprovalToken: true,
           confirmedDestructiveActions: true,
-          localMediaNeverReturned: true,
+          rawLocalFilesNeverReturned: true,
+          frameImagesRequireExplicitOptIn: true,
           boundedSanitizedOutputs: true,
         },
         limits: {
@@ -674,8 +695,59 @@ export const createEditorWebMcpTools = (context: EditorWebMcpToolContext): WebMc
     defineTool({ name: "editor_get_project", title: "Inspect editor project", description: "Inspect bounded, sanitized project timelines without exposing files, object URLs, data URLs, or secrets.", schema: projectInput, readOnly: true, execute: (input) => { const state = context.getState(); const maxItems = input.maxItems ?? 10; const aspects = input.aspect ? [input.aspect] : (["reel_9_16", "widescreen_16_9"] as const); const versions = Object.fromEntries(aspects.map((aspect) => [aspect, sanitizeTimeline(state.present.versions[aspect], maxItems)])); return projectResult({ ok: true, activeVersion: state.present.activeVersion, versions, assets: bounded(context.getAssets?.() ?? [], Math.min(maxItems, 25), sanitizeAsset) }); } }),
     defineTool({ name: "editor_validate_project", title: "Validate editor project", description: "Check export readiness, missing media, unsafe text, timeline gaps, overflow risk, and transition integrity.", schema: validateProjectInput, readOnly: true, execute: (input) => { const aspect = input.aspect ?? context.getState().present.activeVersion; const report = validateEditorVersion(activeVersion(context.getState(), aspect), context.getAssets?.() ?? []); return projectResult({ ok: true, report }); } }),
     defineTool({ name: "editor_get_render_diagnostics", title: "Get render diagnostics", description: "Inspect Elah adapter diagnostics and browser encoding capability alongside project validation.", schema: renderDiagnosticsInput, readOnly: true, execute: (input) => { const aspect = input.aspect ?? context.getState().present.activeVersion; const validation = validateEditorVersion(activeVersion(context.getState(), aspect), context.getAssets?.() ?? []); const runtime = context.getRenderDiagnostics?.(aspect) ?? null; return projectResult({ ok: true, aspect, validation, runtime }); } }),
-    defineTool({ name: "editor_capture_frame", title: "Capture preview frame", description: "Seek the Elah preview, report active timeline items, and optionally return a reduced JPEG data URL for visual inspection.", schema: captureFrameInput, readOnly: true, execute: async (input, signal) => { const aspect = input.aspect ?? context.getState().present.activeVersion; const version = activeVersion(context.getState(), aspect); const duration = Math.max(1, getVersionRenderDurationInFrames(version)); if (input.frame >= duration) throw new Error(`Frame must be below the ${duration} frame timeline duration`); if (context.getState().present.activeVersion !== aspect) dispatch({ type: "switch-aspect", aspect }); if (!context.captureFrame) throw new Error("Frame capture is unavailable"); const capture = await context.captureFrame(input.frame, input.includeImage, signal); return json({ ok: true, inspection: inspectEditorFrame(version, input.frame), capture }, input.includeImage ? 450000 : MAX_PROJECT_CHARS); } }),
+    defineTool({ name: "editor_capture_frame", title: "Capture preview frame", description: "Seek the active Elah preview, report active timeline items, and optionally return a reduced JPEG data URL without changing project state.", schema: captureFrameInput, readOnly: true, execute: async (input, signal) => { const activeAspect = context.getState().present.activeVersion; const aspect = input.aspect ?? activeAspect; if (aspect !== activeAspect) throw new Error(`Frame capture is read-only. Switch to ${aspect} with editor_switch_canvas first.`); const version = activeVersion(context.getState(), aspect); const duration = Math.max(1, getVersionRenderDurationInFrames(version)); if (input.frame >= duration) throw new Error(`Frame must be below the ${duration} frame timeline duration`); if (!context.captureFrame) throw new Error("Frame capture is unavailable"); const capture = await context.captureFrame(input.frame, input.includeImage, signal); return json({ ok: true, inspection: inspectEditorFrame(version, input.frame), capture }, input.includeImage ? 450000 : MAX_PROJECT_CHARS); } }),
+    defineTool({
+      name: "editor_capture_contact_sheet",
+      title: "Capture visual QA contact sheet",
+      description: "Capture representative active-canvas frames, inspect timeline contents and contrast, and publish a visible in-editor contact sheet for human review.",
+      schema: captureContactSheetInput,
+      readOnly: true,
+      execute: async (input, signal) => {
+        const activeAspect = context.getState().present.activeVersion;
+        const aspect = input.aspect ?? activeAspect;
+        if (aspect !== activeAspect) throw new Error(`Contact-sheet capture is read-only. Switch to ${aspect} with editor_switch_canvas first.`);
+        if (!context.captureFrame) throw new Error("Frame capture is unavailable");
+        const version = activeVersion(context.getState(), aspect);
+        const duration = Math.max(1, getVersionRenderDurationInFrames(version));
+        const requestedFrames = input.frames ?? [0, 0.25, 0.5, 0.75, 1].map((ratio) =>
+          Math.min(duration - 1, Math.round((duration - 1) * ratio)),
+        );
+        const frames = [...new Set(requestedFrames)].sort((a, b) => a - b);
+        if (frames.some((frame) => frame >= duration)) {
+          throw new Error(`Every frame must be below the ${duration} frame timeline duration`);
+        }
+        const captures: EditorFrameCapture[] = [];
+        const inspections = [];
+        for (const frame of frames) {
+          throwIfAborted(signal);
+          captures.push(await context.captureFrame(frame, input.includeImages, signal));
+          inspections.push(inspectEditorFrame(version, frame));
+        }
+        const review: EditorVisualReview = {
+          id: `review-${Date.now().toString(36)}`,
+          aspect,
+          createdAt: new Date().toISOString(),
+          captures,
+          summary: {
+            framesCaptured: captures.length,
+            failedContrastChecks: captures.flatMap((capture) => capture.contrastChecks).filter((check) => !check.passes).length,
+            imageFailures: captures.filter((capture) => Boolean(capture.imageError)).length,
+          },
+        };
+        context.publishVisualReview?.(review);
+        return json({
+          ok: true,
+          review,
+          inspections,
+          validation: validateEditorVersion(version, context.getAssets?.() ?? []),
+          nextAction: review.summary.failedContrastChecks > 0
+            ? "Run editor_auto_fix_project for a failing frame, then capture a new contact sheet."
+            : "Review the visible contact sheet, then verify attribution and export.",
+        }, input.includeImages ? MAX_CONTACT_SHEET_CHARS : MAX_PROJECT_CHARS);
+      },
+    }),
     defineTool({ name: "editor_get_export_status", title: "Get export status", description: "Read browser render progress, recovery guidance, and metadata for the latest exported MP4.", schema: emptyInput, readOnly: true, execute: () => { const exportState = context.getExportState?.() ?? { status: "idle", progress: 0, artifact: null }; return projectResult({ ok: true, export: exportState, nextAction: exportState.status === "rendering" ? "Poll editor_get_export_status until completed or failed." : exportState.status === "completed" ? "Verify artifact bytes, duration, codecs, and play the downloaded MP4." : exportState.status === "failed" ? "Read export.message, run editor_get_render_diagnostics, resolve the failure, then request export again." : "Validate and inspect the project before requesting export." }); } }),
+    defineTool({ name: "editor_get_export_artifact", title: "Get playable export artifact", description: "Return the retained page-scoped MP4 Blob URL, integrity metadata, and browser playback verification for the latest completed export.", schema: emptyInput, readOnly: true, execute: () => { const state = context.getExportState?.(); const artifact = state?.artifact; if (!artifact || state.status !== "completed") throw new Error("No completed export artifact is retained in this editor session."); return projectResult({ ok: true, artifact, nextAction: artifact.verification.playable ? "Open artifact.objectUrl to play the MP4, or download it with artifact.filename." : "Review artifact.verification.error and run editor_get_render_diagnostics before exporting again." }); } }),
     defineTool({ name: "editor_list_style_presets", title: "List text styles", description: "List text styles with native Elah preview and export parity.", schema: emptyInput, readOnly: true, execute: () => json({ ok: true, presets: [{ id: "classic", label: TEXT_OVERLAY_STYLE_PRESET_LABELS.classic }] }) }),
     defineTool({ name: "editor_list_assets", title: "List editor assets", description: "List safe asset metadata without exposing File objects, object URLs, data URLs, or secrets.", schema: assetsInput, readOnly: true, execute: (input) => json({ ok: true, ...bounded(context.getAssets?.() ?? [], input.maxItems ?? 50, sanitizeAsset) }) }),
     defineTool({
@@ -727,10 +799,16 @@ export const createEditorWebMcpTools = (context: EditorWebMcpToolContext): WebMc
           assets,
           createId: () => `storyboard-preview-${++idSequence}`,
         });
-        const approvalToken = storyboardApprovalToken(
-          approvedSpec,
-          storyboardBaseline(current, assets),
-        );
+        const fingerprint = JSON.stringify({
+          spec: approvedSpec,
+          baseline: storyboardBaseline(current, assets),
+        });
+        const approvalToken = secureToken();
+        const expiresAt = Date.now() + 10 * 60_000;
+        for (const [token, approval] of approvals) {
+          if (approval.expiresAt <= Date.now()) approvals.delete(token);
+        }
+        approvals.set(approvalToken, { fingerprint, expiresAt });
         return projectResult({
           ok: true,
           message: "Storyboard plan is valid and ready for human approval.",
@@ -738,7 +816,8 @@ export const createEditorWebMcpTools = (context: EditorWebMcpToolContext): WebMc
           requiresConfirmation: true,
           aspect,
           effects: {
-            replacesVisualTimeline: true,
+            replacesVisualTimeline: !input.variantName,
+            savesIsolatedVariant: Boolean(input.variantName),
             preservesAudio: input.preserveAudio,
             scenes: input.scenes.length,
             transitions: preview.version.transitions.length,
@@ -746,6 +825,7 @@ export const createEditorWebMcpTools = (context: EditorWebMcpToolContext): WebMc
           sceneTimings: preview.sceneTimings,
           validation: preview.validation,
           approvedSpec,
+          approvalTokenExpiresAt: new Date(expiresAt).toISOString(),
           nextAction: {
             tool: "editor_compose_storyboard",
             instruction: "After the human approves this exact plan, repeat approvedSpec with confirmed: true and this approvalToken.",
@@ -842,15 +922,18 @@ export const createEditorWebMcpTools = (context: EditorWebMcpToolContext): WebMc
         const current = activeVersion(state, aspect);
         const assets = context.getAssets?.() ?? [];
         const approvedSpec = { ...input, aspect };
-        const expectedToken = storyboardApprovalToken(
-          approvedSpec,
-          storyboardBaseline(current, assets),
-        );
-        if (approvalToken !== expectedToken) {
+        const approval = approvals.get(approvalToken);
+        const fingerprint = JSON.stringify({
+          spec: approvedSpec,
+          baseline: storyboardBaseline(current, assets),
+        });
+        if (!approval || approval.expiresAt <= Date.now() || approval.fingerprint !== fingerprint) {
+          approvals.delete(approvalToken);
           throw new Error(
-            "approvalToken does not match this storyboard. Run editor_plan_storyboard again and obtain approval for the exact returned plan.",
+            "approvalToken does not match this storyboard, has expired, or was already used. Run editor_plan_storyboard again and obtain approval for the exact returned plan.",
           );
         }
+        approvals.delete(approvalToken);
         let idSequence = 0;
         const ids = () =>
           `${context.createId?.() ?? `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`}-${++idSequence}`;
@@ -866,18 +949,26 @@ export const createEditorWebMcpTools = (context: EditorWebMcpToolContext): WebMc
               "Storyboard validation failed",
           );
         }
-        dispatch({ type: "replace-version", aspect, version: composed.version });
-        if (state.present.activeVersion !== aspect) {
-          dispatch({ type: "switch-aspect", aspect });
-        }
-        if (composed.version.textOverlays[0]) {
-          context.selectText?.(composed.version.textOverlays[0].id);
+        const variant = input.variantName
+          ? saveVariant(input.variantName, composed.version)
+          : null;
+        if (!variant) {
+          dispatch({ type: "replace-version", aspect, version: composed.version });
+          if (state.present.activeVersion !== aspect) {
+            dispatch({ type: "switch-aspect", aspect });
+          }
+          if (composed.version.textOverlays[0]) {
+            context.selectText?.(composed.version.textOverlays[0].id);
+          }
         }
         return projectResult({
           ok: true,
-          message: `Composed ${input.scenes.length} approved Elah-native scenes.`,
+          message: variant
+            ? `Composed ${input.scenes.length} approved scenes as isolated variant ${variant.name}.`
+            : `Composed ${input.scenes.length} approved Elah-native scenes.`,
           aspect,
-          approvalToken,
+          approvalConsumed: true,
+          variant: variant ? { id: variant.id, name: variant.name, aspect: variant.aspect, createdAt: variant.createdAt } : null,
           changed: {
             clips: composed.version.clips.map((clip) => clip.id),
             textOverlays: composed.version.textOverlays.map((overlay) => overlay.id),
@@ -886,8 +977,72 @@ export const createEditorWebMcpTools = (context: EditorWebMcpToolContext): WebMc
           counts: composed.validation.counts,
           durationInFrames: composed.validation.durationInFrames,
           warnings: composed.validation.issues.filter((item) => item.severity === "warning"),
-          nextAction: "Run editor_validate_project, capture representative frames, and correct any issues before export.",
+          nextAction: variant
+            ? `Apply ${variant.id} with editor_apply_variant when the human chooses it.`
+            : "Run editor_validate_project, capture a contact sheet, and correct any issues before export.",
         });
+      },
+    }),
+    defineTool({
+      name: "editor_list_variants",
+      title: "List creative variants",
+      description: "List isolated timeline drafts without changing the active edit.",
+      schema: emptyInput,
+      readOnly: true,
+      execute: () => projectResult({
+        ok: true,
+        variants: Array.from(variants.values(), (variant) => ({
+          id: variant.id,
+          name: variant.name,
+          aspect: variant.aspect,
+          createdAt: variant.createdAt,
+          counts: {
+            clips: variant.version.clips.length,
+            textOverlays: variant.version.textOverlays.length,
+            audioTracks: variant.version.audioTracks.length,
+            transitions: variant.version.transitions.length,
+          },
+          durationInFrames: getVersionRenderDurationInFrames(variant.version),
+        })),
+      }),
+    }),
+    defineTool({
+      name: "editor_create_variant",
+      title: "Save current edit as variant",
+      description: "Create an isolated snapshot of the current or specified canvas for safe creative comparison.",
+      schema: createVariantInput,
+      readOnly: false,
+      execute: (input) => {
+        const aspect = input.aspect ?? context.getState().present.activeVersion;
+        const variant = saveVariant(input.name, activeVersion(context.getState(), aspect));
+        return projectResult({ ok: true, variant: { id: variant.id, name: variant.name, aspect, createdAt: variant.createdAt } });
+      },
+    }),
+    defineTool({
+      name: "editor_apply_variant",
+      title: "Apply creative variant",
+      description: "Replace the matching canvas timeline with an isolated variant. Requires explicit confirmation.",
+      schema: applyVariantInput,
+      readOnly: false,
+      execute: (input) => {
+        const variant = variants.get(input.variantId);
+        if (!variant) throw new Error("Variant not found");
+        dispatch({ type: "replace-version", aspect: variant.aspect, version: cloneVersion(variant.version) });
+        if (context.getState().present.activeVersion !== variant.aspect) {
+          dispatch({ type: "switch-aspect", aspect: variant.aspect });
+        }
+        return projectResult({ ok: true, message: `Applied variant ${variant.name}.`, variantId: variant.id, aspect: variant.aspect });
+      },
+    }),
+    defineTool({
+      name: "editor_delete_variant",
+      title: "Delete creative variant",
+      description: "Delete an isolated variant without changing the active edit. Requires explicit confirmation.",
+      schema: deleteVariantInput,
+      readOnly: false,
+      execute: (input) => {
+        if (!variants.delete(input.variantId)) throw new Error("Variant not found");
+        return result("Variant deleted", { variantId: input.variantId });
       },
     }),
     defineTool({ name: "editor_switch_canvas", title: "Switch canvas", description: "Switch the active canvas aspect ratio.", schema: switchInput, readOnly: false, execute: (input) => { dispatch({ type: "switch-aspect", aspect: input.aspect }); return result("Canvas switched", { activeVersion: input.aspect }); } }),

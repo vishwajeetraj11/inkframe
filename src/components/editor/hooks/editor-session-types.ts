@@ -5,6 +5,7 @@ export type {
   EditorExportArtifact,
   EditorExportState,
   EditorFrameCapture,
+  EditorVisualReview,
 } from "@/lib/editor/export-state";
 
 export interface LocalAsset extends AssetRef {
@@ -17,3 +18,10 @@ export interface ExportActionResult {
   message: string;
   export?: EditorExportArtifact;
 }
+
+export type EditorStorageStatus =
+  | "loading"
+  | "saving"
+  | "saved"
+  | "error"
+  | "unavailable";

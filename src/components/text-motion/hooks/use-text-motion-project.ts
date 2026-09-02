@@ -19,7 +19,6 @@ import { useMemo, useState } from "react";
 import {
   createImageAssetsFromFiles,
   createTextMotionScene,
-  mergeGeneratedProject,
   mergeTemplateProject,
 } from "./text-motion-project-helpers";
 
@@ -32,11 +31,7 @@ export const useTextMotionProject = () => {
   const [project, setProject] = useState<TextMotionProject>(() =>
     createDefaultTextMotionProject("reel_9_16"),
   );
-  const [prompt, setPrompt] = useState(
-    "Create a high-energy promo for a new AI video tool with a strong hook and CTA.",
-  );
   const [statusMessage, setStatusMessage] = useState<string | null>(null);
-  const [isGenerating, setIsGenerating] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
 
   const safeProject = useMemo(() => sanitizeTextMotionProject(project), [project]);
@@ -47,7 +42,7 @@ export const useTextMotionProject = () => {
   );
 
   const onImageFilesSelected = async (files: FileList | null): Promise<void> => {
-    if (!files || files.length === 0 || isGenerating || isExporting) {
+    if (!files || files.length === 0 || isExporting) {
       return;
     }
 
@@ -95,7 +90,7 @@ export const useTextMotionProject = () => {
   };
 
   const loadTemplate = (template: TextMotionTemplate): void => {
-    if (isGenerating || isExporting) {
+    if (isExporting) {
       return;
     }
 
@@ -108,68 +103,6 @@ export const useTextMotionProject = () => {
       }),
     );
     setStatusMessage(definition.statusMessage);
-  };
-
-  const onGenerate = async (
-    promptOverride?: string,
-    signal?: AbortSignal,
-  ): Promise<TextMotionActionResult> => {
-    const nextPrompt = (promptOverride ?? prompt).trim();
-    if (nextPrompt.length < 3) {
-      return { ok: false, message: "A prompt of at least 3 characters is required." };
-    }
-    if (isGenerating) {
-      return { ok: false, message: "Generation is already in progress." };
-    }
-
-    setIsGenerating(true);
-    setStatusMessage(null);
-
-    try {
-      const response = await fetch("/api/text-motion/generate", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          prompt: nextPrompt,
-          aspect: safeProject.aspect,
-          template: safeProject.template,
-        }),
-        signal,
-      });
-
-      const payload = await response.json().catch(() => null);
-
-      if (!response.ok) {
-        throw new Error(
-          payload && typeof payload.error === "string"
-            ? payload.error
-            : "Failed to generate motion script.",
-        );
-      }
-
-      if (!payload?.project) {
-        throw new Error("Generation response missing project.");
-      }
-
-      setProject(
-        mergeGeneratedProject({
-          generatedProject: payload.project as TextMotionProject,
-          safeProject,
-          template: safeProject.template,
-        }),
-      );
-      const message = "New text motion storyboard generated.";
-      setStatusMessage(message);
-      return { ok: true, message };
-    } catch (error) {
-      const message = error instanceof Error ? error.message : "Generation failed.";
-      setStatusMessage(message);
-      return { ok: false, message };
-    } finally {
-      setIsGenerating(false);
-    }
   };
 
   const onExport = async (signal?: AbortSignal): Promise<TextMotionActionResult> => {
@@ -256,25 +189,16 @@ export const useTextMotionProject = () => {
     }));
   };
 
-  const updatePrompt = (nextPrompt: string) => {
-    setPrompt(nextPrompt);
-    setStatusMessage(null);
-  };
-
   return {
     durationInFrames,
     imageAssetMap,
     isExporting,
-    isGenerating,
     loadTemplate,
     onExport,
-    onGenerate,
     onImageFilesSelected,
     onRemoveImageAsset,
     onUseImageInAllScenes,
-    prompt,
     safeProject,
-    setPrompt: updatePrompt,
     setProject,
     statusMessage,
     updateScene,

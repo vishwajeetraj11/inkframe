@@ -26,7 +26,9 @@ Discovery and inspection:
 - `editor_validate_project`
 - `editor_get_render_diagnostics`
 - `editor_capture_frame`
+- `editor_capture_contact_sheet`
 - `editor_get_export_status`
+- `editor_get_export_artifact`
 - `editor_list_assets`
 - `editor_get_attribution_report`
 - `editor_list_style_presets`
@@ -46,6 +48,10 @@ Workspace and timeline actions:
 - `editor_import_audio_url`
 - `editor_plan_storyboard`
 - `editor_compose_storyboard`
+- `editor_list_variants`
+- `editor_create_variant`
+- `editor_apply_variant`
+- `editor_delete_variant`
 - `editor_auto_fix_project`
 - `editor_switch_canvas`
 - `editor_select_timeline_item`
@@ -92,10 +98,11 @@ Workspace and timeline actions:
 
 All tool inputs are checked with strict Zod schemas before execution, while the
 browser receives standards-compatible JSON Schema. Tool callbacks read current
-React state at invocation time, outputs exclude embedded image data, and each
+React state at invocation time, general outputs exclude embedded media data, and each
 page unregisters its tools with an `AbortController` when it unmounts. Local
 media never crosses the structured WebMCP boundary: picker tools open the
-existing browser file controls and the user chooses files directly.
+existing browser file controls and the user chooses files directly. Frame tools
+only return reduced JPEGs when `includeImage` or `includeImages` is explicitly true.
 
 Navigation, deletion, structured AI replacement, generation, and browser export tools require a
 strict `confirmed: true` input. This explicit guard supplements the current
@@ -110,14 +117,21 @@ A browser agent can now complete and verify a full local workflow without a rend
    `editor_import_stock_video`.
 2. Preview exact scene timings and replacement effects with
    `editor_plan_storyboard`. It does not mutate the editor and returns a token
-   bound to that plan. After the person approves, repeat the exact plan with
+   bound to that plan for ten minutes. Tokens are random, one-use, and bound to
+   the complete timeline plus asset baseline. After the person approves, repeat the exact plan with
    its token and `confirmed: true` through `editor_compose_storyboard`.
-   Atomic tools remain available for precise refinement. Jamendo music and
+   Add `variantName` to compose into an isolated draft, then compare and apply
+   only the selected draft with `editor_apply_variant`. Atomic tools remain
+   available for precise refinement. Jamendo music and
    Freesound effects retain Creative Commons source/license metadata.
 3. Run `editor_validate_project` and `editor_get_render_diagnostics` before
    export. Validation reports missing assets, unsafe typography, likely text
    overflow, timeline gaps, invalid transitions, and known Elah limitations.
-4. Seek and inspect important moments with `editor_capture_frame`. The tool
+4. Seek and inspect one active-canvas moment with `editor_capture_frame`, or
+   create a multi-frame visual QA pass with `editor_capture_contact_sheet`
+   and `includeImages: true`.
+   Contact sheets appear inside the editor for the human as well as returning
+   structured measurements to the agent. The tools
    reports every active clip, text layer, audio track, transition, and a
    pixel-sampled WCAG contrast result for each visible text overlay; passing
    `includeImage: true` also returns a reduced JPEG data URL for visual review.
@@ -131,7 +145,9 @@ A browser agent can now complete and verify a full local workflow without a rend
    `editor_get_export_status`, and use `editor_cancel_export` if needed. A
    completed job reports filename, MIME type, byte size, duration, canvas size,
    frame rate, MP4 container, H.264 video/AAC audio codecs, bitrates, and
-   completion time.
+   completion time. `editor_get_export_artifact` returns the retained page-scoped
+   Blob URL, MP4 signature, optional SHA-256 digest, and browser playback
+   verification so the agent can reopen the exact rendered file.
 
 `editor_get_capabilities` is the recommended entry point. It returns
 task-oriented workflows and groups the larger atomic surface into discovery,
@@ -143,9 +159,12 @@ Licensed stock audio is optional. Configure `JAMENDO_CLIENT_ID` for music and
 CC0, CC BY, or CC BY-SA items; imported assets retain creator, source, license,
 and attribution requirements.
 
-The returned artifact metadata describes the browser-created download. Inkframe
-does not upload or retain the MP4, so WebMCP intentionally does not expose a
-server URL for the local file.
+Inkframe never uploads an exported MP4. It retains the latest export as a
+page-scoped Blob URL until the next export or page close, displays an in-editor
+playback/download panel, and exposes that same local artifact through WebMCP.
+Local project persistence stores timeline metadata separately from deduplicated
+asset blobs, and API-backed stock/AI routes enforce per-client limits and
+bounded request bodies.
 
 Primary references:
 

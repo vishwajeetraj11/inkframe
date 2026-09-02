@@ -21,6 +21,18 @@ export interface EditorExportArtifact {
   height: number;
   fps: number;
   completedAt: string;
+  /** Page-scoped Blob URL retained until the next export or editor teardown. */
+  objectUrl: string;
+  retainedUntil: "next-export-or-page-close";
+  sha256: string | null;
+  verification: {
+    playable: boolean;
+    containerSignature: "mp4" | "unknown";
+    durationSeconds: number | null;
+    width: number | null;
+    height: number | null;
+    error: string | null;
+  };
 }
 
 export interface EditorExportState {
@@ -41,6 +53,18 @@ export interface EditorFrameCapture {
   dataUrl?: string;
   imageError?: string;
   contrastChecks: EditorContrastCheck[];
+}
+
+export interface EditorVisualReview {
+  id: string;
+  aspect: "reel_9_16" | "widescreen_16_9";
+  createdAt: string;
+  captures: EditorFrameCapture[];
+  summary: {
+    framesCaptured: number;
+    failedContrastChecks: number;
+    imageFailures: number;
+  };
 }
 
 export interface EditorContrastCheck {

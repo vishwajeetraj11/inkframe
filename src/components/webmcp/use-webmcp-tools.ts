@@ -26,15 +26,23 @@ export const useWebMcpTools = <T>(
     let disposed = false;
     let cleanup: (() => Promise<void>) | null = null;
 
-    void registerWebMCPTools(createTools(() => currentRef.current), {
-      signal: controller.signal,
-    }).then((registration) => {
-      cleanup = registration.cleanup;
-      // If React Strict Mode disposed this effect while async registration was
-      // settling, the aborted registration signal owns cleanup. Explicitly
-      // unregistering by name here can delete the replacement registration
-      // created by the second Strict Mode mount.
-      if (disposed) cleanup = null;
+    // React Strict Mode mounts, disposes, and immediately remounts effects in
+    // development. Deferring one microtask prevents the disposed probe mount
+    // from racing native Chrome registrations with the real mount.
+    queueMicrotask(() => {
+      if (disposed) return;
+      void registerWebMCPTools(createTools(() => currentRef.current), {
+        signal: controller.signal,
+      }).then((registration) => {
+        cleanup = registration.cleanup;
+        if (registration.failed.length > 0) {
+          console.warn(
+            "Some WebMCP tools could not be registered:",
+            registration.failed.map(({ tool }) => tool.name),
+          );
+        }
+        if (disposed) cleanup = null;
+      });
     });
 
     return () => {

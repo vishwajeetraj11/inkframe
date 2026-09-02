@@ -164,6 +164,14 @@ const versionTimelineSchema = z.object({
   transitions: z.array(transitionSchema),
 });
 
+export const persistedProjectSchema = z.object({
+  activeVersion: aspectSchema,
+  versions: z.object({
+    reel_9_16: versionTimelineSchema,
+    widescreen_16_9: versionTimelineSchema,
+  }),
+});
+
 const assetRefSchema = z.object({
   assetId: z.string().min(1),
   kind: assetKindSchema,
@@ -197,11 +205,7 @@ const clipHasAdjacentTransition = (
 
 export const exportProjectSchema = z
   .object({
-    activeVersion: aspectSchema,
-    versions: z.object({
-      reel_9_16: versionTimelineSchema,
-      widescreen_16_9: versionTimelineSchema,
-    }),
+    ...persistedProjectSchema.shape,
     assets: z.array(assetRefSchema),
   })
   .superRefine((project, context) => {

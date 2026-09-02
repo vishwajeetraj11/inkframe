@@ -14,7 +14,7 @@ export default defineConfig({
     acceptDownloads: true,
     viewport: { width: 1440, height: 1000 },
     launchOptions: {
-      args: ["--use-angle=swiftshader", "--enable-webgl"],
+      args: ["--use-angle=swiftshader", "--enable-webgl", "--enable-features=WebMCP"],
     },
   },
   webServer: {

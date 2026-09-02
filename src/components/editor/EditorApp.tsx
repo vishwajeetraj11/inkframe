@@ -11,7 +11,7 @@ import {
   ElahTimelineDock,
 } from "@/components/editor/elah";
 import { createDefaultTextOverlay } from "@/lib/editor/defaults";
-import type { EditorFrameCapture } from "@/lib/editor/export-state";
+import type { EditorFrameCapture, EditorVisualReview } from "@/lib/editor/export-state";
 import { analyzeFrameContrast } from "@/lib/editor/webmcp/contrast";
 import { usePlaybackStore, type PreviewHandle } from "@elah/editor";
 import { nanoid } from "nanoid";
@@ -32,6 +32,7 @@ export const EditorApp = ({
 }: EditorAppProps) => {
   const session = useEditorSession();
   const [timelineHeight, setTimelineHeight] = useState(DEFAULT_TIMELINE_HEIGHT);
+  const [visualReview, setVisualReview] = useState<EditorVisualReview | null>(null);
   const previewRef = useRef<PreviewHandle | null>(null);
 
   const capturePreviewFrame = async (frame: number, includeImage: boolean) => {
@@ -110,6 +111,7 @@ export const EditorApp = ({
     getExportState: () => session.exportState,
     cancelExport: session.onCancelExport,
     captureFrame: capturePreviewFrame,
+    publishVisualReview: setVisualReview,
     getRenderDiagnostics: session.getRenderDiagnostics,
     removeAsset: session.onRemoveAsset,
     requestMediaPicker: () => {
@@ -171,6 +173,10 @@ export const EditorApp = ({
         onExport={() => {
           void session.onExport();
         }}
+        storageStatus={session.storageStatus}
+        onRetrySave={() => {
+          void session.retryProjectSave();
+        }}
       />
 
       <ElahEditorWorkspace
@@ -210,6 +216,8 @@ export const EditorApp = ({
             canRedo={session.canRedo}
             onUndo={session.undo}
             onRedo={session.redo}
+            visualReview={visualReview}
+            onDismissVisualReview={() => setVisualReview(null)}
           />
         </div>
 

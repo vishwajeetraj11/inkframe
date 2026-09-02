@@ -2,7 +2,9 @@
 
 import Link from "next/link";
 import { AspectSwitcher } from "@/components/editor/AspectSwitcher";
+import type { EditorStorageStatus } from "@/components/editor/hooks/editor-session-types";
 import type { AspectPreset } from "@/lib/editor/types";
+import { CloudAlert, CloudCheck, LoaderCircle } from "lucide-react";
 
 interface WorkspaceStat {
   label: string;
@@ -17,6 +19,8 @@ interface EditorHeaderProps {
   canExport: boolean;
   onSwitchAspect: (aspect: AspectPreset) => void;
   onExport: () => void;
+  storageStatus: EditorStorageStatus;
+  onRetrySave: () => void;
 }
 
 export const EditorHeader = ({
@@ -27,7 +31,10 @@ export const EditorHeader = ({
   canExport,
   onSwitchAspect,
   onExport,
+  storageStatus,
+  onRetrySave,
 }: EditorHeaderProps) => {
+  const storageIsError = storageStatus === "error" || storageStatus === "unavailable";
   return (
     <header className="relative z-20 border-b border-white/10 bg-[#0f0d0a]/95 px-3 backdrop-blur-xl md:px-4">
       <div className="mx-auto flex h-[53px] w-full max-w-[1800px] flex-nowrap items-center gap-2">
@@ -78,6 +85,31 @@ export const EditorHeader = ({
             disabled={isExporting}
             onChange={onSwitchAspect}
           />
+
+          {storageIsError ? (
+            <button
+              type="button"
+              onClick={onRetrySave}
+              aria-label="Retry local autosave"
+              title="Autosave failed — retry"
+              className="grid h-10 w-10 place-items-center text-amber-300 outline-none transition hover:bg-amber-300/10 focus-visible:ring-2 focus-visible:ring-cyan-300"
+            >
+              <CloudAlert aria-hidden="true" size={15} />
+            </button>
+          ) : (
+            <span
+              role="status"
+              aria-label={`Local autosave ${storageStatus}`}
+              title={`Autosave ${storageStatus}`}
+              className="grid h-10 w-10 place-items-center text-neutral-500"
+            >
+              {storageStatus === "saving" || storageStatus === "loading" ? (
+                <LoaderCircle aria-hidden="true" size={15} className="animate-spin" />
+              ) : (
+                <CloudCheck aria-hidden="true" size={15} />
+              )}
+            </span>
+          )}
 
           <button
             type="button"

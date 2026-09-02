@@ -7,16 +7,13 @@ const signal = () => new AbortController().signal;
 
 const makeTools = (overrides: Partial<Parameters<typeof createTextMotionWebMcpTools>[0]> = {}) => {
   let project = createDefaultTextMotionProject("reel_9_16");
-  let prompt = "A concise motion brief";
   const context = {
     getProject: () => project,
     setProject: (next: TextMotionProject) => { project = next; },
-    getPrompt: () => prompt,
-    setPrompt: (next: string) => { prompt = next; },
     ...overrides,
   };
   const tools = createTextMotionWebMcpTools(context);
-  return { tools, getProject: () => project, getPrompt: () => prompt };
+  return { tools, getProject: () => project };
 };
 
 const tool = (tools: ReturnType<typeof createTextMotionWebMcpTools>, name: string) => {
@@ -35,7 +32,6 @@ describe("Text Motion WebMCP tools", () => {
       "text_motion_get_project_summary",
       "text_motion_set_aspect_template",
       "text_motion_load_template",
-      "text_motion_set_prompt",
       "text_motion_set_title",
       "text_motion_add_scene",
       "text_motion_update_scene",
@@ -44,7 +40,6 @@ describe("Text Motion WebMCP tools", () => {
       "text_motion_assign_image_to_all_scenes",
       "text_motion_remove_image_asset",
       "text_motion_remove_scene",
-      "text_motion_generate",
       "text_motion_export",
       "text_motion_request_image_picker",
     ]);
@@ -119,17 +114,13 @@ describe("Text Motion WebMCP tools", () => {
     expect(getProject().scenes[0].imageAssetId).toBeUndefined();
   });
 
-  it("loads templates through the callback and can update prompt/title", async () => {
+  it("loads templates through the callback and can update the title", async () => {
     const loadTemplate = vi.fn();
     const { tools, getProject } = makeTools({ loadTemplate });
     await tool(tools, "text_motion_load_template").execute({ template: "photo-card" }, { signal: signal() });
     expect(loadTemplate).toHaveBeenCalledWith("photo-card");
     await tool(tools, "text_motion_set_title").execute({ title: "  New title  " }, { signal: signal() });
     expect(getProject().title).toBe("New title");
-    const setPrompt = vi.fn();
-    const promptTools = makeTools({ setPrompt });
-    await tool(promptTools.tools, "text_motion_set_prompt").execute({ prompt: "  A sharper brief  " }, { signal: signal() });
-    expect(setPrompt).toHaveBeenCalledWith("A sharper brief");
   });
 
   it("lists metadata only, assigns/removes images, and removes confirmed scenes", async () => {
@@ -149,22 +140,19 @@ describe("Text Motion WebMCP tools", () => {
   });
 
   it("runs confirmed side-effect callbacks and native picker", async () => {
-    const generate = vi.fn(async () => undefined);
     const exportProject = vi.fn(async () => undefined);
     const requestImagePicker = vi.fn(async () => undefined);
-    const { tools } = makeTools({ generate, exportProject, requestImagePicker });
-    await tool(tools, "text_motion_generate").execute({ prompt: "Make a bold launch reel", confirmed: true }, { signal: signal() });
+    const { tools } = makeTools({ exportProject, requestImagePicker });
     await tool(tools, "text_motion_export").execute({ confirmed: true }, { signal: signal() });
     await tool(tools, "text_motion_request_image_picker").execute({}, { signal: signal() });
-    expect(generate).toHaveBeenCalledWith("Make a bold launch reel", expect.any(AbortSignal));
     expect(exportProject).toHaveBeenCalledWith(expect.any(AbortSignal));
     expect(requestImagePicker).toHaveBeenCalledOnce();
   });
 
   it("honors cancellation before and after async callbacks", async () => {
     const controller = new AbortController();
-    const generate = vi.fn(async () => { controller.abort(); });
-    const { tools } = makeTools({ generate });
-    await expect(tool(tools, "text_motion_generate").execute({ confirmed: true }, { signal: controller.signal })).rejects.toThrow();
+    controller.abort();
+    const { tools } = makeTools();
+    await expect(tool(tools, "text_motion_export").execute({ confirmed: true }, { signal: controller.signal })).rejects.toThrow();
   });
 });

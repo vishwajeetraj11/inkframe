@@ -61,7 +61,9 @@ Export is a browser-side operation powered by Elah. The flow:
 1. `elah-adapter.ts` projects the active Inkframe timeline and browser asset URLs into an Elah `Project`.
 2. `elah-browser.ts` invokes Elah's lazy Web Worker exporter.
 3. Elah renders frames with its browser renderer and MediaBunny encodes MP4 locally.
-4. The resulting Blob is downloaded directly; source media never passes through an Inkframe server route.
+4. The resulting Blob is downloaded directly, retained as a page-scoped URL for playback verification, and revoked on the next export or page teardown; source media never passes through an Inkframe render route.
+
+Local persistence uses IndexedDB v2: project metadata lives in `projects`, while media Blobs live in `assets` and are only rewritten when their fingerprint changes. Stock and AI API routes use shared request-size and per-client rate guards from `src/server/request-guard.ts`.
 
 ### AI Chat Protocol
 
@@ -81,7 +83,7 @@ These are parsed by `src/lib/editor/ai-actions.ts` and applied via `applyAIEdito
 - `parsers/` — per-preset structured-text parsers (parse raw text content into typed preset data)
 - Per-preset domain files (e.g. `vox-timeline.ts`, `chart-card.ts`, `editorial-stat-ring.ts`) — preset-specific business logic, co-located with but separate from the generic domain
 
-`src/components/editor/` contains the React UI and Elah preview workspace. `src/lib/export/` contains the browser download/export bridge. `src/server/` is limited to AI services.
+`src/components/editor/` contains the React UI and Elah preview workspace. `src/lib/export/` contains the browser download/export bridge. `src/server/` contains AI services, stock-provider HTTP helpers, and shared request guards.
 
 ### Text Motion (separate workflow)
 

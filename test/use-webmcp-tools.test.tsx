@@ -56,7 +56,7 @@ describe("useWebMcpTools", () => {
     expect(registrationSignal?.aborted).toBe(true);
   });
 
-  it("does not unregister the replacement tool during Strict Mode remount", async () => {
+  it("skips the Strict Mode probe mount so native registrations cannot race", async () => {
     const registered = new Map<string, WebMcpTool>();
     const registerTool = vi.fn(async (tool: WebMcpTool) => {
       registered.set(tool.name, tool);
@@ -70,7 +70,7 @@ describe("useWebMcpTools", () => {
     });
 
     const view = render(<StrictMode><Harness value="strict" /></StrictMode>);
-    await waitFor(() => expect(registerTool).toHaveBeenCalledTimes(2));
+    await waitFor(() => expect(registerTool).toHaveBeenCalledTimes(1));
     await waitFor(() => expect(registered.has("test_get_value")).toBe(true));
     expect(unregisterTool).not.toHaveBeenCalled();
 

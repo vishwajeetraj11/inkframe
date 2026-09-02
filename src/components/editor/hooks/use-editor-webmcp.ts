@@ -20,6 +20,7 @@ import type { LicensedAudioSearchResult } from "@/lib/stock-audio";
 import type {
   EditorExportState,
   EditorFrameCapture,
+  EditorVisualReview,
 } from "./editor-session-types";
 import { nanoid } from "nanoid";
 import { flushSync } from "react-dom";
@@ -39,6 +40,7 @@ export interface EditorWebMcpBridge {
   getExportState: () => EditorExportState;
   cancelExport: () => EditorWebMcpCallbackResult;
   captureFrame: (frame: number, includeImage: boolean) => Promise<EditorFrameCapture>;
+  publishVisualReview: (review: EditorVisualReview) => void;
   getRenderDiagnostics: (aspect: AspectPreset) => unknown;
   removeAsset: (assetId: string) => void;
   requestMediaPicker: () => void;
@@ -131,6 +133,7 @@ const createTools: WebMcpToolFactory<EditorWebMcpBridge> = (getCurrent) =>
       if (signal.aborted) throw signal.reason;
       return capture;
     },
+    publishVisualReview: (review) => getCurrent().publishVisualReview(review),
     getRenderDiagnostics: (aspect) => getCurrent().getRenderDiagnostics(aspect),
     removeAsset: (assetId, signal) => {
       if (signal.aborted) throw signal.reason;

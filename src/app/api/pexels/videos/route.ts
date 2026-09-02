@@ -6,6 +6,7 @@ import {
 import { parsePexelsSearchParams } from "@/lib/pexels/validation";
 import type { PexelsVideoSearchResult } from "@/lib/pexels/types";
 import { fetchPexelsOverIpv4 } from "@/server/pexels-http";
+import { checkRateLimit } from "@/server/request-guard";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -42,6 +43,8 @@ const cachedSearch = async (
 };
 
 export async function GET(request: Request): Promise<Response> {
+  const rateLimit = checkRateLimit(request, { bucket: "pexels-videos", limit: 60, windowMs: 60_000 });
+  if (!rateLimit.ok) return rateLimit.response;
   if (!process.env.PEXELS_API_KEY) {
     return jsonError("Pexels video search is not configured.", 503);
   }
@@ -57,6 +60,7 @@ export async function GET(request: Request): Promise<Response> {
     const result = await cachedSearch(params, request);
     return Response.json(result, {
       headers: {
+        ...rateLimit.headers,
         "Cache-Control": "private, max-age=60",
         "X-Pexels-Attribution": "https://www.pexels.com/",
       },

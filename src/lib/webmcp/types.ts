@@ -35,12 +35,27 @@ export interface WebMCPRegisterOptions {
   signal?: AbortSignal;
 }
 
+export interface WebMCPRegisteredTool {
+  name: string;
+  title?: string;
+  description: string;
+  inputSchema: string | WebMCPInputSchema;
+  annotations?: WebMCPToolAnnotations;
+  origin?: string;
+}
+
 export interface WebMCPModelContext {
   registerTool: (
     tool: WebMCPTool,
     options?: WebMCPRegisterOptions,
   ) => void | Promise<void>;
   unregisterTool?: (name: string) => void | Promise<void>;
+  getTools?: (options?: { fromOrigins?: string[] }) => Promise<WebMCPRegisteredTool[]>;
+  executeTool?: (
+    tool: WebMCPRegisteredTool,
+    inputObject?: string | Record<string, unknown>,
+    options?: { signal?: AbortSignal },
+  ) => Promise<string>;
 }
 
 export interface WebMCPDocument extends Document {

@@ -412,9 +412,9 @@ const TEMPLATE_CATALOG_SOURCE: TemplateDefinition[] = [
   },
 ];
 
-/** Only expose templates backed by complete Elah-native timelines. */
-export const TEMPLATE_DEFINITIONS: TemplateDefinition[] =
-  TEMPLATE_CATALOG_SOURCE.filter((template) => Boolean(template.blueprint));
+/** The template library is intentionally empty until new templates are added. */
+void TEMPLATE_CATALOG_SOURCE;
+export const TEMPLATE_DEFINITIONS: TemplateDefinition[] = [];
 
 export type TemplateDefinitionId = (typeof TEMPLATE_DEFINITIONS)[number]["id"];
 
@@ -441,6 +441,8 @@ export const instantiateTemplate = (
   value: string | null | undefined,
   createId: () => string,
 ): VersionTimeline | null => {
-  const blueprint = getTemplateBlueprint(value);
+  const blueprint = value
+    ? FLAGSHIP_TEMPLATE_BLUEPRINTS[value as FlagshipTemplateId]
+    : undefined;
   return blueprint ? instantiateTemplateBlueprint(blueprint, createId) : null;
 };
