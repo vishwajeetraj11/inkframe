@@ -333,6 +333,8 @@ describe("editor WebMCP tools", () => {
         executeOptions,
       ),
     );
+    expect(planned.sceneTimings[0]).toMatchObject({ startFrame: 0, endFrame: 60 });
+    expect(planned.validation.durationInFrames).toBe(60);
     await tools.find((tool) => tool.name === "editor_add_text_overlay")!.execute(
       { text: "A change after approval" },
       executeOptions,

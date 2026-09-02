@@ -444,7 +444,9 @@ const createStoryboardVersion = ({
       ...overlay,
       text: scene.text,
       startFrame: startFrame + Math.min(6, Math.floor(durationFrames / 6)),
-      endFrame: endFrame - Math.min(4, Math.floor(durationFrames / 8)),
+      endFrame: requestedAsset
+        ? endFrame - Math.min(4, Math.floor(durationFrames / 8))
+        : endFrame,
       x: scene.x,
       y: scene.y,
       fontSize: scene.fontSize,
@@ -505,13 +507,18 @@ const createStoryboardVersion = ({
   return {
     version,
     validation: validateEditorVersion(version, assets),
-    sceneTimings: textOverlays.map((overlay, index) => ({
-      scene: index + 1,
-      startFrame: index === 0 ? 0 : clips[index]?.startFrame ?? 0,
-      endFrame: clips[index]?.endFrame ?? overlay.endFrame,
-      textStartFrame: overlay.startFrame,
-      textEndFrame: overlay.endFrame,
-    })),
+    sceneTimings: textOverlays.map((overlay, index) => {
+      const startFrame = requestedFrames
+        .slice(0, index)
+        .reduce((sum, frames) => sum + frames, 0);
+      return {
+        scene: index + 1,
+        startFrame,
+        endFrame: startFrame + requestedFrames[index],
+        textStartFrame: overlay.startFrame,
+        textEndFrame: overlay.endFrame,
+      };
+    }),
   };
 };
 
