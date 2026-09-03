@@ -425,7 +425,7 @@ export default function Home() {
               animation: `kinetic-fade-up 0.8s ${EXPO_OUT} 0.05s both`,
             }}
           >
-            A motion studio in the browser
+            A WebMCP-native motion studio in the browser
           </p>
 
           <h1 className="font-condensed mt-6 text-[clamp(4rem,13vw,10.5rem)] font-bold uppercase leading-[0.86]">
@@ -453,8 +453,8 @@ export default function Home() {
               animation: `kinetic-fade-up 0.8s ${EXPO_OUT} 0.5s both`,
             }}
           >
-            Cut footage on a timeline, prompt kinetic typography, or start from an
-            editorial preset — then export MP4 in{" "}
+            An agent plans editable videos with structured browser tools. You review the
+            timeline, approve changes, and export MP4 locally in{" "}
             <span className="app-data" style={{ color: BONE }}>
               9:16
             </span>{" "}
@@ -470,11 +470,11 @@ export default function Home() {
             style={{ animation: `kinetic-fade-up 0.8s ${EXPO_OUT} 0.55s both` }}
           >
             <Link
-              href="/templates"
+              href="/editor"
               className="font-condensed group inline-flex items-center gap-3 px-6 py-3.5 text-base font-semibold uppercase tracking-[0.18em] transition-transform duration-300 hover:-translate-y-0.5"
               style={{ background: VERMILLION, color: INK }}
             >
-              Browse templates
+              Try the agent flow
               <span
                 className="inline-block transition-transform duration-300 group-hover:translate-x-1"
                 aria-hidden
@@ -484,11 +484,11 @@ export default function Home() {
             </Link>
 
             <Link
-              href="/editor"
+              href="/templates"
               className="font-condensed inline-flex items-center gap-3 border px-6 py-3.5 text-base font-semibold uppercase tracking-[0.18em] transition-colors duration-300 hover:border-[#FF4F1F] hover:text-[#FF4F1F]"
               style={{ borderColor: `${BONE}45`, color: BONE }}
             >
-              Open editor
+              Browse templates
             </Link>
           </div>
 

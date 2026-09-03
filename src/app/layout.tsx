@@ -75,9 +75,9 @@ export default function RootLayout({
           closeButton
           toastOptions={{
             classNames: {
-              toast: "rounded-none border border-white/10 border-l-2 border-l-cyan-300 bg-[#1b1813] text-neutral-100 shadow-2xl",
+              toast: "rounded-none border border-white/10 border-l-2 border-l-[#ff4f1f] bg-[#1b1813] pr-12 text-neutral-100 shadow-2xl",
               title: "text-sm leading-5 text-neutral-100",
-              closeButton: "min-h-[44px] min-w-[44px] border-white/10 bg-transparent text-neutral-400 hover:bg-white/10 hover:text-neutral-100",
+              closeButton: "!left-auto !right-2 !top-1/2 !h-7 !w-7 !min-h-0 !min-w-0 !border-white/10 !bg-[#1b1813] !text-neutral-400 ![transform:translateY(-50%)] hover:!bg-white/10 hover:!text-neutral-100",
             },
           }}
         />
