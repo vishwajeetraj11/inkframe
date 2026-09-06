@@ -6,8 +6,11 @@ const packageJsonPath = join(packageRoot, "package.json");
 const resolverPath = join(packageRoot, "dist", "resolver", "resolveTimeline.js");
 const typesPath = join(packageRoot, "dist", "types", "index.d.ts");
 const exportPath = join(packageRoot, "dist", "export", "exportVideo.js");
+const textLayerPath = join(packageRoot, "dist", "renderer", "gpu", "layers", "TextLayer.js");
+const exportWorkerPath = join(packageRoot, "dist", "export", "ExportWorker.js");
 const patchMarker = "INKFRAME_TEXT_MOTION_PATCH_V1";
 const audioFadeMarker = "INKFRAME_AUDIO_FADE_PATCH_V1";
+const textContrastMarker = "INKFRAME_TEXT_CONTRAST_PATCH_V1";
 
 const packageJson = JSON.parse(await readFile(packageJsonPath, "utf8"));
 if (packageJson.version !== "0.4.1") {
@@ -131,6 +134,28 @@ if (!resolverSource.includes(patchMarker)) {
   await writeFile(resolverPath, resolverSource);
 }
 
+if (!resolverSource.includes(textContrastMarker)) {
+  const textBranchStart = resolverSource.indexOf("            else if (clip.type === 'text') {");
+  const textBranchEnd = resolverSource.indexOf(
+    "            else if (clip.type === 'image' && clip.src) {",
+    textBranchStart,
+  );
+  if (textBranchStart < 0 || textBranchEnd < 0) {
+    throw new Error("Unable to locate Elah's active text branch for contrast patching.");
+  }
+  const textBranch = resolverSource.slice(textBranchStart, textBranchEnd);
+  const alignmentField =
+    "                    ...(clip.textAlign !== undefined ? { textAlign: clip.textAlign } : {}),";
+  if (!textBranch.includes(alignmentField)) {
+    throw new Error("Unable to locate Elah's resolved text alignment field.");
+  }
+  const patchedTextBranch = textBranch.replace(
+    alignmentField,
+    `${alignmentField}\n                    // ${textContrastMarker}: carry Inkframe's export-safe text outline.\n                    ...(clip.strokeColor !== undefined ? { strokeColor: clip.strokeColor } : {}),\n                    ...(clip.strokeWidth !== undefined ? { strokeWidth: clip.strokeWidth } : {}),`,
+  );
+  resolverSource = `${resolverSource.slice(0, textBranchStart)}${patchedTextBranch}${resolverSource.slice(textBranchEnd)}`;
+}
+
 let typesSource = await readFile(typesPath, "utf8");
 const originalType = "export type TextAnimationKind = 'fade';";
 const patchedType =
@@ -152,6 +177,52 @@ if (!typesSource.includes("fadeInFrames?: FrameCount;")) {
   );
 }
 await writeFile(typesPath, typesSource);
+
+let textLayerSource = await readFile(textLayerPath, "utf8");
+if (!textLayerSource.includes(textContrastMarker)) {
+  const fillLoop = `        layout.lines.forEach((line, i) => {
+            ctx2d.fillText(line, layout.anchorX, layout.firstLineY + i * layout.lineAdvance);
+        });`;
+  if (!textLayerSource.includes(fillLoop)) {
+    throw new Error("Unable to locate Elah's preview text paint loop.");
+  }
+  textLayerSource = textLayerSource.replace(
+    fillLoop,
+    `        // ${textContrastMarker}: draw an optional crisp outline beneath the text fill.
+        ctx2d.lineJoin = 'round';
+        ctx2d.strokeStyle = item.strokeColor ?? 'transparent';
+        ctx2d.lineWidth = item.strokeWidth ?? 0;
+        layout.lines.forEach((line, i) => {
+            if ((item.strokeWidth ?? 0) > 0)
+                ctx2d.strokeText(line, layout.anchorX, layout.firstLineY + i * layout.lineAdvance);
+            ctx2d.fillText(line, layout.anchorX, layout.firstLineY + i * layout.lineAdvance);
+        });`,
+  );
+  await writeFile(textLayerPath, textLayerSource);
+}
+
+let exportWorkerSource = await readFile(exportWorkerPath, "utf8");
+if (!exportWorkerSource.includes(textContrastMarker)) {
+  const exportFillLoop = `    for (let i = 0; i < layout.lines.length; i++) {
+        ctx.fillText(layout.lines[i], layout.anchorX, layout.firstLineY + i * layout.lineAdvance);
+    }`;
+  if (!exportWorkerSource.includes(exportFillLoop)) {
+    throw new Error("Unable to locate Elah's export text paint loop.");
+  }
+  exportWorkerSource = exportWorkerSource.replace(
+    exportFillLoop,
+    `    // ${textContrastMarker}: match the preview's optional text outline in MP4 exports.
+    ctx.lineJoin = 'round';
+    ctx.strokeStyle = clip.strokeColor ?? 'transparent';
+    ctx.lineWidth = clip.strokeWidth ?? 0;
+    for (let i = 0; i < layout.lines.length; i++) {
+        if ((clip.strokeWidth ?? 0) > 0)
+            ctx.strokeText(layout.lines[i], layout.anchorX, layout.firstLineY + i * layout.lineAdvance);
+        ctx.fillText(layout.lines[i], layout.anchorX, layout.firstLineY + i * layout.lineAdvance);
+    }`,
+  );
+  await writeFile(exportWorkerPath, exportWorkerSource);
+}
 
 if (!resolverSource.includes(audioFadeMarker)) {
   const volumeDeclaration = "            const volume = baseVolume * trackGain;";
@@ -220,3 +291,7 @@ if (!exportSource.includes(audioFadeMarker)) {
 }
 
 console.log(`Elah ${packageJson.version} text motion and audio fades ready.`);
+
+// Apply the shared deterministic evaluator only after legacy motion/fade hooks.
+await import("./patch-elah-deterministic.mjs");
+await import("./patch-elah-video-filters.mjs");

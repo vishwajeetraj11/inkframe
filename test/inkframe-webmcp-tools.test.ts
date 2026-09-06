@@ -45,7 +45,15 @@ describe("Inkframe WebMCP tools", () => {
         kind: "editor",
         editable: true,
         editableTextLayers: 9,
-        durationSeconds: 358 / 30,
+        durationSeconds: 368 / 30,
+      }),
+      expect.objectContaining({
+        id: "new-day-place",
+        kind: "editor",
+        editable: true,
+        aspect: "widescreen_16_9",
+        editableTextLayers: 23,
+        durationSeconds: 1257 / 30,
       }),
     ]);
     expect(result.returned).toBeLessThanOrEqual(20);
@@ -67,6 +75,8 @@ describe("Inkframe WebMCP tools", () => {
     );
     expect(navigate).toHaveBeenCalledWith("/editor?template=one-number");
     expect(openResult.nextAction).toContain("editor_* tools");
+    await openTemplate.execute({ templateId: "new-day-place", confirmed: true }, executeOptions);
+    expect(navigate).toHaveBeenCalledWith("/editor?template=new-day-place");
     await expect(openTemplate.execute({ templateId: "documentary-cut", confirmed: true }, executeOptions)).rejects.toThrow();
 
     await expect(navigateTool.execute({ route: "https://example.com", confirmed: true }, executeOptions)).rejects.toThrow();

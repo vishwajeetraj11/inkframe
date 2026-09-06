@@ -1,10 +1,11 @@
 import {
+  FPS,
   MAX_AUDIO_FILE_BYTES,
   MAX_DURATION_FRAMES,
   MAX_IMAGE_FILE_BYTES,
   MAX_VIDEO_FILE_BYTES,
 } from "./constants";
-import { getTimelineDurationInFrames } from "./timeline";
+import { getTimelineDurationInFrames, validateVersionPlacement, sanitizeTransitions } from "./timeline";
 import {
   CREATEDALEY_OPENER_TEXTURES,
   EDITOR_TRACK_KINDS,
@@ -14,6 +15,7 @@ import {
   type AssetKind,
 } from "./types";
 import { z } from "zod";
+import { validateTimeMapping } from "./time-mapping";
 
 export const SUPPORTED_IMAGE_MIME_TYPES = [
   "image/jpeg",
@@ -29,6 +31,25 @@ export const isSupportedImageMimeType = (mimeType: string): boolean =>
 const aspectSchema = z.enum(["reel_9_16", "widescreen_16_9"]);
 const assetKindSchema = z.enum(["video", "image", "audio"]);
 
+const scalarPointSchema=z.object({id:z.string().min(1),frame:z.number().int().min(0).max(MAX_DURATION_FRAMES),value:z.number().finite(),interpolation:z.enum(["linear","hold"])});
+const keyframesSchema=z.object({x:z.array(scalarPointSchema).optional(),y:z.array(scalarPointSchema).optional(),scale:z.array(scalarPointSchema).optional(),rotation:z.array(scalarPointSchema).optional(),opacity:z.array(scalarPointSchema).optional()}).strict();
+const speedPointSchema=z.object({frame:z.number().int().min(0).max(MAX_DURATION_FRAMES),speed:z.number().positive().finite(),interpolation:z.enum(["linear","hold"])});
+const timeMappingSchema=z.discriminatedUnion("kind",[
+ z.object({kind:z.literal("normal")}).strict(),z.object({kind:z.literal("hold"),sourceTimeUs:z.number().nonnegative().finite().max(Number.MAX_SAFE_INTEGER)}).strict(),
+ z.object({kind:z.literal("speed"),points:z.array(speedPointSchema).min(1),sourceStartTimeUs:z.number().nonnegative().finite().max(Number.MAX_SAFE_INTEGER).optional()}).strict()]);
+const videoFilterSchema = z.object({
+  preset: z.enum(["none", "cinematic", "warm", "cool", "vintage", "mono", "custom"]),
+  brightness: z.number().min(0.5).max(1.5),
+  contrast: z.number().min(0.5).max(1.5),
+  saturation: z.number().min(0).max(2),
+  sepia: z.number().min(0).max(1),
+  grayscale: z.number().min(0).max(1),
+  hueRotate: z.number().min(-30).max(30),
+}).strict();
+const captionCueSchema=z.object({id:z.string().min(1),trackId:z.string().min(1),startFrame:z.number().int().min(0),endFrame:z.number().int().min(1),text:z.string().min(1)});
+const audioRefSchema=z.object({kind:z.enum(["audio","video"]),id:z.string().min(1)});
+const duckingRuleSchema=z.object({id:z.string().min(1),target:audioRefSchema,triggers:z.array(audioRefSchema).min(1),attenuationDb:z.number().min(-60).max(0),attackFrames:z.number().int().min(0).max(MAX_DURATION_FRAMES),releaseFrames:z.number().int().min(0).max(MAX_DURATION_FRAMES)});
+
 const clipSchema = z
   .object({
     id: z.string().min(1),
@@ -40,6 +61,14 @@ const clipSchema = z
     trimStartFrame: z.number().int().min(0),
     trimEndFrame: z.number().int().min(1),
     volume: z.number().min(0).max(1),
+    transform: z.object({
+      x: z.number().finite(), y: z.number().finite(),
+      scale: z.number().finite().positive(), rotation: z.number().finite(),
+      anchor: z.object({ x: z.number().min(0).max(1), y: z.number().min(0).max(1) }),
+    }).optional(),
+    opacity: z.number().min(0).max(1).optional(),
+    videoFilter: videoFilterSchema.optional(),
+    keyframes:keyframesSchema.optional(), timeMapping:timeMappingSchema.optional(), sourceDurationUs:z.number().finite().positive().max(Number.MAX_SAFE_INTEGER).optional(),
   })
   .superRefine((clip, context) => {
     if (clip.endFrame <= clip.startFrame) {
@@ -76,6 +105,7 @@ const textOverlaySchema = z
     textAlign: z.enum(["left", "center", "right"]).default("center"),
     stylePreset: z.enum(TEXT_OVERLAY_STYLE_PRESETS).default("classic"),
     createdaleyTexture: z.enum(CREATEDALEY_OPENER_TEXTURES).default("plain"),
+    contrast: z.literal("outline").optional(),
     animation: z
       .object({
         in: z
@@ -176,9 +206,20 @@ const versionTimelineSchema = z.object({
   textOverlays: z.array(textOverlaySchema),
   audioTracks: z.array(audioTrackSchema),
   transitions: z.array(transitionSchema),
+  captionCues:z.array(captionCueSchema).optional(),
+  duckingRules:z.array(duckingRuleSchema).optional(),
+}).superRefine((version, context) => {
+  for (const issue of validateVersionPlacement(version)) {
+    context.addIssue({code: z.ZodIssueCode.custom, message: issue.message});
+  }
+  const valid = sanitizeTransitions(version.clips, version.transitions);
+  if (valid.length !== version.transitions.length || valid.some((item, index) => item.durationInFrames !== version.transitions[index].durationInFrames)) {
+    context.addIssue({code: z.ZodIssueCode.custom, path: ["transitions"], message: "Transitions must connect touching clips on the same lane with valid unique edges and durations."});
+  }
 });
 
 export const persistedProjectSchema = z.object({
+  contentVersion: z.literal(1).optional(),
   activeVersion: aspectSchema,
   versions: z.object({
     reel_9_16: versionTimelineSchema,
@@ -193,6 +234,7 @@ const assetRefSchema = z.object({
   name: z.string().min(1),
   size: z.number().int().min(0),
   externalUrl: z.string().url().optional(),
+  mediaMetadata:z.object({durationUs:z.number().finite().positive().max(Number.MAX_SAFE_INTEGER),width:z.number().int().positive().optional(),height:z.number().int().positive().optional()}).optional(),
   attribution: z
     .object({
       provider: z.enum(["pexels", "mixkit", "freesound"]),
@@ -205,17 +247,6 @@ const assetRefSchema = z.object({
     })
     .optional(),
 });
-
-const clipHasAdjacentTransition = (
-  fromClipId: string,
-  toClipId: string,
-  clipIds: string[],
-): boolean => {
-  const fromIndex = clipIds.indexOf(fromClipId);
-  const toIndex = clipIds.indexOf(toClipId);
-
-  return fromIndex !== -1 && toIndex === fromIndex + 1;
-};
 
 export const exportProjectSchema = z
   .object({
@@ -270,7 +301,11 @@ export const exportProjectSchema = z
         });
       }
 
-      const clipIds = version.clips.map((clip) => clip.id);
+      for (const issue of validateVersionPlacement(version)) {
+        context.addIssue({ code: z.ZodIssueCode.custom,
+          path: ["versions", versionName], message: issue.message });
+      }
+      const validTransitions = sanitizeTransitions(version.clips, version.transitions);
 
       for (const [clipIndex, clip] of version.clips.entries()) {
         const asset = assetById.get(clip.assetId);
@@ -281,6 +316,12 @@ export const exportProjectSchema = z
             message: `Unknown assetId ${clip.assetId}`,
           });
           continue;
+        }
+
+        if (clip.kind === "video" && asset.mediaMetadata?.durationUs !== undefined) {
+          for (const message of validateTimeMapping(clip.timeMapping, clip.endFrame - clip.startFrame, clip.trimStartFrame, asset.mediaMetadata.durationUs, FPS)) {
+            context.addIssue({code: z.ZodIssueCode.custom, path: ["versions", versionName, "clips", clipIndex, "timeMapping"], message: `Verified asset bound: ${message}`});
+          }
         }
 
         if (asset.kind !== clip.kind) {
@@ -314,16 +355,12 @@ export const exportProjectSchema = z
 
       for (const [transitionIndex, transition] of version.transitions.entries()) {
         if (
-          !clipHasAdjacentTransition(
-            transition.fromClipId,
-            transition.toClipId,
-            clipIds,
-          )
+          !validTransitions.some((item) => item.id === transition.id && item.durationInFrames === transition.durationInFrames)
         ) {
           context.addIssue({
             code: z.ZodIssueCode.custom,
             path: ["versions", versionName, "transitions", transitionIndex],
-            message: "Transitions must connect adjacent clips in timeline order.",
+            message: "Transitions must connect touching clips on the same lane with a valid duration.",
           });
         }
       }
@@ -331,14 +368,14 @@ export const exportProjectSchema = z
 
     const activeTimeline = project.versions[project.activeVersion];
     const hasRenderableVisuals =
-      activeTimeline.clips.length > 0 || activeTimeline.textOverlays.length > 0;
+      activeTimeline.clips.length > 0 || activeTimeline.textOverlays.length > 0 || (activeTimeline.captionCues?.length ?? 0) > 0;
 
     if (!hasRenderableVisuals) {
       context.addIssue({
         code: z.ZodIssueCode.custom,
         path: ["versions", project.activeVersion],
         message:
-          "Active version must contain at least one clip or text overlay to export.",
+          "Active version must contain at least one clip, text overlay, or caption to export.",
       });
     }
   });

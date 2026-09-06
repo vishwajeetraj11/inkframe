@@ -2,8 +2,7 @@
 
 import { useWebMcpTools, type WebMcpToolFactory } from "@/components/webmcp/use-webmcp-tools";
 import type { AIEditorActions } from "@/lib/editor/ai-actions";
-import type { EditorHistoryState } from "@/lib/editor/history";
-import type { EditorAction } from "@/lib/editor/reducer";
+import type { EditorHistoryAction, EditorHistoryState } from "@/lib/editor/history";
 import type { AspectPreset, AssetRef } from "@/lib/editor/types";
 import type {
   PexelsPhotoSearchResult,
@@ -26,7 +25,7 @@ import { flushSync } from "react-dom";
 
 export interface EditorWebMcpBridge {
   history: EditorHistoryState;
-  dispatch: (action: EditorAction) => void;
+  dispatch: (action: EditorHistoryAction) => void;
   undo: () => void;
   redo: () => void;
   assets: readonly AssetRef[];
@@ -95,6 +94,7 @@ const createTools: WebMcpToolFactory<EditorWebMcpBridge> = (getCurrent) =>
     getState: () => getCurrent().history,
     getAssets: () => getCurrent().assets,
     dispatch: (action) => flushSync(() => getCurrent().dispatch(action)),
+    dispatchCommand: (action) => flushSync(() => getCurrent().dispatch(action)),
     undo: () => flushSync(() => getCurrent().undo()),
     redo: () => flushSync(() => getCurrent().redo()),
     createId: () => nanoid(10),

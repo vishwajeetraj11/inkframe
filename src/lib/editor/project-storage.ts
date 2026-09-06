@@ -1,6 +1,6 @@
 import type { LocalAsset } from "@/components/editor/hooks/editor-session-types";
 import type { ProjectSession } from "./types";
-import { persistedProjectSchema } from "./schema";
+import { migrateProjectContent } from "./project-migrations";
 
 const DATABASE_NAME = "inkframe-editor";
 const PROJECT_STORE_NAME = "projects";
@@ -16,6 +16,7 @@ interface PersistedAssetMetadata {
   size: number;
   externalUrl?: string;
   attribution?: LocalAsset["attribution"];
+  mediaMetadata?: LocalAsset["mediaMetadata"];
 }
 
 interface PersistedAssetBlob {
@@ -51,6 +52,17 @@ export interface ProjectSaveResult {
   reusedAssetBlobs: number;
   removedAssetBlobs: number;
 }
+
+const validateAssetMetadata = (assets: readonly PersistedAssetMetadata[]): void => {
+  for (const asset of assets) {
+    const metadata = asset.mediaMetadata;
+    if (metadata === undefined) continue;
+    if (!metadata || !Number.isSafeInteger(metadata.durationUs) || metadata.durationUs <= 0 ||
+      [metadata.width, metadata.height].some((value) => value !== undefined && (!Number.isSafeInteger(value) || value <= 0))) {
+      throw new Error(`Asset ${asset.assetId} has invalid media metadata.`);
+    }
+  }
+};
 
 const assetFingerprint = (asset: LocalAsset): string =>
   [asset.name, asset.mimeType, asset.size, asset.file?.lastModified ?? 0].join(":");
@@ -92,6 +104,8 @@ export const saveProjectSnapshot = async (
   project: ProjectSession,
   assets: readonly LocalAsset[],
 ): Promise<ProjectSaveResult> => {
+  validateAssetMetadata(assets);
+  const migratedProject = migrateProjectContent(project);
   const database = await openDatabase();
   const savedAt = Date.now();
   let writtenAssetBlobs = 0;
@@ -103,8 +117,8 @@ export const saveProjectSnapshot = async (
       key: PROJECT_KEY,
       schemaVersion: 2,
       savedAt,
-      project,
-      assets: assets.map(({ assetId, kind, mimeType, name, size, externalUrl, attribution }) => ({
+      project: migratedProject,
+      assets: assets.map(({ assetId, kind, mimeType, name, size, externalUrl, attribution, mediaMetadata }) => ({
         assetId,
         kind,
         mimeType,
@@ -112,6 +126,7 @@ export const saveProjectSnapshot = async (
         size,
         externalUrl,
         attribution,
+        mediaMetadata,
       })),
     };
 
@@ -176,12 +191,21 @@ export const loadProjectSnapshot = async (): Promise<RestoredProject | null> => 
     );
 
     if (!result) return null;
-    const parsedProject = persistedProjectSchema.safeParse(result.project);
-    if (!parsedProject.success) {
-      throw new Error("The saved project is invalid or from an unsupported editor version.");
+    validateAssetMetadata(result.assets);
+    const project = migrateProjectContent(result.project);
+    // Upgrade only project metadata: keep the storage layout, saved timestamp,
+    // and all existing asset records/fingerprints intact.
+    if (result.project.contentVersion === undefined) {
+      await new Promise<void>((resolve, reject) => {
+        const transaction = database.transaction(PROJECT_STORE_NAME, "readwrite");
+        transaction.objectStore(PROJECT_STORE_NAME).put({ ...result, project });
+        transaction.oncomplete = () => resolve();
+        transaction.onerror = () => reject(transaction.error ?? new Error("Project migration failed."));
+        transaction.onabort = () => reject(transaction.error ?? new Error("Project migration aborted."));
+      });
     }
     if (!("schemaVersion" in result) || result.schemaVersion !== 2) {
-      return { project: parsedProject.data, assets: result.assets, savedAt: result.savedAt };
+      return { project, assets: result.assets, savedAt: result.savedAt };
     }
 
     const blobs = await new Promise<Map<string, Blob>>((resolve, reject) => {
@@ -196,7 +220,7 @@ export const loadProjectSnapshot = async (): Promise<RestoredProject | null> => 
     });
 
     return {
-      project: parsedProject.data,
+      project,
       assets: result.assets.map((asset) => ({ ...asset, blob: blobs.get(asset.assetId) })),
       savedAt: result.savedAt,
     };

@@ -9,6 +9,7 @@ describe("editor template catalog", () => {
     expect(TEMPLATE_DEFINITIONS.map((template) => template.id)).toEqual([
       "agent-demo-reel",
       "one-number",
+      "new-day-place",
     ]);
     expect(TEMPLATE_DEFINITIONS[0]).toMatchObject({
       aspect: "reel_9_16",
@@ -31,6 +32,24 @@ describe("editor template catalog", () => {
         clips: expect.any(Array),
         audioTracks: expect.any(Array),
         transitions: expect.any(Array),
+      },
+    });
+    expect(TEMPLATE_DEFINITIONS[2]).toMatchObject({
+      id: "new-day-place",
+      aspect: "widescreen_16_9",
+      starterAssets: expect.arrayContaining([
+        expect.objectContaining({ kind: "video" }),
+        expect.objectContaining({
+          kind: "audio",
+          publicPath: "/starter-assets/new-day-india/brand-new-day-tokyo-edition.mp3",
+        }),
+      ]),
+      blueprint: {
+        clips: expect.any(Array),
+        audioTracks: expect.arrayContaining([
+          expect.objectContaining({ assetId: "new-day-place-audio-01" }),
+        ]),
+        transitions: [],
       },
     });
   });
@@ -84,6 +103,27 @@ describe("editor template catalog", () => {
       template?.blueprint?.textOverlays.every((overlay) => overlay.stylePreset === "classic"),
     ).toBe(true);
     expect(template?.blueprint?.textOverlays.at(-1)?.endFrame).toBe(358);
+  });
+
+  it("resolves the editable New Day place project", () => {
+    const template = getTemplateDefinition("new-day-place");
+
+    expect(template?.blueprint?.clips).toHaveLength(19);
+    expect(template?.blueprint?.textOverlays).toHaveLength(23);
+    expect(template?.blueprint?.clips.at(-1)?.endFrame).toBe(1257);
+    expect(template?.starterAssets).toHaveLength(20);
+    expect(template?.starterAssets?.filter((asset) => asset.kind === "video")).toHaveLength(19);
+    expect(template?.starterAssets?.at(-1)).toMatchObject({
+      kind: "audio",
+      name: "Brand New Day — Tokyo Edition",
+      mimeType: "audio/mpeg",
+      publicPath: "/starter-assets/new-day-india/brand-new-day-tokyo-edition.mp3",
+    });
+    expect(
+      template?.starterAssets
+        ?.filter((asset) => asset.kind === "video")
+        .every((asset) => asset.attribution?.creatorName && asset.attribution?.sourceUrl),
+    ).toBe(true);
   });
 
   it("does not resolve removed vox explainer template", () => {

@@ -1,3 +1,4 @@
+import { evaluateGainEnvelope } from "@/lib/editor/deterministic-runtime.mjs";
 import { describe, expect, it } from "vitest";
 import {
   fromElahProject,
@@ -18,6 +19,15 @@ const version: VersionTimeline = {
       trimStartFrame: 12,
       trimEndFrame: 102,
       volume: 0.8,
+      videoFilter: {
+        preset: "cinematic",
+        brightness: 0.94,
+        contrast: 1.18,
+        saturation: 0.88,
+        sepia: 0.06,
+        grayscale: 0,
+        hueRotate: -3,
+      },
     },
     {
       id: "clip-image",
@@ -45,6 +55,7 @@ const version: VersionTimeline = {
       fontStyle: "italic",
       stylePreset: "classic",
       createdaleyTexture: "plain",
+      contrast: "outline",
       syncMediaToTimelineEvents: false,
     },
     {
@@ -161,10 +172,21 @@ describe("Inkframe ↔ Elah timeline adapter", () => {
       fadeInFrames: 12,
       fadeOutFrames: 24,
     });
+    expect(nativeClips.find((clip) => clip.id === "clip-video")).toMatchObject({
+      videoFilter: { preset: "cinematic", contrast: 1.18, saturation: 0.88 },
+    });
     expect(projected.sidecar.canonicalVersion).toEqual(version);
     expect(nativeClips.find((clip) => clip.id === "text-preset")).toMatchObject({
       content: "95%\n42% growth",
       fontSize: 72,
+    });
+    expect(nativeClips.find((clip) => clip.id === "text-classic")).toMatchObject({
+      fontFamily: '"Barlow Condensed", "Arial Narrow", sans-serif',
+      strokeColor: "#17120f",
+      strokeWidth: 4,
+    });
+    expect(nativeClips.find((clip) => clip.id === "text-preset")).toMatchObject({
+      fontFamily: '"Cormorant Garamond", Georgia, serif',
     });
     expect(projected.diagnostics).toEqual([
       expect.objectContaining({
@@ -319,4 +341,88 @@ describe("Inkframe ↔ Elah timeline adapter", () => {
     expect(restored.version.clips).toEqual(version.clips);
     expect(restored.version.transitions).toEqual(version.transitions);
   });
+
+  it("preserves legacy auto-fit and explicit source-pixel transforms across native edits", () => {
+    const transformed: VersionTimeline = {
+      ...version,
+      clips: version.clips.map((clip, index) => index ? clip : {
+        ...clip,
+        transform: { x: 0.75, y: 0.25, scale: 0.5, rotation: Math.PI / 4, anchor: { x: 0.5, y: 0.5 } },
+        opacity: 0.6,
+      }),
+    };
+    const projected = toElahProject(transformed, { assets });
+    const native = Object.values(projected.project.clips).flat();
+    const video = native.find((clip) => clip.id === "clip-video")!;
+    const image = native.find((clip) => clip.id === "clip-image")!;
+    expect(image.transform).toBeUndefined();
+    expect(video.transform).toEqual(transformed.clips[0].transform);
+    expect(video.opacity).toBe(0.6);
+    video.startFrame = 180;
+    video.transform!.x = 0.2;
+    const restored = fromElahProject(projected.project, projected.sidecar).version;
+    expect(restored.clips.find((clip) => clip.id === video.id)).toMatchObject({
+      startFrame: 180, endFrame: 270, opacity: 0.6,
+      transform: { x: 0.2, y: 0.25, scale: 0.5, rotation: Math.PI / 4 },
+    });
+    expect(transformed.clips[0].transform!.x).toBe(0.75);
+    expect(projected.sidecar.canonicalVersion.clips[0].transform!.x).toBe(0.75);
+    delete video.transform;
+    expect(fromElahProject(projected.project, projected.sidecar).version.clips.find((clip) => clip.id === video.id)!.transform).toBeUndefined();
+  });
+
+  it("retains overlapping lanes and order and rebuilds linked audio after a native move", () => {
+    const layered: VersionTimeline = {
+      ...version,
+      tracks: [{ id: "pip", kind: "video", name: "PiP", order: -1 }, ...createDefaultEditorTracks()],
+      clips: [version.clips[0], { ...version.clips[0], id: "pip-clip", trackId: "pip", startFrame: 30, endFrame: 60 }],
+      transitions: [],
+    };
+    const first = toElahProject(layered, { assets });
+    expect(first.project.tracks[0].id).toBe("pip");
+    first.project.clips.pip[0].startFrame = 45;
+    const restored = fromElahProject(first.project, first.sidecar).version;
+    expect(restored.clips.map((clip) => [clip.startFrame, clip.endFrame])).toEqual([[0, 90], [45, 75]]);
+    expect(restored.tracks![0].id).toBe("pip");
+    const next = toElahProject(restored, { assets });
+    const linked = Object.values(next.project.clips).flat().find((clip) => clip.id === "inkframe-video-audio-pip-clip")!;
+    expect(linked).toMatchObject({ startFrame: 45, durationFrames: 30, sourceStartFrame: 12 });
+  });
+
+  it("projects plain captions without preset backgrounds and preserves caption track identity", () => {
+    const captioned: VersionTimeline = { ...version, tracks: [...createDefaultEditorTracks(), { id: "captions", kind: "caption", name: "Captions", order: 3 }], captionCues: [{ id: "cue", trackId: "captions", startFrame: 10, endFrame: 180, text: "Plain caption" }] };
+    const projected = toElahProject(captioned, { assets });
+    const native = projected.project.clips.captions[0];
+    expect(native).toMatchObject({ id: "cue", type: "text", content: "Plain caption", startFrame: 10, durationFrames: 170 });
+    expect(Object.values(projected.project.clips).flat().some(clip => clip.id === "inkframe-background-cue")).toBe(false);
+    native.content = "Edited caption";
+    const restored = fromElahProject(projected.project, projected.sidecar).version;
+    expect(restored.captionCues![0].text).toBe("Edited caption");
+    expect(restored.tracks!.find(track => track.id === "captions")!.kind).toBe("caption");
+    expect(restored.textOverlays).toMatchObject(version.textOverlays);
+  });
+
+  it("preserves animation and retiming but rejects unsupported native timing edits", () => {
+    const animated: VersionTimeline = { ...version, transitions: [], clips: [{ ...version.clips[0], keyframes: { opacity: [{ id: "key", frame: 0, value: .5, interpolation: "linear" }] }, timeMapping: { kind: "hold", sourceTimeUs: 123456 } }] };
+    const projected = toElahProject(animated, { assets });
+    const native = Object.values(projected.project.clips).flat().find(clip => clip.id === "clip-video")!;
+    expect(native.keyframes).toEqual(animated.clips[0].keyframes);
+    expect(native.timeMapping).toEqual(animated.clips[0].timeMapping);
+    expect(Object.values(projected.project.clips).flat().some(clip => clip.id === "inkframe-video-audio-clip-video")).toBe(false);
+    native.startFrame = 20;
+    const moved = fromElahProject(projected.project, projected.sidecar);
+    expect(moved.rejected).toBeUndefined();
+    expect(moved.version.clips[0]).toMatchObject({ startFrame: 20, keyframes: animated.clips[0].keyframes, timeMapping: animated.clips[0].timeMapping });
+    native.durationFrames = 45;
+    expect(fromElahProject(projected.project, projected.sidecar).rejected).toBe(true);
+  });
+
+  it("projects ducking on standalone and embedded audio and retains rules on roundtrip", () => {
+    const ducked: VersionTimeline = { ...version, duckingRules: [{ id: "duck", target: { kind: "video", id: "clip-video" }, triggers: [{ kind: "audio", id: "audio-main" }], attenuationDb: -6, attackFrames: 3, releaseFrames: 3 }] };
+    const projected = toElahProject(ducked, { assets });
+    const linked = Object.values(projected.project.clips).flat().find(clip => clip.id === "inkframe-video-audio-clip-video")!;
+    expect(evaluateGainEnvelope(linked.gainEnvelope, 15)).toBeCloseTo(10 ** (-6 / 20));
+    expect(fromElahProject(projected.project, projected.sidecar).version.duckingRules).toEqual(ducked.duckingRules);
+  });
+
 });

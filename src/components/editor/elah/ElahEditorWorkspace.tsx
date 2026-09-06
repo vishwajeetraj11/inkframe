@@ -66,18 +66,35 @@ export const ElahEditorWorkspace = ({
     (project: ElahProject) => {
       const next = fromElahProject(project, sidecarRef.current);
       const sanitizedVersion = sanitizeVersion(next.version);
-      if (!sanitizedVersion) return;
-      sidecarRef.current = {
-        ...sidecarRef.current,
-        canonicalVersion: sanitizedVersion,
-      };
+      if (!sanitizedVersion || next.rejected) {
+        // A fresh accepted projection forces the native engine back to the
+        // canonical timeline even when the parent version did not change.
+        const accepted = toElahProject(sidecarRef.current.canonicalVersion, {
+          assets,
+          assetSources,
+          projectId: project.id,
+        });
+        sidecarRef.current = accepted.sidecar;
+        setElahEcho({
+          project: accepted.project,
+          syncSignature: `${JSON.stringify(accepted.sidecar.canonicalVersion)}:${sourceSignature}`,
+        });
+        return;
+      }
+      const accepted = toElahProject(sanitizedVersion, {
+        assets,
+        assetSources,
+        projectId: project.id,
+      });
+      sidecarRef.current = accepted.sidecar;
       setElahEcho({
-        project,
+        // Regenerate linked embedded audio after native moves, trims and splits.
+        project: accepted.project,
         syncSignature: `${JSON.stringify(sanitizedVersion)}:${sourceSignature}`,
       });
       onVersionChange(sanitizedVersion);
     },
-    [onVersionChange, sourceSignature],
+    [assetSources, assets, onVersionChange, sourceSignature],
   );
 
   const syncSignature = `${versionSignature}:${sourceSignature}`;

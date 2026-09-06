@@ -1,4 +1,9 @@
-import type { TextOverlayAnimationKind, VersionTimeline } from "../types";
+import type {
+  TextOverlayAnimationKind,
+  VersionTimeline,
+  VideoFilterPreset,
+} from "../types";
+import { cloneVideoFilterPreset } from "../video-filters";
 
 interface NativeTemplateBeat {
   text: string;
@@ -68,6 +73,120 @@ const createNativeThreeBeatBlueprint = (
     },
   ],
 });
+
+/**
+ * Frame-accurate 41.9 second cut grid modelled on the compact city-film rhythm:
+ * one long establishing beat, a short credit passage, then increasingly spacious
+ * observational cuts. The bundled user-supplied track follows this same grid.
+ */
+export const NEW_DAY_PLACE_CUT_FRAMES = [
+  0, 146, 192, 239, 286, 337, 391, 448, 504, 563, 621, 681, 741, 804, 869, 936,
+  1006, 1081, 1165, 1257,
+] as const;
+
+const NEW_DAY_PLACE_ASSET_IDS = [
+  "new-day-place-video-01",
+  "new-day-place-video-02",
+  "new-day-place-video-03",
+  "new-day-place-video-04",
+  "new-day-place-video-05",
+  "new-day-place-video-06",
+  "new-day-place-video-07",
+  "new-day-place-video-08",
+  "new-day-place-video-09",
+  "new-day-place-video-10",
+  "new-day-place-video-11",
+  "new-day-place-video-12",
+  "new-day-place-video-13",
+  "new-day-place-video-14",
+  "new-day-place-video-15",
+  "new-day-place-video-16",
+  "new-day-place-video-17",
+  "new-day-place-video-18",
+  "new-day-place-video-19",
+] as const;
+
+/** Shot-aware grading: warm natural light, cool atmospheric landscapes, and a
+ * restrained cinematic baseline for rain, greenery, and neutral city scenes. */
+export const NEW_DAY_PLACE_FILTER_PRESETS: readonly VideoFilterPreset[] = [
+  "warm",       // Taj Mahal
+  "warm",       // Goa coast
+  "cool",       // Ladakh
+  "cinematic",  // Pune monsoon
+  "warm",       // Hawa Mahal
+  "cinematic",  // Kerala backwaters
+  "warm",       // Mehrangarh Fort
+  "cool",       // Misty Kerala highlands
+  "warm",       // Varanasi ghats
+  "warm",       // Golden Temple
+  "cinematic",  // India Gate
+  "warm",       // Laxmi Vilas Palace
+  "cool",       // Nohkalikai Falls
+  "cool",       // Kashmir valley
+  "warm",       // Kanchenjunga sunrise
+  "warm",       // Kutch
+  "cinematic",  // Munnar tea hills
+  "warm",       // Ancient temple
+  "warm",       // Varkala Beach
+] as const;
+
+const NEW_DAY_PLACE_SOURCE_CREDITS = [
+  "TAJ MAHAL, AGRA  ·  VIDEO: CHANDAN KUMAR / PEXELS",
+  "GOA COAST  ·  VIDEO: KARTIK NAIK / PEXELS",
+  "LADAKH  ·  VIDEO: GAURAV GUPTA / PEXELS",
+  "PUNE MONSOON  ·  VIDEO: ANIKET SURYAWANSHI / PEXELS",
+  "HAWA MAHAL, JAIPUR  ·  VIDEO: ABHISHEK SHEKHAWAT / PEXELS",
+  "KERALA BACKWATERS  ·  VIDEO: DHYEY PATEL / PEXELS",
+  "MEHRANGARH FORT, JODHPUR  ·  VIDEO: ANIL SHARMA / PEXELS",
+  "KERALA HIGHLANDS  ·  VIDEO: OVO FILMS / PEXELS",
+  "VARANASI GHATS  ·  VIDEO: ARTO SURAJ / PEXELS",
+  "GOLDEN TEMPLE, AMRITSAR  ·  VIDEO: SHALENDER KUMAR / PEXELS",
+  "INDIA GATE, NEW DELHI  ·  VIDEO: IN OLD NEWS LLC / PEXELS",
+  "LAXMI VILAS PALACE, VADODARA  ·  VIDEO: NIIHAR DOSHI / PEXELS",
+  "NOHKALIKAI FALLS, MEGHALAYA  ·  VIDEO: VIKASH SINGH / PEXELS",
+  "KASHMIR VALLEY  ·  VIDEO: HINDUSTANI LENS / PEXELS",
+  "KANCHENJUNGA, SIKKIM  ·  VIDEO: ARIJIT DEY / PEXELS",
+  "KUTCH, GUJARAT  ·  VIDEO: VIKASH SINGH / PEXELS",
+  "MUNNAR TEA HILLS  ·  VIDEO: ANIL SHARMA / PEXELS",
+  "ANCIENT INDIAN TEMPLE  ·  VIDEO: FILMLINE / PEXELS",
+  "VARKALA BEACH, KERALA  ·  VIDEO: AERIAL GLIMPSES / PEXELS",
+] as const;
+
+const createNewDayPlaceClips = () =>
+  NEW_DAY_PLACE_CUT_FRAMES.slice(0, -1).map((startFrame, index) => {
+    const endFrame = NEW_DAY_PLACE_CUT_FRAMES[index + 1];
+    return {
+      id: `new-day-place-scene-${String(index + 1).padStart(2, "0")}`,
+      assetId: NEW_DAY_PLACE_ASSET_IDS[index],
+      kind: "video" as const,
+      startFrame,
+      endFrame,
+      trimStartFrame: 0,
+      trimEndFrame: endFrame - startFrame,
+      volume: 0,
+      videoFilter: cloneVideoFilterPreset(NEW_DAY_PLACE_FILTER_PRESETS[index]),
+    };
+  });
+
+const createNewDayPlaceSourceCredits = (): VersionTimeline["textOverlays"] =>
+  NEW_DAY_PLACE_CUT_FRAMES.slice(0, -1).map((startFrame, index) => ({
+    id: `new-day-place-source-${String(index + 1).padStart(2, "0")}`,
+    text: NEW_DAY_PLACE_SOURCE_CREDITS[index],
+    startFrame,
+    endFrame: NEW_DAY_PLACE_CUT_FRAMES[index + 1],
+    x: 80,
+    y: 88,
+    fontSize: 14,
+    color: "#f2ede3",
+    fontFamily: "modern",
+    fontWeight: 500,
+    fontStyle: "normal",
+    textAlign: "right",
+    stylePreset: "classic",
+    createdaleyTexture: "plain",
+    contrast: "outline",
+    animation: { in: "fade", out: "fade", durationFrames: 4 },
+  }));
 
 /**
  * Editor-native starter projects. The ids in these blueprints are semantic
@@ -466,6 +585,100 @@ export const FLAGSHIP_TEMPLATE_BLUEPRINTS = {
         easing: "ease-out",
       },
     ],
+  },
+  "new-day-place": {
+    aspect: "widescreen_16_9",
+    clips: createNewDayPlaceClips(),
+    textOverlays: [
+      {
+        id: "new-day-place-title",
+        text: "BRAND NEW DAY",
+        startFrame: 10,
+        endFrame: 138,
+        x: 50,
+        y: 48,
+        fontSize: 82,
+        color: "#f2ede3",
+        fontFamily: "modern",
+        fontWeight: 700,
+        fontStyle: "normal",
+        textAlign: "center",
+        stylePreset: "classic",
+        createdaleyTexture: "plain",
+        contrast: "outline",
+        animation: { in: "rise", out: "fade", durationFrames: 14 },
+      },
+      {
+        id: "new-day-place-location",
+        text: "INDIA",
+        startFrame: 30,
+        endFrame: 140,
+        x: 50,
+        y: 62,
+        fontSize: 28,
+        color: "#f2ede3",
+        fontFamily: "modern",
+        fontWeight: 600,
+        fontStyle: "normal",
+        textAlign: "center",
+        stylePreset: "classic",
+        createdaleyTexture: "plain",
+        contrast: "outline",
+        animation: { in: "fade", out: "fade", durationFrames: 12 },
+      },
+      {
+        id: "new-day-place-credit",
+        text: "LICENSED FOOTAGE · PEXELS CREATORS",
+        startFrame: 151,
+        endFrame: 232,
+        x: 88,
+        y: 81,
+        fontSize: 16,
+        color: "#f2ede3",
+        fontFamily: "modern",
+        fontWeight: 500,
+        fontStyle: "normal",
+        textAlign: "right",
+        stylePreset: "classic",
+        createdaleyTexture: "plain",
+        contrast: "outline",
+        animation: { in: "fade", out: "fade", durationFrames: 8 },
+      },
+      {
+        id: "new-day-place-dedication",
+        text: "INDIA IN\n19 SCENES",
+        startFrame: 244,
+        endFrame: 328,
+        x: 50,
+        y: 47,
+        fontSize: 58,
+        color: "#f2ede3",
+        fontFamily: "modern",
+        fontWeight: 700,
+        fontStyle: "normal",
+        textAlign: "center",
+        stylePreset: "classic",
+        createdaleyTexture: "plain",
+        contrast: "outline",
+        animation: { in: "fade", out: "fade", durationFrames: 8 },
+      },
+      ...createNewDayPlaceSourceCredits(),
+    ],
+    audioTracks: [
+      {
+        id: "new-day-place-audio-01",
+        assetId: "new-day-place-audio-01",
+        startFrame: 0,
+        endFrame: 1257,
+        trimStartFrame: 0,
+        trimEndFrame: 1257,
+        volume: 1,
+        fadeInFrames: 0,
+        fadeOutFrames: 0,
+        muted: false,
+      },
+    ],
+    transitions: [],
   },
   "editorial-explainer": {
     aspect: "reel_9_16",

@@ -100,3 +100,21 @@ describe("editor WebMCP diagnostics", () => {
     });
   });
 });
+
+it("treats multilayer coverage as a union and reports only same-lane collisions", () => {
+  const base = { id: "base", assetId: "asset", kind: "video" as const, startFrame: 0, endFrame: 300, trimStartFrame: 0, trimEndFrame: 300, volume: 1 };
+  const layered: VersionTimeline = {
+    aspect: "reel_9_16",
+    tracks: [{ id: "pip", kind: "video", name: "PiP", order: 0 }],
+    clips: [base, { ...base, id: "overlay-1", trackId: "pip", startFrame: 60, endFrame: 90 }, { ...base, id: "overlay-2", trackId: "pip", startFrame: 120, endFrame: 150 }],
+    textOverlays: [], audioTracks: [], transitions: [],
+  };
+  const assets = [{ assetId: "asset", kind: "video" as const, name: "Video", mimeType: "video/mp4", size: 1 }];
+  const report = validateEditorVersion(layered, assets);
+  expect(report.durationInFrames).toBe(300);
+  expect(report.issues.some((issue) => ["visual-gap", "visual-overlap", "LANE_COLLISION"].includes(issue.code))).toBe(false);
+  expect(inspectEditorFrame(layered, 60).activeClips).toHaveLength(2);
+  expect(inspectEditorFrame(layered, 90).activeClips).toHaveLength(1);
+  layered.clips[2].startFrame = 80;
+  expect(validateEditorVersion(layered, assets).issues.some((issue) => issue.code === "LANE_COLLISION")).toBe(true);
+});

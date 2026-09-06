@@ -1,7 +1,7 @@
 import { MAX_DURATION_FRAMES } from "../constants";
 import type { Clip, Transition, VersionTimeline } from "../types";
 import { clamp, getClipDurationInFrames, toSafeInt } from "./helpers";
-import { normalizeClips } from "./normalization";
+import { DEFAULT_VIDEO_TRACK_ID } from "../tracks";
 
 export type TransitionKind = NonNullable<Transition["kind"]>;
 export type TransitionDirection = NonNullable<Transition["direction"]>;
@@ -46,7 +46,7 @@ export const sanitizeTransitions = (
       continue;
     }
 
-    if (toIndex !== fromIndex + 1) {
+    if ((clips[fromIndex].trackId ?? DEFAULT_VIDEO_TRACK_ID) !== (clips[toIndex].trackId ?? DEFAULT_VIDEO_TRACK_ID) || clips[fromIndex].endFrame !== clips[toIndex].startFrame) {
       continue;
     }
 
@@ -81,19 +81,10 @@ export const getTransitionBetween = (
   );
 
 export const getTimelineDurationInFrames = (version: VersionTimeline): number => {
-  const clips = normalizeClips(version.clips);
-  const transitions = sanitizeTransitions(clips, version.transitions);
-
-  const totalClipFrames = clips.reduce(
-    (sum, clip) => sum + getClipDurationInFrames(clip),
-    0,
-  );
-  const totalTransitionFrames = transitions.reduce(
-    (sum, transition) => sum + transition.durationInFrames,
-    0,
-  );
-
-  return Math.max(0, toSafeInt(totalClipFrames - totalTransitionFrames, 0));
+  return Math.max(0, ...version.clips.map((item) => item.endFrame),
+    ...version.textOverlays.map((item) => item.endFrame),
+    ...version.audioTracks.map((item) => item.endFrame),
+    ...(version.captionCues ?? []).map((item) => item.endFrame));
 };
 
 export const isTimelineWithinLimit = (version: VersionTimeline): boolean =>
@@ -113,7 +104,7 @@ export interface RenderTrack {
 }
 
 export const buildRenderTrack = (version: VersionTimeline): RenderTrack => {
-  const clips = normalizeClips(version.clips);
+  const clips = version.clips;
   const transitions = sanitizeTransitions(clips, version.transitions);
 
   const fadeInByClipId = new Map<string, number>();
@@ -124,7 +115,6 @@ export const buildRenderTrack = (version: VersionTimeline): RenderTrack => {
     fadeOutByClipId.set(transition.fromClipId, transition.durationInFrames);
   }
 
-  let cursor = 0;
   const entries: RenderTrackEntry[] = [];
 
   for (let index = 0; index < clips.length; index += 1) {
@@ -132,9 +122,7 @@ export const buildRenderTrack = (version: VersionTimeline): RenderTrack => {
     const durationInFrames = getClipDurationInFrames(clip);
     const fadeInFrames = Math.max(0, toSafeInt(fadeInByClipId.get(clip.id) ?? 0, 0));
     const fadeOutFrames = Math.max(0, toSafeInt(fadeOutByClipId.get(clip.id) ?? 0, 0));
-    const startFrame = index === 0 ? 0 : cursor - fadeInFrames;
-
-    cursor = startFrame + durationInFrames;
+    const startFrame = clip.startFrame;
 
     entries.push({
       clip,
@@ -147,7 +135,7 @@ export const buildRenderTrack = (version: VersionTimeline): RenderTrack => {
 
   return {
     entries,
-    durationInFrames: Math.max(1, cursor),
+    durationInFrames: Math.max(1, ...clips.map((clip) => clip.endFrame)),
   };
 };
 
@@ -168,5 +156,5 @@ export const getVersionRenderDurationInFrames = (
     0,
   );
 
-  return Math.max(1, trackDuration, maxTextEndFrame, maxAudioEndFrame);
+  return Math.max(1, trackDuration, maxTextEndFrame, maxAudioEndFrame, ...(version.captionCues ?? []).map(cue => cue.endFrame));
 };

@@ -63,16 +63,16 @@ const version: VersionTimeline = {
 };
 
 describe("editor timeline domain", () => {
-  it("sanitizes clip ordering and overlay minimum durations", () => {
+  it("preserves explicit placement and normalizes overlay minimum durations", () => {
     const sanitized = sanitizeVersion(version);
 
     expect(sanitized).not.toBeNull();
-    expect(sanitized?.clips[0]).toMatchObject({ startFrame: 0, endFrame: 60 });
-    expect(sanitized?.clips[1]).toMatchObject({ startFrame: 60, endFrame: 180 });
+    expect(sanitized?.clips[0]).toMatchObject({ startFrame: 120, endFrame: 180 });
+    expect(sanitized?.clips[1]).toMatchObject({ startFrame: 500, endFrame: 620 });
     expect((sanitized?.textOverlays[0].endFrame ?? 0) - (sanitized?.textOverlays[0].startFrame ?? 0)).toBeGreaterThanOrEqual(240);
   });
 
-  it("deduplicates and clamps transitions in the render track", () => {
+  it("removes transitions across gaps without moving clips", () => {
     const sanitized = sanitizeVersion(version);
     if (!sanitized) {
       throw new Error("Expected sanitized version");
@@ -80,9 +80,9 @@ describe("editor timeline domain", () => {
 
     const track = buildRenderTrack(sanitized);
     expect(track.entries).toHaveLength(2);
-    expect(sanitized.transitions).toHaveLength(1);
-    expect(track.entries[1]?.startFrame).toBe(45);
-    expect(getTimelineDurationInFrames(sanitized)).toBe(165);
+    expect(sanitized.transitions).toHaveLength(0);
+    expect(track.entries[1]?.startFrame).toBe(500);
+    expect(getTimelineDurationInFrames(sanitized)).toBe(620);
   });
 
   it("preserves newer overlay presets during normalization", () => {

@@ -1,5 +1,7 @@
 "use client";
 
+import { DEFAULT_VIDEO_TRACK_ID } from "@/lib/editor/tracks";
+
 import type { AIEditorActions } from "@/lib/editor/ai-actions";
 import {
   ASPECT_PRESETS,
@@ -48,7 +50,6 @@ import {
   type PexelsVideoSearchResult,
 } from "@/lib/pexels";
 import type {
-  LicensedAudioProvider,
   LicensedAudioResult,
   LicensedAudioSearchResult,
 } from "@/lib/stock-audio";
@@ -85,6 +86,44 @@ const getStarterAssetFilename = (publicPath: string): string => {
   return filename ? sanitizeUploadFilename(filename) : "starter-asset";
 };
 
+/** Read decoder-reported metadata; never infer duration from a trim endpoint. */
+const probeMediaMetadata = (
+  asset: LocalAsset,
+  signal: AbortSignal,
+): Promise<NonNullable<LocalAsset["mediaMetadata"]> | undefined> => new Promise((resolve) => {
+  const src = asset.objectUrl ?? asset.externalUrl;
+  if (!src || asset.kind === "image" || signal.aborted) { resolve(undefined); return; }
+  const media = document.createElement(asset.kind === "video" ? "video" : "audio");
+  let finished = false;
+  const finish = (metadata?: NonNullable<LocalAsset["mediaMetadata"]>) => {
+    if (finished) return;
+    finished = true;
+    window.clearTimeout(timeout);
+    media.onloadedmetadata = null;
+    media.onerror = null;
+    signal.removeEventListener("abort", abort);
+    media.removeAttribute("src");
+    media.load();
+    resolve(metadata);
+  };
+  const abort = () => finish();
+  const timeout = window.setTimeout(() => finish(), 10000);
+  media.preload = "metadata";
+  media.onloadedmetadata = () => {
+    const durationUs = Math.floor(media.duration * 1_000_000);
+    if (!Number.isSafeInteger(durationUs) || durationUs <= 0) { finish(); return; }
+    const video = media instanceof HTMLVideoElement ? media : undefined;
+    finish({ durationUs,
+      ...(video && video.videoWidth > 0 ? { width: video.videoWidth } : {}),
+      ...(video && video.videoHeight > 0 ? { height: video.videoHeight } : {}),
+    });
+  };
+  media.onerror = () => finish();
+  signal.addEventListener("abort", abort, { once: true });
+  media.src = src;
+  media.load();
+});
+
 const RESTORE_STATUS_MESSAGE = "Restored your last local project.";
 const RESTORE_STATUS_DISMISS_MS = 4500;
 
@@ -106,6 +145,7 @@ export const useEditorSession = () => {
   const [isStorageReady, setIsStorageReady] = useState(false);
   const [storageStatus, setStorageStatus] = useState<EditorStorageStatus>("loading");
 
+  const metadataAttemptedRef = useRef<Set<string>>(new Set());
   const objectUrlsRef = useRef<Set<string>>(new Set());
   const hydratedTemplateIdRef = useRef<string | null>(null);
   const projectRef = useRef(project);
@@ -179,6 +219,7 @@ export const useEditorSession = () => {
             size: asset.size,
             externalUrl: asset.externalUrl,
             attribution: asset.attribution,
+            mediaMetadata: asset.mediaMetadata,
             file: asset.blob
               ? new File([asset.blob], asset.name, { type: asset.mimeType })
               : undefined,
@@ -243,6 +284,31 @@ export const useEditorSession = () => {
 
     return () => window.clearTimeout(timeout);
   }, [assets, isStorageReady, project, templateParam]);
+
+  useEffect(() => {
+    const pending = Object.values(assets).filter((asset) => asset.kind !== "image" &&
+      !asset.mediaMetadata && !metadataAttemptedRef.current.has(asset.assetId));
+    if (!pending.length) return;
+    const controller = new AbortController();
+    void Promise.all(pending.map(async (asset) => ({
+      assetId: asset.assetId,
+      metadata: await probeMediaMetadata(asset, controller.signal),
+    }))).then((results) => {
+      if (controller.signal.aborted) return;
+      results.forEach(({ assetId }) => metadataAttemptedRef.current.add(assetId));
+      if (!results.some(({ metadata }) => metadata)) return;
+      setAssets((previous) => {
+        const next = { ...previous };
+        for (const { assetId, metadata } of results) {
+          if (metadata && next[assetId] && !next[assetId].mediaMetadata) {
+            next[assetId] = { ...next[assetId], mediaMetadata: metadata };
+          }
+        }
+        return next;
+      });
+    });
+    return () => controller.abort();
+  }, [assets]);
 
   const retryProjectSave = async (): Promise<void> => {
     ++saveGenerationRef.current;
@@ -330,6 +396,10 @@ export const useEditorSession = () => {
           },
         });
       }
+      dispatch({
+        type: "switch-aspect",
+        aspect: initialTemplate.aspect ?? templateVersion.aspect,
+      });
       dispatch({ type: "history/clear" });
       setSelectedTextId(templateVersion.textOverlays[0]?.id ?? null);
       setSelectedClipId(null);
@@ -444,7 +514,7 @@ export const useEditorSession = () => {
         const clipId = nanoid(10);
 
         dispatch({
-          type: "add-clip",
+          type: "append-clip",
           aspect,
           clip: {
             ...createDefaultClip(clipId, assetId, "image"),
@@ -617,7 +687,7 @@ export const useEditorSession = () => {
         for (const aspect of ALL_ASPECTS) {
           const clipId = nanoid(10);
           dispatch({
-            type: "add-clip",
+            type: "append-clip",
             aspect,
             clip: createDefaultClip(clipId, assetId, kind),
           });
@@ -748,13 +818,13 @@ export const useEditorSession = () => {
       let selectedId: string | null = null;
       for (const aspect of ALL_ASPECTS) {
         const target = projectRef.current.versions[aspect];
-        const startFrame = getTimelineDurationInFrames(target);
+        const startFrame = Math.max(0, ...target.clips.filter((clip) => (clip.trackId ?? DEFAULT_VIDEO_TRACK_ID) === DEFAULT_VIDEO_TRACK_ID).map((clip) => clip.endFrame));
         const available = MAX_DURATION_FRAMES - startFrame;
         if (available <= 0) continue;
         const duration = Math.min(sourceDuration, available);
         const clipId = nanoid(10);
         dispatch({
-          type: "add-clip",
+          type: "append-clip",
           aspect,
           clip: {
             ...createDefaultClip(clipId, assetId, "video"),
@@ -889,12 +959,12 @@ export const useEditorSession = () => {
 
       let selectedId: string | null = null;
       for (const aspect of ALL_ASPECTS) {
-        const startFrame = getTimelineDurationInFrames(projectRef.current.versions[aspect]);
+        const startFrame = Math.max(0, ...projectRef.current.versions[aspect].clips.filter((clip) => (clip.trackId ?? DEFAULT_VIDEO_TRACK_ID) === DEFAULT_VIDEO_TRACK_ID).map((clip) => clip.endFrame));
         const duration = Math.min(DEFAULT_CLIP_DURATION_FRAMES, MAX_DURATION_FRAMES - startFrame);
         if (duration <= 0) continue;
         const clipId = nanoid(10);
         dispatch({
-          type: "add-clip",
+          type: "append-clip",
           aspect,
           clip: {
             ...createDefaultClip(clipId, assetId, "image"),
@@ -1038,11 +1108,11 @@ export const useEditorSession = () => {
   };
 
   const searchLicensedAudio = async (
-    provider: LicensedAudioProvider,
+    category: "music" | "sfx",
     query: string,
     signal?: AbortSignal,
   ): Promise<LicensedAudioSearchResult> => {
-    const endpoint = provider === "jamendo" ? "music" : "sfx";
+    const endpoint = category;
     const params = new URLSearchParams({ query });
     const response = await fetch(`/api/stock-audio/${endpoint}?${params.toString()}`, { signal });
     const payload = (await response.json()) as LicensedAudioSearchResult | { error?: string };
@@ -1053,22 +1123,22 @@ export const useEditorSession = () => {
   };
 
   const searchLicensedMusic = (query: string, signal?: AbortSignal) =>
-    searchLicensedAudio("jamendo", query, signal);
+    searchLicensedAudio("music", query, signal);
 
   const searchLicensedSoundEffects = (query: string, signal?: AbortSignal) =>
-    searchLicensedAudio("freesound", query, signal);
+    searchLicensedAudio("sfx", query, signal);
 
   const importLicensedAudio = async (
-    provider: LicensedAudioProvider,
+    category: "music" | "sfx",
     input: LicensedAudioImportInput,
     signal?: AbortSignal,
   ): Promise<ExportActionResult> => {
     try {
-      const result = await searchLicensedAudio(provider, input.query, signal);
+      const result = await searchLicensedAudio(category, input.query, signal);
       const audio = result.results.find((item: LicensedAudioResult) => item.id === input.audioId);
       if (!audio) return { ok: false, message: "Licensed audio was not found in this search." };
       const aspect = input.aspect ?? activeAspect;
-      const defaultStart = provider === "jamendo"
+      const defaultStart = category === "music"
         ? 0
         : getTimelineDurationInFrames(projectRef.current.versions[aspect]);
       const startFrame = Math.min(input.startFrame ?? defaultStart, MAX_DURATION_FRAMES - 1);
@@ -1082,11 +1152,11 @@ export const useEditorSession = () => {
         aspect,
         startFrame,
         endFrame,
-        volume: input.volume ?? (provider === "jamendo" ? 0.24 : 0.65),
+        volume: input.volume ?? (category === "music" ? 0.24 : 0.65),
         sourceUrl: audio.sourceUrl,
         creatorName: audio.creatorName,
         creatorUrl: audio.creatorUrl,
-        provider,
+        provider: audio.provider,
         licenseName: audio.licenseName,
         licenseUrl: audio.licenseUrl,
         attributionRequired: audio.attributionRequired,
@@ -1100,10 +1170,10 @@ export const useEditorSession = () => {
   };
 
   const onImportLicensedMusic = (input: LicensedAudioImportInput, signal?: AbortSignal) =>
-    importLicensedAudio("jamendo", input, signal);
+    importLicensedAudio("music", input, signal);
 
   const onImportLicensedSoundEffect = (input: LicensedAudioImportInput, signal?: AbortSignal) =>
-    importLicensedAudio("freesound", input, signal);
+    importLicensedAudio("sfx", input, signal);
 
   const commitExportState = (
     next:
@@ -1147,7 +1217,7 @@ export const useEditorSession = () => {
     });
 
     const hasRenderableVisual =
-      currentVersion.clips.length > 0 || currentVersion.textOverlays.length > 0;
+      currentVersion.clips.length > 0 || currentVersion.textOverlays.length > 0 || (currentVersion.captionCues?.length ?? 0) > 0;
 
     if (!hasRenderableVisual) {
       const message = "Add a clip or text overlay before export.";

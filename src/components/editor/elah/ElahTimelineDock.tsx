@@ -15,6 +15,7 @@ interface ElahTimelineDockProps {
   onSelectClip: (clipId: string | null) => void;
   onSelectText: (overlayId: string | null) => void;
   onSelectAudio: (trackId: string | null) => void;
+  onSelectCaption?: (cueId: string) => void;
   onAddText: (trackId?: string) => void;
   onAddTrack: (kind: EditorTrackKind) => string | void;
 }
@@ -24,9 +25,10 @@ const SelectionBridge = ({
   onSelectClip,
   onSelectText,
   onSelectAudio,
+  onSelectCaption,
 }: Pick<
   ElahTimelineDockProps,
-  "version" | "onSelectClip" | "onSelectText" | "onSelectAudio"
+  "version" | "onSelectClip" | "onSelectText" | "onSelectAudio" | "onSelectCaption"
 >) => {
   const selectedClipIds = useSelectionStore((state) => state.selectedClipIds);
 
@@ -38,10 +40,12 @@ const SelectionBridge = ({
       onSelectClip(selectedId);
     } else if (version.textOverlays.some((overlay) => overlay.id === selectedId)) {
       onSelectText(selectedId);
+    } else if (version.captionCues?.some((cue) => cue.id === selectedId)) {
+      onSelectCaption?.(selectedId);
     } else if (version.audioTracks.some((track) => track.id === selectedId)) {
       onSelectAudio(selectedId);
     }
-  }, [onSelectAudio, onSelectClip, onSelectText, selectedClipIds, version]);
+  }, [onSelectAudio, onSelectCaption, onSelectClip, onSelectText, selectedClipIds, version]);
 
   return null;
 };
@@ -51,6 +55,7 @@ export const ElahTimelineDock = ({
   onSelectClip,
   onSelectText,
   onSelectAudio,
+  onSelectCaption,
   onAddTrack,
   onAddText,
 }: ElahTimelineDockProps) => {
@@ -71,6 +76,7 @@ export const ElahTimelineDock = ({
         onSelectClip={onSelectClip}
         onSelectText={onSelectText}
         onSelectAudio={onSelectAudio}
+        onSelectCaption={onSelectCaption}
       />
       <div className="flex min-h-11 items-center overflow-visible border-b border-white/10 sm:pl-3 xl:min-h-10">
         <div className="hidden items-center gap-2 sm:flex">

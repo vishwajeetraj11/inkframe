@@ -145,6 +145,315 @@ const FLAGSHIP_TEMPLATE_ASSETS: Record<
       },
     },
   ],
+  "new-day-place": [
+    {
+      kind: "video",
+      name: "Taj Mahal, Agra",
+      mimeType: "video/mp4",
+      publicPath: "/starter-assets/new-day-india/taj-mahal-agra.mp4",
+      attribution: {
+        provider: "pexels",
+        sourceUrl:
+          "https://www.pexels.com/video/majestic-view-of-the-taj-mahal-in-agra-india-34379970/",
+        creatorName: "Chandan Kumar",
+        creatorUrl: "https://www.pexels.com/@chandan-kumar-566203332",
+        licenseName: "Pexels License",
+        licenseUrl: "https://www.pexels.com/license/",
+        attributionRequired: false,
+      },
+    },
+    {
+      kind: "video",
+      name: "Goa coast aerial",
+      mimeType: "video/mp4",
+      publicPath: "/starter-assets/new-day-india/goa-beach-drone.mp4",
+      attribution: {
+        provider: "pexels",
+        sourceUrl:
+          "https://www.pexels.com/video/drone-view-of-a-beach-resort-in-goa-india-15455610/",
+        creatorName: "kartik naik",
+        creatorUrl: "https://www.pexels.com/@kartik-naik-447172211",
+        licenseName: "Pexels License",
+        licenseUrl: "https://www.pexels.com/license/",
+        attributionRequired: false,
+      },
+    },
+    {
+      kind: "video",
+      name: "Ladakh mountain panorama",
+      mimeType: "video/mp4",
+      publicPath: "/starter-assets/new-day-india/ladakh-mountains.mp4",
+      attribution: {
+        provider: "pexels",
+        sourceUrl:
+          "https://www.pexels.com/video/stunning-panorama-of-ladakh-s-rugged-mountains-30412767/",
+        creatorName: "Gaurav Gupta",
+        creatorUrl: "https://www.pexels.com/@gaurav-gupta-2148434222",
+        licenseName: "Pexels License",
+        licenseUrl: "https://www.pexels.com/license/",
+        attributionRequired: false,
+      },
+    },
+    {
+      kind: "video",
+      name: "Pune monsoon",
+      mimeType: "video/mp4",
+      publicPath: "/starter-assets/new-day-india/pune-monsoon.mp4",
+      attribution: {
+        provider: "pexels",
+        sourceUrl:
+          "https://www.pexels.com/video/tropical-rainfall-on-lush-greenery-in-pune-32628145/",
+        creatorName: "Aniket Suryawanshi",
+        creatorUrl: "https://www.pexels.com/@aniket-suryawanshi-480804303",
+        licenseName: "Pexels License",
+        licenseUrl: "https://www.pexels.com/license/",
+        attributionRequired: false,
+      },
+    },
+    {
+      kind: "video",
+      name: "Hawa Mahal, Jaipur",
+      mimeType: "video/mp4",
+      publicPath: "/starter-assets/new-day-india/hawa-mahal-jaipur.mp4",
+      attribution: {
+        provider: "pexels",
+        sourceUrl:
+          "https://www.pexels.com/video/the-hawa-mahal-palace-in-jaipur-india-27052515/",
+        creatorName: "Abhishek Shekhawat",
+        creatorUrl: "https://www.pexels.com/@absoluteabhi",
+        licenseName: "Pexels License",
+        licenseUrl: "https://www.pexels.com/license/",
+        attributionRequired: false,
+      },
+    },
+    {
+      kind: "video",
+      name: "Kerala backwaters",
+      mimeType: "video/mp4",
+      publicPath: "/starter-assets/new-day-india/kerala-backwaters.mp4",
+      attribution: {
+        provider: "pexels",
+        sourceUrl:
+          "https://www.pexels.com/video/serene-kerala-backwaters-boat-journey-35576146/",
+        creatorName: "Dhyey Patel",
+        creatorUrl: "https://www.pexels.com/@dhyey237",
+        licenseName: "Pexels License",
+        licenseUrl: "https://www.pexels.com/license/",
+        attributionRequired: false,
+      },
+    },
+    {
+      kind: "video",
+      name: "Mehrangarh Fort, Jodhpur",
+      mimeType: "video/mp4",
+      publicPath: "/starter-assets/new-day-india/mehrangarh-fort.mp4",
+      attribution: {
+        provider: "pexels",
+        sourceUrl:
+          "https://www.pexels.com/video/aerial-view-of-majestic-mehrangarh-fort-in-jodhpur-31031043/",
+        creatorName: "Anil Sharma",
+        creatorUrl: "https://www.pexels.com/@shootsaga",
+        licenseName: "Pexels License",
+        licenseUrl: "https://www.pexels.com/license/",
+        attributionRequired: false,
+      },
+    },
+    {
+      kind: "video",
+      name: "Misty Kerala highlands",
+      mimeType: "video/mp4",
+      publicPath: "/starter-assets/new-day-india/kerala-misty-hills.mp4",
+      attribution: {
+        provider: "pexels",
+        sourceUrl:
+          "https://www.pexels.com/video/drone-view-of-foggy-kerala-landscape-34838676/",
+        creatorName: "OvO Films",
+        creatorUrl: "https://www.pexels.com/@ovo-films-2153386936",
+        licenseName: "Pexels License",
+        licenseUrl: "https://www.pexels.com/license/",
+        attributionRequired: false,
+      },
+    },
+    {
+      kind: "video",
+      name: "Varanasi ghats",
+      mimeType: "video/mp4",
+      publicPath: "/starter-assets/new-day-india/varanasi-ghats.mp4",
+      attribution: {
+        provider: "pexels",
+        sourceUrl:
+          "https://www.pexels.com/video/vibrant-varanasi-ghats-along-the-ganges-river-37110601/",
+        creatorName: "Arto Suraj",
+        creatorUrl: "https://www.pexels.com/@artosuraj",
+        licenseName: "Pexels License",
+        licenseUrl: "https://www.pexels.com/license/",
+        attributionRequired: false,
+      },
+    },
+    {
+      kind: "video",
+      name: "Golden Temple, Amritsar",
+      mimeType: "video/mp4",
+      publicPath: "/starter-assets/new-day-india/golden-temple-amritsar.mp4",
+      attribution: {
+        provider: "pexels",
+        sourceUrl: "https://www.pexels.com/video/golden-temple-in-india-6583039/",
+        creatorName: "shalender kumar",
+        creatorUrl: "https://www.pexels.com/@shalenderkumar",
+        licenseName: "Pexels License",
+        licenseUrl: "https://www.pexels.com/license/",
+        attributionRequired: false,
+      },
+    },
+    {
+      kind: "video",
+      name: "India Gate, New Delhi",
+      mimeType: "video/mp4",
+      publicPath: "/starter-assets/new-day-india/india-gate-delhi.mp4",
+      attribution: {
+        provider: "pexels",
+        sourceUrl: "https://www.pexels.com/video/india-gate-in-new-delhi-india-20794139/",
+        creatorName: "In Old News LLC",
+        creatorUrl: "https://www.pexels.com/@in-old-news-llc-338724185",
+        licenseName: "Pexels License",
+        licenseUrl: "https://www.pexels.com/license/",
+        attributionRequired: false,
+      },
+    },
+    {
+      kind: "video",
+      name: "Laxmi Vilas Palace, Vadodara",
+      mimeType: "video/mp4",
+      publicPath: "/starter-assets/new-day-india/laxmi-vilas-palace.mp4",
+      attribution: {
+        provider: "pexels",
+        sourceUrl:
+          "https://www.pexels.com/video/historic-laxmi-vilas-palace-in-vadodara-35167231/",
+        creatorName: "Niihar Doshi",
+        creatorUrl: "https://www.pexels.com/@niihar2001",
+        licenseName: "Pexels License",
+        licenseUrl: "https://www.pexels.com/license/",
+        attributionRequired: false,
+      },
+    },
+    {
+      kind: "video",
+      name: "Nohkalikai Falls, Meghalaya",
+      mimeType: "video/mp4",
+      publicPath: "/starter-assets/new-day-india/nohkalikai-falls.mp4",
+      attribution: {
+        provider: "pexels",
+        sourceUrl:
+          "https://www.pexels.com/video/tallest-plunge-waterfall-in-sheer-mountains-nohkalikai-falls-in-meghalaya-near-cherrapunji-india-aerial-drone-shot-28398824/",
+        creatorName: "Vikash Singh",
+        creatorUrl: "https://www.pexels.com/@vikashkr50",
+        licenseName: "Pexels License",
+        licenseUrl: "https://www.pexels.com/license/",
+        attributionRequired: false,
+      },
+    },
+    {
+      kind: "video",
+      name: "Kashmir valley",
+      mimeType: "video/mp4",
+      publicPath: "/starter-assets/new-day-india/kashmir-valley.mp4",
+      attribution: {
+        provider: "pexels",
+        sourceUrl: "https://www.pexels.com/video/aerial-views-of-kashmir-valley-19674205/",
+        creatorName: "Hindustani Lens",
+        creatorUrl: "https://www.pexels.com/@pixzium",
+        licenseName: "Pexels License",
+        licenseUrl: "https://www.pexels.com/license/",
+        attributionRequired: false,
+      },
+    },
+    {
+      kind: "video",
+      name: "Kanchenjunga sunrise, Sikkim",
+      mimeType: "video/mp4",
+      publicPath: "/starter-assets/new-day-india/kanchenjunga-sunrise.mp4",
+      attribution: {
+        provider: "pexels",
+        sourceUrl:
+          "https://www.pexels.com/video/breathtaking-sunrise-at-kanchenjunga-peaks-29586895/",
+        creatorName: "Arijit Dey",
+        creatorUrl: "https://www.pexels.com/@arijit-dey-830130595",
+        licenseName: "Pexels License",
+        licenseUrl: "https://www.pexels.com/license/",
+        attributionRequired: false,
+      },
+    },
+    {
+      kind: "video",
+      name: "Dhordo, Kutch",
+      mimeType: "video/mp4",
+      publicPath: "/starter-assets/new-day-india/kutch-road.mp4",
+      attribution: {
+        provider: "pexels",
+        sourceUrl:
+          "https://www.pexels.com/video/hut-house-at-dhordo-white-run-kutch-gujarat-india-hut-hotel-27089235/",
+        creatorName: "Vikash Singh",
+        creatorUrl: "https://www.pexels.com/@vikashkr50",
+        licenseName: "Pexels License",
+        licenseUrl: "https://www.pexels.com/license/",
+        attributionRequired: false,
+      },
+    },
+    {
+      kind: "video",
+      name: "Munnar tea hills",
+      mimeType: "video/mp4",
+      publicPath: "/starter-assets/new-day-india/munnar-tea-hills.mp4",
+      attribution: {
+        provider: "pexels",
+        sourceUrl:
+          "https://www.pexels.com/video/breathtaking-aerial-view-of-lush-munnar-hills-35440607/",
+        creatorName: "Anil Sharma",
+        creatorUrl: "https://www.pexels.com/@shootsaga",
+        licenseName: "Pexels License",
+        licenseUrl: "https://www.pexels.com/license/",
+        attributionRequired: false,
+      },
+    },
+    {
+      kind: "video",
+      name: "Ancient Indian temple",
+      mimeType: "video/mp4",
+      publicPath: "/starter-assets/new-day-india/ancient-indian-temple.mp4",
+      attribution: {
+        provider: "pexels",
+        sourceUrl:
+          "https://www.pexels.com/video/ancient-indian-temple-architecture-in-nature-30632229/",
+        creatorName: "Filmline",
+        creatorUrl: "https://www.pexels.com/@filmline-2149060806",
+        licenseName: "Pexels License",
+        licenseUrl: "https://www.pexels.com/license/",
+        attributionRequired: false,
+      },
+    },
+    {
+      kind: "video",
+      name: "Varkala Beach, Kerala",
+      mimeType: "video/mp4",
+      publicPath: "/starter-assets/new-day-india/varkala-beach.mp4",
+      attribution: {
+        provider: "pexels",
+        sourceUrl:
+          "https://www.pexels.com/video/aerial-view-of-varkala-beach-kerala-coastline-29041047/",
+        creatorName: "Aerial Glimpses",
+        creatorUrl: "https://www.pexels.com/@aerialglimpses",
+        licenseName: "Pexels License",
+        licenseUrl: "https://www.pexels.com/license/",
+        attributionRequired: false,
+      },
+    },
+    {
+      kind: "audio",
+      name: "Brand New Day — Tokyo Edition",
+      mimeType: "audio/mpeg",
+      publicPath: "/starter-assets/new-day-india/brand-new-day-tokyo-edition.mp3",
+    },
+  ],
   "editorial-explainer": [
     {
       kind: "image",
@@ -326,6 +635,18 @@ const TEMPLATE_CATALOG_SOURCE: TemplateDefinition[] = [
     aspect: "reel_9_16",
     starterAssets: FLAGSHIP_TEMPLATE_ASSETS["one-number"],
     blueprint: FLAGSHIP_TEMPLATE_BLUEPRINTS["one-number"],
+  },
+  {
+    id: "new-day-place",
+    stylePreset: "classic",
+    name: "New Day — India Edition",
+    description:
+      "A 41.9-second portrait of India's monuments, coast, mountains, monsoon, and backwaters with 19 music-ready hard cuts and visible creator credits.",
+    sampleText: "BRAND NEW DAY\nINDIA EDITION\nINDIA IN 19 SCENES",
+    accentClass: "text-red-500",
+    aspect: "widescreen_16_9",
+    starterAssets: FLAGSHIP_TEMPLATE_ASSETS["new-day-place"],
+    blueprint: FLAGSHIP_TEMPLATE_BLUEPRINTS["new-day-place"],
   },
   {
     id: "vox-timeline",
@@ -539,7 +860,10 @@ const TEMPLATE_CATALOG_SOURCE: TemplateDefinition[] = [
 
 /** Only verified, Elah-native templates are published. Retired definitions remain above for migration context. */
 export const TEMPLATE_DEFINITIONS: TemplateDefinition[] = TEMPLATE_CATALOG_SOURCE.filter(
-  (template) => template.id === "agent-demo-reel" || template.id === "one-number",
+  (template) =>
+    template.id === "agent-demo-reel" ||
+    template.id === "one-number" ||
+    template.id === "new-day-place",
 );
 
 export type TemplateDefinitionId = (typeof TEMPLATE_DEFINITIONS)[number]["id"];

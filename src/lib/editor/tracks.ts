@@ -3,6 +3,7 @@ import type { EditorTrack, EditorTrackKind, VersionTimeline } from "./types";
 export const DEFAULT_VIDEO_TRACK_ID = "inkframe-video";
 export const DEFAULT_TEXT_TRACK_ID = "inkframe-elements";
 export const DEFAULT_AUDIO_TRACK_ID = "inkframe-audio";
+export const DEFAULT_CAPTION_TRACK_ID = "inkframe-captions";
 
 const DEFAULT_TRACKS: readonly EditorTrack[] = [
   { id: DEFAULT_VIDEO_TRACK_ID, kind: "video", name: "Video", order: 0 },
@@ -18,7 +19,9 @@ export const defaultTrackIdForKind = (kind: EditorTrackKind): string =>
     ? DEFAULT_VIDEO_TRACK_ID
     : kind === "text"
       ? DEFAULT_TEXT_TRACK_ID
-      : DEFAULT_AUDIO_TRACK_ID;
+      : kind === "caption"
+        ? DEFAULT_CAPTION_TRACK_ID
+        : DEFAULT_AUDIO_TRACK_ID;
 
 export const ensureEditorTracks = (
   version: Pick<VersionTimeline, "tracks">,

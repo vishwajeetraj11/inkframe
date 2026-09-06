@@ -9,6 +9,7 @@ import {
 import { ASPECT_PRESETS } from "@/lib/editor/constants";
 import { getVersionRenderDurationInFrames } from "@/lib/editor/timeline";
 import type { AspectPreset, VersionTimeline } from "@/lib/editor/types";
+import { videoFilterToCss } from "@/lib/editor/video-filters";
 import type { EditorVisualReview } from "@/lib/editor/export-state";
 import { Images, Pause, Play, Redo2, Square, Undo2, X } from "lucide-react";
 import { useEffect, useMemo, type RefObject } from "react";
@@ -43,6 +44,13 @@ export const PreviewPane = ({
   const pause = usePlaybackStore((state) => state.pause);
   const togglePlayPause = usePlaybackStore((state) => state.togglePlayPause);
   const setCurrentFrame = usePlaybackStore((state) => state.setCurrentFrame);
+  const activeVideoClip = version.clips.find(
+    (clip) =>
+      clip.kind === "video" &&
+      currentFrame >= clip.startFrame &&
+      currentFrame < clip.endFrame,
+  );
+  const previewFilter = videoFilterToCss(activeVideoClip?.videoFilter);
 
   const stop = () => {
     pause();
@@ -62,7 +70,7 @@ export const PreviewPane = ({
   const safeHeight = toPositiveInt(preset.height, 1920);
   const safeFps = toPositiveInt(preset.fps, 30);
   const hasRenderableVisual =
-    version.clips.length > 0 || version.textOverlays.length > 0;
+    version.clips.length > 0 || version.textOverlays.length > 0 || Boolean(version.captionCues?.length);
 
   let computedDurationInFrames = 1;
   try {
@@ -176,7 +184,7 @@ export const PreviewPane = ({
                     clearColor={[0.02, 0.02, 0.025, 1]}
                     preserveDrawingBuffer
                     className="h-full w-full"
-                    style={{ width: "100%", height: "100%" }}
+                    style={{ width: "100%", height: "100%", filter: previewFilter }}
                   />
                   <div className="absolute inset-x-0 bottom-0 z-20 flex min-h-11 items-center gap-2 border-t border-white/10 bg-black/75 px-2 backdrop-blur-sm xl:min-h-10">
                     <button

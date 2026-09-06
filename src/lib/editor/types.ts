@@ -1,9 +1,15 @@
+import type { ClipKeyframes } from "./keyframes";
+import type { TimeMapping } from "./time-mapping";
+import type { CaptionCue } from "./captions";
+import type { AudioDuckingRule } from "./audio-ducking";
+
 export type AspectPreset = "reel_9_16" | "widescreen_16_9";
 
 export type AssetKind = "video" | "image" | "audio";
 
 export const TEXT_OVERLAY_FONT_FAMILIES = [
   "sans",
+  "modern",
   "serif",
   "cursive",
   "mono",
@@ -120,6 +126,7 @@ export interface AssetRef {
   name: string;
   size: number;
   externalUrl?: string;
+  mediaMetadata?: { durationUs: number; width?: number; height?: number };
   attribution?: {
     provider: "pexels" | "mixkit" | "freesound";
     sourceUrl: string;
@@ -129,6 +136,36 @@ export interface AssetRef {
     licenseUrl?: string;
     attributionRequired?: boolean;
   };
+}
+
+/** Elah-compatible transform. Positions/anchor are stage fractions, rotation is
+ * radians and scale multiplies source pixels. Omission retains automatic fit. */
+export interface ClipTransform {
+  x: number;
+  y: number;
+  scale: number;
+  rotation: number;
+  anchor: { x: number; y: number };
+}
+
+export const VIDEO_FILTER_PRESETS = [
+  "none",
+  "cinematic",
+  "warm",
+  "cool",
+  "vintage",
+  "mono",
+] as const;
+export type VideoFilterPreset = (typeof VIDEO_FILTER_PRESETS)[number];
+
+export interface VideoFilter {
+  preset: VideoFilterPreset | "custom";
+  brightness: number;
+  contrast: number;
+  saturation: number;
+  sepia: number;
+  grayscale: number;
+  hueRotate: number;
 }
 
 export interface Clip {
@@ -142,6 +179,14 @@ export interface Clip {
   trimStartFrame: number;
   trimEndFrame: number;
   volume: number;
+  transform?: ClipTransform;
+  opacity?: number;
+  /** Export-safe color treatment applied identically in preview and MP4 rendering. */
+  videoFilter?: VideoFilter;
+  keyframes?: ClipKeyframes;
+  timeMapping?: TimeMapping;
+  /** Verified source bound retained for pure reducer validation. */
+  sourceDurationUs?: number;
 }
 
 export interface TextOverlay {
@@ -161,6 +206,8 @@ export interface TextOverlay {
   textAlign?: TextOverlayAlignment;
   stylePreset: TextOverlayStylePreset;
   createdaleyTexture: CreatedaleyOpenerTexture;
+  /** Optional export-safe edge treatment for text placed over variable footage. */
+  contrast?: "outline";
   /** Browser-native text motion rendered by Inkframe's Elah compatibility layer. */
   animation?: TextOverlayAnimation;
   syncMediaToTimelineEvents?: boolean;
@@ -211,7 +258,7 @@ export interface Transition {
   easing?: "linear" | "ease-in" | "ease-out";
 }
 
-export const EDITOR_TRACK_KINDS = ["video", "text", "audio"] as const;
+export const EDITOR_TRACK_KINDS = ["video", "text", "audio", "caption"] as const;
 export type EditorTrackKind = (typeof EDITOR_TRACK_KINDS)[number];
 
 /** A persistent, user-visible lane in the browser-native Elah timeline. */
@@ -230,6 +277,8 @@ export interface VersionTimeline {
   textOverlays: TextOverlay[];
   audioTracks: AudioTrack[];
   transitions: Transition[];
+  captionCues?: CaptionCue[];
+  duckingRules?: AudioDuckingRule[];
 }
 
 export interface VersionMap {
@@ -238,6 +287,8 @@ export interface VersionMap {
 }
 
 export interface ProjectSession {
+  /** Project content format; independent of the IndexedDB storage layout. */
+  contentVersion?: 1;
   activeVersion: AspectPreset;
   versions: VersionMap;
 }

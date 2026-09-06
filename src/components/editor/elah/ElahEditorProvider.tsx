@@ -63,13 +63,14 @@ const ProjectBridge = ({
   }, [engine, project]);
 
   useEffect(() => {
-    const handleChange = (nextProject: ElahProject) => {
+    const handleChange = () => {
       if (isLoadingProjectRef.current) return;
-      onProjectChangeRef.current?.(nextProject);
+      onProjectChangeRef.current?.(engine.getProject());
     };
-    engine.on("change", handleChange);
+    // Preview changes stay inside Elah; only a completed interaction enters canonical history.
+    engine.on("history:change", handleChange);
     onEngineReadyRef.current?.(engine);
-    return () => engine.off("change", handleChange);
+    return () => engine.off("history:change", handleChange);
   }, [engine]);
 
   return null;

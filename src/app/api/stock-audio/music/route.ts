@@ -1,4 +1,4 @@
-import { StockAudioApiError, parseLicensedAudioSearch, searchJamendoMusic } from "@/lib/stock-audio";
+import { StockAudioApiError, parseLicensedAudioSearch, searchFreesoundMusic } from "@/lib/stock-audio";
 import { getErrorMessage, jsonError } from "@/server/http";
 import { checkRateLimit } from "@/server/request-guard";
 
@@ -8,10 +8,10 @@ export const dynamic = "force-dynamic";
 export async function GET(request: Request): Promise<Response> {
   const rateLimit = checkRateLimit(request, { bucket: "licensed-music", limit: 40, windowMs: 60_000 });
   if (!rateLimit.ok) return rateLimit.response;
-  if (!process.env.JAMENDO_CLIENT_ID) return jsonError("Jamendo music search is not configured.", 503);
+  if (!process.env.FREESOUND_API_KEY) return jsonError("Freesound music search is not configured.", 503);
   try {
     const query = parseLicensedAudioSearch({ query: new URL(request.url).searchParams.get("query") ?? "" }).query;
-    return Response.json(await searchJamendoMusic(query, { signal: request.signal }), {
+    return Response.json(await searchFreesoundMusic(query, { signal: request.signal }), {
       headers: { ...rateLimit.headers, "Cache-Control": "private, max-age=60" },
     });
   } catch (error) {

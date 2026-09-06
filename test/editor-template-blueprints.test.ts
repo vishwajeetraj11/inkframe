@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest";
 import {
   FLAGSHIP_TEMPLATE_BLUEPRINTS,
+  NEW_DAY_PLACE_CUT_FRAMES,
+  NEW_DAY_PLACE_FILTER_PRESETS,
   instantiateTemplate,
   instantiateTemplateBlueprint,
 } from "@/lib/editor/templates";
@@ -53,6 +55,61 @@ describe("Elah-native editor template blueprints", () => {
         "DEMO DATA — REPLACE WITH YOUR SOURCE",
       ]),
     );
+  });
+
+  it("ships New Day as a 41.9-second hard-cut place portrait", () => {
+    const blueprint = FLAGSHIP_TEMPLATE_BLUEPRINTS["new-day-place"];
+
+    expect(blueprint.aspect).toBe("widescreen_16_9");
+    expect(blueprint.clips).toHaveLength(19);
+    expect(blueprint.clips.every((clip) => clip.kind === "video")).toBe(true);
+    expect(new Set(blueprint.clips.map((clip) => clip.assetId))).toHaveLength(19);
+    expect(blueprint.clips.every((clip) => clip.trimStartFrame === 0)).toBe(true);
+    expect(blueprint.clips.map((clip) => clip.videoFilter?.preset)).toEqual(
+      NEW_DAY_PLACE_FILTER_PRESETS,
+    );
+    expect(blueprint.clips.every((clip) => clip.videoFilter)).toBe(true);
+    expect(blueprint.clips.map((clip) => clip.startFrame)).toEqual(
+      NEW_DAY_PLACE_CUT_FRAMES.slice(0, -1),
+    );
+    expect(blueprint.clips.at(-1)?.endFrame).toBe(1257);
+    expect(blueprint.transitions).toEqual([]);
+    expect(blueprint.audioTracks).toEqual([
+      expect.objectContaining({
+        id: "new-day-place-audio-01",
+        assetId: "new-day-place-audio-01",
+        startFrame: 0,
+        endFrame: 1257,
+        trimStartFrame: 0,
+        trimEndFrame: 1257,
+        volume: 1,
+        fadeInFrames: 0,
+        fadeOutFrames: 0,
+        muted: false,
+      }),
+    ]);
+    expect(blueprint.textOverlays.slice(0, 4).map((overlay) => overlay.text)).toEqual([
+      "BRAND NEW DAY",
+      "INDIA",
+      "LICENSED FOOTAGE · PEXELS CREATORS",
+      "INDIA IN\n19 SCENES",
+    ]);
+    expect(blueprint.textOverlays.slice(0, 4).map((overlay) => overlay.fontFamily)).toEqual([
+      "modern",
+      "modern",
+      "modern",
+      "modern",
+    ]);
+    const sourceCredits = blueprint.textOverlays.slice(4);
+    expect(sourceCredits).toHaveLength(19);
+    expect(sourceCredits.every((credit) => credit.x === 80)).toBe(true);
+    expect(sourceCredits.every((credit) => credit.y === 88)).toBe(true);
+    expect(sourceCredits.every((credit) => credit.fontSize === 14)).toBe(true);
+    expect(sourceCredits.every((credit) => credit.fontFamily === "modern")).toBe(true);
+    expect(sourceCredits.every((credit) => credit.textAlign === "right")).toBe(true);
+    expect(blueprint.textOverlays.every((overlay) => overlay.contrast === "outline")).toBe(true);
+    expect(sourceCredits.every((credit) => credit.text.includes("VIDEO:"))).toBe(true);
+    expect(sourceCredits.every((credit) => credit.text.endsWith("/ PEXELS"))).toBe(true);
   });
 
   it.each([

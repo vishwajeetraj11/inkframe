@@ -100,3 +100,50 @@ describe("editor history", () => {
     );
   });
 });
+
+describe("deterministic command history", () => {
+  const aspect = "reel_9_16" as const;
+  const add = { type: "add-text-overlay" as const, aspect, overlay: createDefaultTextOverlay("caption") };
+
+  it("applies a batch once, replays its receipt, and keeps revision monotonic across undo", () => {
+    const command = { type: "history/command" as const, operationId: "batch-1", expectedRevision: 0, actions: [add, { type: "update-text-overlay" as const, aspect, overlayId: "caption", patch: { text: "Final caption" } }] };
+    let state = editorHistoryReducer(createInitialEditorHistory(), command);
+    expect(state.revision).toBe(1);
+    expect(state.past).toHaveLength(1);
+    const present = state.present;
+    state = editorHistoryReducer(state, command);
+    expect(state.present).toBe(present);
+    expect(state.lastCommandReceipt).toMatchObject({ ok: true, revision: 1 });
+    state = editorHistoryReducer(state, { type: "history/undo" });
+    expect(state.revision).toBe(2);
+    expect(state.present.versions[aspect].textOverlays).toHaveLength(0);
+    state = editorHistoryReducer(state, command);
+    expect(state.lastCommandReceipt).toMatchObject({ ok: true, revision: 1 });
+    expect(state.revision).toBe(2);
+    expect(state.present.versions[aspect].textOverlays).toHaveLength(0);
+    state = editorHistoryReducer(state, { type: "history/redo" });
+    expect(state.revision).toBe(3);
+    expect(state.present.versions[aspect].textOverlays[0].text).toBe("Final caption");
+  });
+
+  it("rejects stale revisions and operation ID reuse without changing project/history", () => {
+    const command = { type: "history/command" as const, operationId: "op", expectedRevision: 0, actions: [add] };
+    const applied = editorHistoryReducer(createInitialEditorHistory(), command);
+    const stale = editorHistoryReducer(applied, { ...command, operationId: "stale" });
+    expect(stale.lastCommandReceipt?.code).toBe("REVISION_CONFLICT");
+    expect(stale.present).toBe(applied.present);
+    expect(stale.past).toBe(applied.past);
+    const reused = editorHistoryReducer(applied, { ...command, expectedRevision: 1, actions: [{ ...add, overlay: createDefaultTextOverlay("different") }] });
+    expect(reused.lastCommandReceipt?.code).toBe("OPERATION_ID_CONFLICT");
+    expect(reused.present).toBe(applied.present);
+  });
+
+  it("rejects an entire batch when a later action is invalid", () => {
+    const initial = createInitialEditorHistory();
+    const state = editorHistoryReducer(initial, { type: "history/command", operationId: "atomic", expectedRevision: 0, actions: [add, { type: "place-clip", aspect, clipId: "missing", trackId: "inkframe-video", startFrame: 0 }] });
+    expect(state.lastCommandReceipt?.code).toBe("NOT_FOUND");
+    expect(state.present).toBe(initial.present);
+    expect(state.past).toBe(initial.past);
+    expect(state.revision).toBe(0);
+  });
+});

@@ -24,6 +24,7 @@ export const createEmptyVersionTimeline = (
 });
 
 export const createInitialProjectSession = (): ProjectSession => ({
+  contentVersion: 1,
   activeVersion: "reel_9_16",
   versions: {
     reel_9_16: createEmptyVersionTimeline("reel_9_16"),

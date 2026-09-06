@@ -3,14 +3,18 @@
 import { AudioInspector } from "@/components/editor/inspector/AudioInspector";
 import { ClipInspector } from "@/components/editor/inspector/ClipInspector";
 import { TextOverlayInspector } from "@/components/editor/inspector/TextOverlayInspector";
-import type { AudioTrack, Clip, TextOverlay } from "@/lib/editor/types";
+import type { AudioTrack, Clip, TextOverlay, EditorTrack } from "@/lib/editor/types";
 
 interface InspectorProps {
+  captionSelected?: boolean;
   clip: Clip | null;
   textOverlay: TextOverlay | null;
   audioTrack: AudioTrack | null;
   assetNames?: Record<string, string>;
   disabled?: boolean;
+  tracks?: readonly EditorTrack[];
+  onPlaceClip?: (clipId: string, trackId: string, startFrame: number) => void;
+  onReorderTracks?: (trackIds: string[]) => void;
   onUpdateClip: (clipId: string, patch: Partial<Omit<Clip, "id" | "assetId" | "kind">>) => void;
   onDetachAudio?: (clipId: string) => void;
   onUpdateText: (overlayId: string, patch: Partial<Omit<TextOverlay, "id">>) => void;
@@ -19,18 +23,22 @@ interface InspectorProps {
 }
 
 export const Inspector = ({
+  captionSelected = false,
   clip,
   textOverlay,
   audioTrack,
   assetNames = {},
   disabled,
+  tracks,
+  onPlaceClip,
+  onReorderTracks,
   onUpdateClip,
   onDetachAudio,
   onUpdateText,
   onUpdateAudio,
   onRemoveAudio,
 }: InspectorProps) => {
-  const activeKind = clip ? "Clip" : textOverlay ? "Text Overlay" : audioTrack ? "Audio Track" : null;
+  const activeKind = clip ? "Clip" : textOverlay ? "Text Overlay" : audioTrack ? "Audio Track" : captionSelected ? "Caption" : null;
 
   return (
     <section className="space-y-3 bg-[#15120e] p-3">
@@ -51,7 +59,7 @@ export const Inspector = ({
         ) : null}
       </div>
 
-      {!clip && !textOverlay && !audioTrack ? (
+      {!clip && !textOverlay && !audioTrack && !captionSelected ? (
         <div className="border border-dashed border-white/15 bg-white/[0.02] px-3 py-4">
           <p className="app-title text-sm font-semibold uppercase text-neutral-100">
             Nothing selected
@@ -66,6 +74,9 @@ export const Inspector = ({
         <ClipInspector
           clip={clip}
           disabled={disabled}
+          tracks={tracks}
+          onPlaceClip={onPlaceClip}
+          onReorderTracks={onReorderTracks}
           onUpdateClip={onUpdateClip}
           onDetachAudio={onDetachAudio}
         />

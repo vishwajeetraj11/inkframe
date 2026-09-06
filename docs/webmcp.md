@@ -99,8 +99,7 @@ A browser agent can now complete and verify a full local workflow without a rend
    its token and `confirmed: true` through `editor_compose_storyboard`.
    Add `variantName` to compose into an isolated draft, then compare and apply
    only the selected draft with `editor_apply_variant`. Atomic tools remain
-   available for precise refinement. Jamendo music and
-   Freesound effects retain Creative Commons source/license metadata.
+   available for precise refinement. Freesound music and effects retain Creative Commons source/license metadata.
 3. Run `editor_validate_project` and `editor_get_render_diagnostics` before
    export. Validation reports missing assets, unsafe typography, likely text
    overflow, timeline gaps, invalid transitions, and known Elah limitations.
@@ -131,8 +130,7 @@ task-oriented workflows and groups the larger atomic surface into discovery,
 composition, inspection, correction, and delivery tools so an agent does not
 need to infer a path from every registered operation.
 
-Licensed stock audio is optional. Configure `JAMENDO_CLIENT_ID` for music and
-`FREESOUND_API_KEY` for sound effects. Results are restricted to downloadable
+Licensed stock audio is optional. Configure `FREESOUND_API_KEY` for music and sound effects. Results are restricted to downloadable
 CC0, CC BY, or CC BY-SA items; imported assets retain creator, source, license,
 and attribution requirements.
 

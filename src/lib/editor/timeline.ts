@@ -7,6 +7,6 @@ export {
   isTimelineWithinLimit,
   sanitizeTransitions,
 } from "./domain/render";
-export { sanitizeVersion } from "./domain/version";
+export { sanitizeVersion, validateVersionPlacement } from "./domain/version";
 
 export { getClipDurationInFrames } from "./domain/helpers";

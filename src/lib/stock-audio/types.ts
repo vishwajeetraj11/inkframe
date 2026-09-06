@@ -1,4 +1,4 @@
-export type LicensedAudioProvider = "jamendo" | "freesound";
+export type LicensedAudioProvider = "freesound";
 
 export interface LicensedAudioResult {
   id: string;

@@ -96,7 +96,7 @@ const setup = () => {
       attribution: { label: "Pexels" as const, url: "https://www.pexels.com/" as const },
     })),
     importStockPhoto: vi.fn(async () => ({ ok: true, message: "Imported photo" })),
-    searchLicensedMusic: vi.fn(async () => ({ provider: "jamendo" as const, query: "focus", results: [] })),
+    searchLicensedMusic: vi.fn(async () => ({ provider: "freesound" as const, query: "focus", results: [] })),
     importLicensedMusic: vi.fn(async () => ({ ok: true, message: "Imported music" })),
     searchLicensedSoundEffects: vi.fn(async () => ({ provider: "freesound" as const, query: "whoosh", results: [] })),
     importLicensedSoundEffect: vi.fn(async () => ({ ok: true, message: "Imported SFX" })),
@@ -122,6 +122,17 @@ describe("editor WebMCP tools", () => {
   it("exposes the safe initial catalog", () => {
     const { tools } = setup();
     expect(tools.map((tool) => tool.name)).toEqual([
+      "editor_set_clip_keyframes",
+      "editor_upsert_caption_cues",
+      "editor_import_captions",
+      "editor_set_audio_ducking",
+      "editor_remove_audio_ducking",
+      "editor_freeze_clip_range",
+      "editor_set_clip_speed_ramp",
+      "editor_add_track",
+      "editor_reorder_tracks",
+      "editor_place_clip",
+      "editor_set_clip_transform",
       "editor_get_capabilities",
       "editor_get_state_summary",
       "editor_get_project",
@@ -197,6 +208,29 @@ describe("editor WebMCP tools", () => {
         confirmedDestructiveActions: true,
       },
     });
+    expect(guide.deterministicCommands).toMatchObject({
+      requiredMetadata: ["aspect", "expectedRevision", "operationId"],
+      timing: { fps: 30, sameVideoLaneOverlap: false },
+      keyframes: { maxPointsPerChannel: 1000 },
+      captions: { formats: ["srt", "vtt"], plainTextOnly: true },
+      ducking: { attenuationDb: [-60, 0] },
+      retiming: {
+        preservesTimelineDuration: true,
+        positiveSpeedOnly: true,
+        embeddedVideoAudio: expect.stringContaining("muted"),
+        transitions: expect.stringContaining("not supported"),
+      },
+    });
+    expect(guide.deterministicCommands.tools).toHaveLength(11);
+    for (const name of guide.deterministicCommands.tools) {
+      const tool = tools.find((candidate) => candidate.name === name);
+      expect(tool, `Advertised tool ${name} must exist`).toBeDefined();
+      expect(tool!.inputSchema).toMatchObject({ required: expect.arrayContaining(["aspect", "expectedRevision", "operationId"]) });
+    }
+    expect(guide.deterministicCommands.tools).toEqual(expect.arrayContaining([
+      "editor_set_clip_keyframes", "editor_upsert_caption_cues", "editor_import_captions",
+      "editor_set_audio_ducking", "editor_remove_audio_ducking", "editor_freeze_clip_range", "editor_set_clip_speed_ramp",
+    ]));
     expect(guide.workflows[0].steps).toEqual(
       expect.arrayContaining([
         "editor_plan_storyboard",
@@ -246,7 +280,7 @@ describe("editor WebMCP tools", () => {
   it("validates and applies timeline item, clip, audio, and transition actions", async () => {
     const { tools, getState, selected, dispatch } = setup();
     dispatch({ type: "add-clip", aspect: "reel_9_16", clip: createDefaultClip("clip-1", "video-1", "video") });
-    dispatch({ type: "add-clip", aspect: "reel_9_16", clip: { ...createDefaultClip("clip-2", "video-1", "video"), startFrame: 30, endFrame: 60 } });
+    dispatch({ type: "add-clip", aspect: "reel_9_16", clip: { ...createDefaultClip("clip-2", "video-1", "video"), startFrame: 90, endFrame: 120 } });
     dispatch({ type: "add-audio-track", aspect: "reel_9_16", track: createDefaultAudioTrack("audio-1", "audio-1") });
     await tools.find((tool) => tool.name === "editor_select_timeline_item")!.execute({ itemType: "clip", itemId: "clip-1" }, executeOptions);
     await tools.find((tool) => tool.name === "editor_update_clip")!.execute({ clipId: "clip-1", volume: 0.4 }, executeOptions);
@@ -313,7 +347,7 @@ describe("editor WebMCP tools", () => {
       ),
     );
 
-    expect(response).toMatchObject({ ok: true, durationInFrames: 116 });
+    expect(response).toMatchObject({ ok: true, durationInFrames: 120 });
     const version = getState().present.versions.reel_9_16;
     expect(version.clips).toHaveLength(2);
     expect(version.textOverlays).toHaveLength(2);
@@ -579,7 +613,7 @@ describe("editor WebMCP tools", () => {
       { query: "focus" },
       executeOptions,
     ));
-    expect(music.result).toMatchObject({ provider: "jamendo", query: "focus" });
+    expect(music.result).toMatchObject({ provider: "freesound", query: "focus" });
 
     await expect(tools.find((tool) => tool.name === "editor_import_licensed_music")!.execute(
       { query: "focus", audioId: "12" },

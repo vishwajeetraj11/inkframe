@@ -1,3 +1,5 @@
+import { buildDuckingEnvelope } from "./audio-ducking";
+import type { CaptionCue } from "./captions";
 import type {
   Clip as ElahClip,
   Project as ElahProject,
@@ -41,7 +43,8 @@ export type ElahAdapterDiagnosticCode =
   | "unsupported-elah-clip"
   | "unsupported-elah-transition"
   | "missing-asset-id"
-  | "fps-mismatch";
+  | "fps-mismatch"
+  | "unsupported-native-timing-edit";
 
 export interface ElahAdapterDiagnostic {
   code: ElahAdapterDiagnosticCode;
@@ -68,6 +71,7 @@ export interface InkframeElahSidecar {
     audioTrackIds: string[];
     textOverlayIds: string[];
     transitionIds: string[];
+    captionCueIds?: string[];
   };
   projectionSnapshots: Record<string, ElahProjectionSnapshot>;
 }
@@ -86,14 +90,19 @@ export interface ElahProjectProjection {
 }
 
 export interface InkframeTimelineProjection {
+  rejected?: boolean;
   version: VersionTimeline;
   diagnostics: ElahAdapterDiagnostic[];
 }
 
 const cloneVersion = (version: VersionTimeline): VersionTimeline => ({
   ...version,
+  ...(version.captionCues ? { captionCues: version.captionCues.map(cue => ({ ...cue })) } : {}),
   tracks: version.tracks?.map((track) => ({ ...track })),
-  clips: version.clips.map((clip) => ({ ...clip })),
+  clips: version.clips.map((clip) => ({
+    ...clip,
+    ...(clip.transform ? { transform: { ...clip.transform, anchor: { ...clip.transform.anchor } } } : {}),
+  })),
   textOverlays: version.textOverlays.map((overlay) => ({ ...overlay })),
   audioTracks: version.audioTracks.map((track) => ({ ...track })),
   transitions: version.transitions.map((transition) => ({ ...transition })),
@@ -209,15 +218,23 @@ const presentationFontSizeForOverlay = (overlay: TextOverlay): number => {
 };
 
 const ELah_FONT_BY_INKFRAME: Record<TextOverlayFontFamily, string> = {
-  sans: "sans-serif",
-  serif: "serif",
-  cursive: "cursive",
-  mono: "monospace",
+  sans: '"Barlow Condensed", "Arial Narrow", sans-serif',
+  modern: '"Avenir Next", Avenir, "Trebuchet MS", "Helvetica Neue", sans-serif',
+  serif: '"Cormorant Garamond", Georgia, serif',
+  cursive: '"Cormorant Garamond", Georgia, cursive',
+  mono: '"IBM Plex Mono", "SFMono-Regular", Consolas, monospace',
 };
 
 const toInkframeFontFamily = (fontFamily: string | undefined): TextOverlayFontFamily => {
   const normalized = fontFamily?.toLowerCase() ?? "";
   if (normalized.includes("mono")) return "mono";
+  if (
+    normalized.includes("avenir") ||
+    normalized.includes("trebuchet") ||
+    normalized.includes("helvetica")
+  ) {
+    return "modern";
+  }
   if (normalized.includes("cursive") || normalized.includes("script")) return "cursive";
   if (normalized.includes("serif") && !normalized.includes("sans")) return "serif";
   return "sans";
@@ -243,7 +260,7 @@ const createTrack = (
 });
 
 const toElahTrackKind = (kind: EditorTrack["kind"]): ElahTrack["kind"] =>
-  kind === "text" ? "elements" : kind;
+  kind === "text" || kind === "caption" ? "elements" : kind;
 
 const toEditorTrackKind = (kind: ElahTrack["kind"]): EditorTrack["kind"] =>
   kind === "elements" ? "text" : kind === "audio" ? "audio" : "video";
@@ -282,6 +299,7 @@ export const toElahProject = (
   const mappedAudioTrackIds: string[] = [];
   const mappedTextOverlayIds: string[] = [];
   const mappedTransitionIds: string[] = [];
+  const mappedCaptionCueIds: string[] = [];
 
   const preset = ASPECT_PRESETS[version.aspect];
   const totalFrames = Math.max(
@@ -289,6 +307,7 @@ export const toElahProject = (
     ...version.clips.map((clip) => clip.endFrame),
     ...version.textOverlays.map((overlay) => overlay.endFrame),
     ...version.audioTracks.map((track) => track.endFrame),
+    ...(version.captionCues ?? []).map(cue => cue.endFrame),
   );
   const editorTracks = ensureEditorTracks(version);
   const editorTrackById = new Map(editorTracks.map((track) => [track.id, track]));
@@ -380,7 +399,13 @@ export const toElahProject = (
       src,
       assetId: clip.assetId,
       volume: clampVolume(clip.volume),
-      opacity: 1,
+      opacity: clip.opacity ?? 1,
+      ...(clip.kind === "video" && clip.videoFilter
+        ? { videoFilter: structuredClone(clip.videoFilter) }
+        : {}),
+      ...(clip.keyframes ? { keyframes: structuredClone(clip.keyframes) } : {}),
+      ...(clip.timeMapping ? { timeMapping: structuredClone(clip.timeMapping) } : {}),
+      ...(clip.transform ? { transform: { ...clip.transform, anchor: { ...clip.transform.anchor } } } : {}),
       locked: false,
       disabled: false,
     };
@@ -388,7 +413,7 @@ export const toElahProject = (
     projectionSnapshots[clip.id] = projectSnapshot(elahClip);
     mappedClipIds.push(clip.id);
 
-    if (clip.kind === "video" && clip.volume > 0) {
+    if (clip.kind === "video" && clip.volume > 0 && (!clip.timeMapping || clip.timeMapping.kind === "normal")) {
       // Elah's audio controller schedules audio-track clips, not the audio
       // stream embedded in a video clip. Mirror that stream as a linked audio
       // clip so uploaded videos retain their original soundtrack in preview
@@ -407,6 +432,7 @@ export const toElahProject = (
           src,
           assetId: clip.assetId,
           volume: clampVolume(clip.volume),
+          gainEnvelope: buildDuckingEnvelope(version, { kind: "video", id: clip.id }),
           opacity: 1,
           locked: true,
           disabled: false,
@@ -432,6 +458,12 @@ export const toElahProject = (
       content: presentationTextForOverlay(overlay),
       fontSize: presentationFontSizeForOverlay(overlay),
       color: overlay.color,
+      ...(overlay.contrast === "outline"
+        ? {
+            strokeColor: "#17120f",
+            strokeWidth: Math.max(2, Math.round(presentationFontSizeForOverlay(overlay) * 0.07)),
+          }
+        : {}),
       fontFamily: ELah_FONT_BY_INKFRAME[overlay.fontFamily],
       fontWeight: overlay.fontWeight >= 600 ? "bold" : "normal",
       textAlign: overlay.textAlign ?? "center",
@@ -464,6 +496,22 @@ export const toElahProject = (
     clipsByTrack[trackId].push(elahClip);
   }
 
+  for (const cue of version.captionCues ?? []) {
+    if (editorTrackById.get(cue.trackId)?.kind !== "caption") continue;
+    const caption: ElahClip = {
+      id: cue.id, trackId: cue.trackId, type: "text", name: "Caption",
+      startFrame: cue.startFrame, durationFrames: cue.endFrame - cue.startFrame,
+      sourceStartFrame: 0, sourceDurationFrames: cue.endFrame - cue.startFrame,
+      content: cue.text, fontSize: Math.round(preset.height * 0.045),
+      color: "#ffffff", fontFamily: "sans-serif", fontWeight: "bold", textAlign: "center",
+      opacity: 1, volume: 0, locked: false, disabled: false,
+      transform: { x: 0.5, y: 0.88, scale: 1, rotation: 0, anchor: { x: 0.5, y: 0.5 } },
+    };
+    clipsByTrack[cue.trackId].push(caption);
+    mappedCaptionCueIds.push(cue.id);
+    projectionSnapshots[cue.id] = projectSnapshot(caption);
+  }
+
   for (const audio of version.audioTracks) {
     const src = resolveSource(audio.assetId, options, assetById);
     if (!src) {
@@ -492,6 +540,7 @@ export const toElahProject = (
       src,
       assetId: audio.assetId,
       volume: clampVolume(audio.volume),
+      gainEnvelope: buildDuckingEnvelope(version, { kind: "audio", id: audio.id }),
       fadeInFrames: Math.max(0, Math.round(audio.fadeInFrames ?? 0)),
       fadeOutFrames: Math.max(0, Math.round(audio.fadeOutFrames ?? 0)),
       opacity: 1,
@@ -554,6 +603,7 @@ export const toElahProject = (
         audioTrackIds: mappedAudioTrackIds,
         textOverlayIds: mappedTextOverlayIds,
         transitionIds: mappedTransitionIds,
+        captionCueIds: mappedCaptionCueIds,
       },
       projectionSnapshots,
     },
@@ -638,7 +688,8 @@ export const fromElahProject = (
       .filter((track) => track.id !== BACKGROUND_TRACK_ID)
       .map((track) => ({
         id: track.id,
-        kind: toEditorTrackKind(track.kind),
+        kind: canonical.tracks?.find(item => item.id === track.id)?.kind === "caption"
+          ? "caption" as const : toEditorTrackKind(track.kind),
         name: track.name,
         order: track.order,
       })),
@@ -653,6 +704,17 @@ export const fromElahProject = (
       ? projectedTrackId
       : undefined;
   const nativeClips = flattenClips(project);
+  // Native trimming/splitting does not rebase animation channels or source maps.
+  // Reject the complete gesture rather than commit a partially changed timeline.
+  for (const original of canonical.clips) {
+    if (!original.keyframes && (!original.timeMapping || original.timeMapping.kind === "normal")) continue;
+    const native = nativeClips.find(clip => clip.id === original.id);
+    const snapshot = sidecar.projectionSnapshots[original.id];
+    if (native && snapshot && (native.durationFrames !== snapshot.durationFrames || native.sourceStartFrame !== snapshot.sourceStartFrame || native.sourceDurationFrames !== snapshot.sourceDurationFrames)) {
+      return { version: cloneVersion(canonical), rejected: true, diagnostics: [{ code: "unsupported-native-timing-edit", entityId: original.id, message: "Use canonical trim or split commands for clips with keyframes or source-time mapping." }] };
+    }
+  }
+  const captionById = new Map<string, CaptionCue>();
   const visualById = new Map<string, Clip>();
   const audioById = new Map<string, AudioTrack>();
   const textById = new Map<string, TextOverlay>();
@@ -669,8 +731,19 @@ export const fromElahProject = (
       continue;
     }
 
+    if (native.type === "text" && editorTracks.some(track => track.id === native.trackId && track.kind === "caption")) {
+      captionById.set(native.id, {
+        id: native.id, trackId: native.trackId, startFrame: native.startFrame,
+        endFrame: native.startFrame + native.durationFrames, text: native.content ?? "",
+      });
+      continue;
+    }
+
     if (native.type === "video" || native.type === "image") {
       const original = canonicalClipById.get(native.id);
+      const nativeVideoFilter = (
+        native as ElahClip & { videoFilter?: Clip["videoFilter"] }
+      ).videoFilter;
       const assetId = native.assetId ?? original?.assetId;
       if (!assetId) {
         diagnostics.push({
@@ -684,6 +757,20 @@ export const fromElahProject = (
       const trimStartFrame = Math.max(0, Math.round(native.sourceStartFrame));
       const durationFrames = Math.max(1, Math.round(native.durationFrames));
       visualById.set(native.id, {
+        ...original,
+        ...(native.keyframes ? { keyframes: structuredClone(native.keyframes) } : {}),
+        ...(native.timeMapping ? { timeMapping: structuredClone(native.timeMapping) } : {}),
+        // Explicit transforms use Elah source-pixel scale and radians. Missing
+        // transforms retain automatic contain-fit for legacy projects.
+        transform: native.transform
+          ? { ...native.transform, anchor: { ...native.transform.anchor } }
+          : undefined,
+        ...(native.opacity !== 1 || original?.opacity !== undefined
+          ? { opacity: native.opacity }
+          : {}),
+        ...(native.type === "video" && (nativeVideoFilter || original?.videoFilter)
+          ? { videoFilter: structuredClone(nativeVideoFilter ?? original?.videoFilter) }
+          : {}),
         id: native.id,
         assetId,
         trackId: resolvePersistedTrackId(
@@ -825,6 +912,7 @@ export const fromElahProject = (
           : {}),
         stylePreset: original?.stylePreset ?? "classic",
         createdaleyTexture: original?.createdaleyTexture ?? "plain",
+        ...(original?.contrast ? { contrast: original.contrast } : {}),
         ...(native.textAnimation
           ? {
               animation: {
@@ -903,7 +991,9 @@ export const fromElahProject = (
 
   return {
     version: {
+      ...canonical,
       aspect: canonical.aspect,
+      ...(canonical.captionCues || captionById.size ? { captionCues: mergeCanonicalOrder(canonical.captionCues ?? [], new Set(sidecar.mapped.captionCueIds ?? []), captionById) } : {}),
       ...(canonical.tracks ? { tracks: editorTracks } : {}),
       clips: mergeVisualTimelineOrder(
         canonical.clips,

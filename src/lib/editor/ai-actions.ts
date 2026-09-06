@@ -7,7 +7,7 @@ import {
 export const AI_EDITOR_ACTIONS_START = "[[EDITOR_ACTIONS]]";
 export const AI_EDITOR_ACTIONS_END = "[[/EDITOR_ACTIONS]]";
 
-const AI_READABLE_FONT_FAMILIES = ["sans", "serif", "mono"] as const;
+const AI_READABLE_FONT_FAMILIES = ["sans", "modern", "serif", "mono"] as const;
 
 const normalizeAIFontFamily = (
   value: unknown,
@@ -28,6 +28,17 @@ const normalizeAIFontFamily = (
 
   if (normalized === "serif" || normalized === "times" || normalized === "georgia") {
     return "serif";
+  }
+
+  if (
+    normalized === "modern" ||
+    normalized === "avenir" ||
+    normalized === "trebuchet" ||
+    normalized === "helvetica" ||
+    normalized === "clean sans" ||
+    normalized === "editorial sans"
+  ) {
+    return "modern";
   }
 
   if (

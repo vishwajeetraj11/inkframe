@@ -1,5 +1,11 @@
 import { defineConfig } from "@playwright/test";
 
+const port = Number(process.env.INKFRAME_E2E_PORT ?? 3100);
+if (!Number.isInteger(port) || port < 1 || port > 65535) {
+  throw new Error("INKFRAME_E2E_PORT must be an integer between 1 and 65535.");
+}
+const baseURL = `http://127.0.0.1:${port}`;
+
 export default defineConfig({
   testDir: "./e2e",
   timeout: 120_000,
@@ -7,7 +13,7 @@ export default defineConfig({
   workers: 1,
   reporter: "line",
   use: {
-    baseURL: "http://127.0.0.1:3000",
+    baseURL,
     browserName: "chromium",
     channel: "chrome",
     headless: true,
@@ -18,8 +24,8 @@ export default defineConfig({
     },
   },
   webServer: {
-    command: "npm run dev -- --hostname 127.0.0.1 --port 3000",
-    url: "http://127.0.0.1:3000/editor",
+    command: `npm run dev -- --hostname 127.0.0.1 --port ${port}`,
+    url: `${baseURL}/editor`,
     timeout: 120_000,
     reuseExistingServer: true,
   },

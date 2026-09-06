@@ -35,6 +35,7 @@ const trackOptions: Array<{
 }> = [
   { kind: "video", label: "Video track", icon: Film },
   { kind: "text", label: "Text track", icon: Type },
+  { kind: "caption", label: "Caption track", icon: Type },
   { kind: "audio", label: "Audio track", icon: Music2 },
 ];
 

@@ -1,5 +1,5 @@
 import { ASPECT_PRESETS, MAX_DURATION_FRAMES } from "../constants";
-import { getVersionRenderDurationInFrames } from "../timeline";
+import { getVersionRenderDurationInFrames, validateVersionPlacement } from "../timeline";
 import type {
   AspectPreset,
   AssetRef,
@@ -31,6 +31,8 @@ export interface EditorValidationReport {
     textOverlays: number;
     audioTracks: number;
     transitions: number;
+    captionCues: number;
+    duckingRules: number;
   };
   issues: EditorValidationIssue[];
 }
@@ -154,7 +156,7 @@ export const validateEditorVersion = (
     issues.push(issue("invalid-timeline", "error", "The visual timeline could not be resolved."));
   }
 
-  if (version.clips.length === 0 && version.textOverlays.length === 0) {
+  if (version.clips.length === 0 && version.textOverlays.length === 0 && !(version.captionCues?.length)) {
     issues.push(issue("empty-canvas", "error", "Add a visual clip or text overlay before export."));
   }
 
@@ -169,7 +171,7 @@ export const validateEditorVersion = (
   }
 
   const orderedClips = [...version.clips].sort((left, right) => left.startFrame - right.startFrame);
-  orderedClips.forEach((clip, index) => {
+  orderedClips.forEach((clip) => {
     if (!assetIds.has(clip.assetId)) {
       issues.push(
         issue("missing-asset", "error", `Clip ${clip.id} references a missing asset.`, {
@@ -186,27 +188,7 @@ export const validateEditorVersion = (
         }),
       );
     }
-    const previous = orderedClips[index - 1];
-    if (previous && clip.startFrame > previous.endFrame) {
-      issues.push(
-        issue(
-          "visual-gap",
-          "warning",
-          `There is a ${clip.startFrame - previous.endFrame} frame gap before clip ${clip.id}.`,
-          { entityId: clip.id, frame: previous.endFrame },
-        ),
-      );
-    }
-    if (previous && clip.startFrame < previous.endFrame) {
-      issues.push(
-        issue(
-          "visual-overlap",
-          "warning",
-          `Clip ${clip.id} overlaps ${previous.id} outside a transition.`,
-          { entityId: clip.id, frame: clip.startFrame },
-        ),
-      );
-    }
+
   });
 
   const visualEndFrame = orderedClips.reduce((maximum, clip) => Math.max(maximum, clip.endFrame), 0);
@@ -306,19 +288,25 @@ export const validateEditorVersion = (
     }
   });
 
-  const clipIndex = new Map(version.clips.map((clip, index) => [clip.id, index]));
+  // Coverage is the union across lanes: a short overlay must not invent gaps
+  // inside an underlying longer clip.
+  let coveredUntil = 0;
+  for (const clip of orderedClips) {
+    if (clip.startFrame > coveredUntil) {
+      issues.push(issue("visual-gap", "warning", `There is a ${clip.startFrame - coveredUntil} frame gap before clip ${clip.id}.`, { entityId: clip.id, frame: coveredUntil }));
+    }
+    coveredUntil = Math.max(coveredUntil, clip.endFrame);
+  }
+  for (const problem of validateVersionPlacement(version)) {
+    issues.push(issue(problem.code, "error", problem.message, { entityId: problem.entityId }));
+  }
   version.transitions.forEach((transition) => {
-    const fromIndex = clipIndex.get(transition.fromClipId);
-    const toIndex = clipIndex.get(transition.toClipId);
-    if (fromIndex === undefined || toIndex === undefined || toIndex !== fromIndex + 1) {
-      issues.push(
-        issue(
-          "invalid-transition-edge",
-          "error",
-          `Transition ${transition.id} must connect adjacent visual clips.`,
-          { entityId: transition.id },
-        ),
-      );
+    const source = version.clips.find((clip) => clip.id === transition.fromClipId);
+    const lane = version.clips.filter((clip) => (clip.trackId ?? "inkframe-video") === (source?.trackId ?? "inkframe-video")).sort((a, b) => a.startFrame - b.startFrame);
+    const fromIndex = lane.findIndex((clip) => clip.id === transition.fromClipId);
+    const toIndex = lane.findIndex((clip) => clip.id === transition.toClipId);
+    if (fromIndex < 0 || toIndex !== fromIndex + 1 || lane[fromIndex].endFrame !== lane[toIndex].startFrame) {
+      issues.push(issue("invalid-transition-edge", "error", `Transition ${transition.id} must connect touching adjacent clips on the same lane.`, { entityId: transition.id }));
     }
   });
 
@@ -339,6 +327,8 @@ export const validateEditorVersion = (
       textOverlays: version.textOverlays.length,
       audioTracks: version.audioTracks.length,
       transitions: version.transitions.length,
+      captionCues: version.captionCues?.length ?? 0,
+      duckingRules: version.duckingRules?.length ?? 0,
     },
     issues,
   };
@@ -351,9 +341,13 @@ export const inspectEditorFrame = (
   aspect: version.aspect,
   frame,
   seconds: Number((frame / ASPECT_PRESETS[version.aspect].fps).toFixed(3)),
+  activeCaptions: (version.captionCues ?? []).filter(cue => frame >= cue.startFrame && frame < cue.endFrame).map(cue => ({...cue,text:cue.text.slice(0,240)})),
   activeClips: version.clips
     .filter((clip) => frame >= clip.startFrame && frame < clip.endFrame)
-    .map(({ id, assetId, kind, startFrame, endFrame }) => ({
+    .map(({ id, assetId, kind, startFrame, endFrame, trackId, transform, opacity }) => ({
+      trackId: trackId ?? "inkframe-video",
+      transform,
+      opacity: opacity ?? 1,
       id,
       assetId,
       kind,

@@ -7,9 +7,12 @@ import {
 import { aiEditorActionsSchema, type AIEditorActions } from "../ai-actions";
 import { FPS, MAX_DURATION_FRAMES } from "../constants";
 import { createDefaultClip, createDefaultTextOverlay } from "../defaults";
-import type { EditorHistoryState } from "../history";
+import { validateEditorCommandAction, type EditorCommand, type EditorHistoryState } from "../history";
 import { getClipDurationInFrames } from "../domain/helpers";
 import { getVersionRenderDurationInFrames } from "../timeline";
+import { importCaptions } from "../captions";
+import { validateTimeMapping, type TimeMapping } from "../time-mapping";
+import { DEFAULT_VIDEO_TRACK_ID, ensureEditorTracks } from "../tracks";
 import type {
   PexelsPhotoSearchResult,
   PexelsVideoSearchResult,
@@ -50,7 +53,7 @@ const textFields = {
   y: z.number().min(0).max(100).optional(),
   fontSize: z.number().min(1).max(500).optional(),
   color: z.string().regex(/^#[0-9a-fA-F]{6}$/).optional(),
-  fontFamily: z.enum(["sans", "serif", "cursive", "mono"]).optional(),
+  fontFamily: z.enum(["sans", "modern", "serif", "cursive", "mono"]).optional(),
   fontWeight: z.number().int().min(100).max(900).optional(),
   fontStyle: z.enum(["normal", "italic"]).optional(),
   textAlign: z.enum(["left", "center", "right"]).optional(),
@@ -58,6 +61,7 @@ const textFields = {
   createdaleyTexture: z
     .enum(["plain", "dots", "grid-dots", "newsprint-grain", "warm-editorial"])
     .optional(),
+  contrast: z.literal("outline").optional(),
   syncMediaToTimelineEvents: z.boolean().optional(),
   animation: z
     .object({
@@ -78,6 +82,15 @@ const updateClipInput = z.object({
   startFrame: frameSchema.optional(), endFrame: frameSchema.optional(),
   trimStartFrame: frameSchema.optional(), trimEndFrame: frameSchema.optional(),
   volume: z.number().min(0).max(1).optional(),
+  videoFilter: z.object({
+    preset: z.enum(["none", "cinematic", "warm", "cool", "vintage", "mono", "custom"]),
+    brightness: z.number().min(0.5).max(1.5),
+    contrast: z.number().min(0.5).max(1.5),
+    saturation: z.number().min(0).max(2),
+    sepia: z.number().min(0).max(1),
+    grayscale: z.number().min(0).max(1),
+    hueRotate: z.number().min(-30).max(30),
+  }).strict().optional(),
 }).strict();
 const removeClipInput = z.object({ aspect: aspectSchema.optional(), clipId: z.string().trim().min(1).max(128), confirmed: z.literal(true) }).strict();
 const updateAudioInput = z.object({
@@ -95,6 +108,29 @@ const selectInput = z.object({
   aspect: aspectSchema.optional(), itemType: z.enum(["clip", "textOverlay", "audioTrack"]),
   itemId: z.string().trim().min(1).max(128),
 }).strict();
+const commandFields = {
+  aspect: aspectSchema,
+  expectedRevision: z.number().int().nonnegative(),
+  operationId: z.string().trim().min(1).max(128),
+};
+const addTrackInput = z.object({ ...commandFields, id: z.string().trim().min(1).max(128), kind: z.enum(["video", "text", "audio", "caption"]), name: z.string().trim().min(1).max(128) }).strict();
+const reorderTracksInput = z.object({ ...commandFields, trackIds: z.array(z.string().min(1).max(128)).min(1).max(100) }).strict();
+const placeClipInput = z.object({ ...commandFields, clipId: z.string().min(1).max(128), trackId: z.string().min(1).max(128), startFrame: frameSchema }).strict();
+const clipTransformInput = z.object({
+  ...commandFields, clipId: z.string().min(1).max(128),
+  transform: z.object({ x: z.number(), y: z.number(), scale: z.number().positive(), rotation: z.number(), anchor: z.object({ x: z.number().min(0).max(1), y: z.number().min(0).max(1) }).strict() }).strict(),
+  opacity: z.number().min(0).max(1).optional(),
+}).strict();
+const keyframePointSchema = z.object({ id: z.string().min(1).max(128), frame: frameSchema, value: z.number(), interpolation: z.enum(["linear", "hold"]) }).strict();
+const keyframesInput = z.object({ ...commandFields, clipId: z.string().min(1).max(128), keyframes: z.object({ x: z.array(keyframePointSchema).max(1000).optional(), y: z.array(keyframePointSchema).max(1000).optional(), scale: z.array(keyframePointSchema).max(1000).optional(), rotation: z.array(keyframePointSchema).max(1000).optional(), opacity: z.array(keyframePointSchema).max(1000).optional() }).strict() }).strict();
+const captionCueSchema = z.object({ id: z.string().min(1).max(128), trackId: z.string().min(1).max(128), startFrame: frameSchema, endFrame: frameSchema, text: z.string().trim().min(1).max(4000) }).strict();
+const captionCuesInput = z.object({ ...commandFields, cues: z.array(captionCueSchema).min(1).max(1000) }).strict();
+const captionsImportInput = z.object({ ...commandFields, trackId: z.string().min(1).max(128), format: z.enum(["srt", "vtt"]), content: z.string().min(1).max(200000), mode: z.enum(["append", "replace"]).default("append") }).strict();
+const audioReferenceSchema = z.object({ kind: z.enum(["audio", "video"]), id: z.string().min(1).max(128) }).strict();
+const duckingInput = z.object({ ...commandFields, rule: z.object({ id: z.string().min(1).max(128), target: audioReferenceSchema, triggers: z.array(audioReferenceSchema).min(1).max(1000), attenuationDb: z.number().min(-60).max(0), attackFrames: frameSchema, releaseFrames: frameSchema }).strict() }).strict();
+const removeDuckingInput = z.object({ ...commandFields, ruleId: z.string().min(1).max(128), confirmed: z.literal(true) }).strict();
+const freezeInput = z.object({ ...commandFields, clipId: z.string().min(1).max(128), startFrame: frameSchema, endFrame: frameSchema, sourceTimeUs: z.number().int().nonnegative() }).strict();
+const speedRampInput = z.object({ ...commandFields, clipId: z.string().min(1).max(128), points: z.array(z.object({ frame: frameSchema, speed: z.number().positive(), interpolation: z.enum(["linear", "hold"]) }).strict()).min(1).max(1000), audioPolicy: z.literal("mute") }).strict();
 const moveClipInput = z.object({ aspect: aspectSchema.optional(), clipId: z.string().trim().min(1).max(128), offset: z.union([z.literal(-1), z.literal(1)]) }).strict();
 const splitClipInput = z.object({
   aspect: aspectSchema.optional(), clipId: z.string().trim().min(1).max(128),
@@ -152,7 +188,7 @@ const audioUrlInput = z.object({
   sourceUrl: z.string().url().optional(),
   creatorName: z.string().trim().min(1).max(120).optional(),
   creatorUrl: z.string().url().optional(),
-  provider: z.enum(["mixkit", "jamendo", "freesound"]).optional(),
+  provider: z.enum(["mixkit", "freesound"]).optional(),
   licenseName: z.string().trim().min(1).max(120).optional(),
   licenseUrl: z.string().url().optional(),
   attributionRequired: z.boolean().optional(),
@@ -188,7 +224,7 @@ const storyboardSceneSchema = z.object({
   y: z.number().min(8).max(90).default(50),
   fontSize: z.number().int().min(24).max(180).default(64),
   color: z.string().regex(/^#[0-9a-fA-F]{6}$/).default("#f2ede3"),
-  fontFamily: z.enum(["sans", "serif", "mono"]).default("sans"),
+  fontFamily: z.enum(["sans", "modern", "serif", "mono"]).default("sans"),
   fontWeight: z.number().int().min(100).max(900).default(700),
   textAlign: z.enum(["left", "center", "right"]).default("center"),
   animationIn: z.enum(TEXT_OVERLAY_ANIMATION_KINDS).default("rise"),
@@ -242,6 +278,7 @@ export interface EditorWebMcpToolContext {
   getState: () => EditorHistoryState;
   getAssets?: () => readonly AssetRef[];
   dispatch?: (action: EditorAction) => void;
+  dispatchCommand?: (command: EditorCommand) => void;
   undo?: () => void;
   redo?: () => void;
   createId?: () => string;
@@ -288,7 +325,14 @@ const validateRange = (startFrame: number, endFrame: number) => {
 const activeVersion = (state: EditorHistoryState, aspect?: AspectPreset) => state.present.versions[aspect ?? state.present.activeVersion];
 const scrub = (value: string, maxLength = 240): string => value.replace(/(?:data|blob|javascript):[^\s"']*/gi, "[redacted-url]").slice(0, maxLength);
 const bounded = <T, U>(items: readonly T[], maxItems: number, map: (item: T) => U) => ({ items: items.slice(0, maxItems).map(map), omitted: Math.max(0, items.length - maxItems) });
-const sanitizeClip = (clip: Clip) => ({ ...clip });
+const sanitizeClip = (clip: Clip) => ({
+  ...clip,
+  ...(clip.keyframes ? {
+    keyframes: Object.fromEntries(Object.entries(clip.keyframes).map(([property, points]) => [property, points?.slice(0, 25)])),
+    omittedKeyframes: Object.fromEntries(Object.entries(clip.keyframes).map(([property, points]) => [property, Math.max(0, (points?.length ?? 0) - 25)])),
+  } : {}),
+  ...(clip.timeMapping?.kind === "speed" ? { timeMapping: {...clip.timeMapping, points:clip.timeMapping.points.slice(0,25)}, omittedSpeedPoints:Math.max(0,clip.timeMapping.points.length-25) } : {}),
+});
 const sanitizeText = (overlay: TextOverlay) => ({ ...overlay, text: scrub(overlay.text) });
 const sanitizeAudio = (track: AudioTrack) => ({ ...track });
 const sanitizeTransition = (transition: Transition) => ({ ...transition });
@@ -298,6 +342,7 @@ const sanitizeAsset = (asset: AssetRef) => ({
   mimeType: scrub(asset.mimeType, 128),
   name: scrub(asset.name, 160),
   size: asset.size,
+  ...(asset.mediaMetadata ? { mediaMetadata: { ...asset.mediaMetadata } } : {}),
   ...(asset.attribution ? {
     attribution: {
       provider: asset.attribution.provider,
@@ -356,10 +401,13 @@ const sanitizePhotoSearch = (response: PexelsPhotoSearchResult) => ({
 });
 const sanitizeTimeline = (version: ReturnType<typeof activeVersion>, maxItems: number) => ({
   aspect: version.aspect,
+  tracks: bounded(ensureEditorTracks(version), maxItems, (track) => ({ ...track, name: scrub(track.name, 128) })),
   clips: bounded(version.clips, maxItems, sanitizeClip),
   textOverlays: bounded(version.textOverlays, maxItems, sanitizeText),
   audioTracks: bounded(version.audioTracks, maxItems, sanitizeAudio),
   transitions: bounded(version.transitions, maxItems, sanitizeTransition),
+  captionCues: bounded(version.captionCues ?? [], maxItems, (cue) => ({ ...cue, text: scrub(cue.text) })),
+  duckingRules: bounded(version.duckingRules ?? [], maxItems, (rule) => ({ ...rule, triggers: rule.triggers.slice(0,25), omittedTriggers: Math.max(0,rule.triggers.length-25) })),
 });
 const callbackResponse = (value: void | EditorWebMcpCallbackResult, fallback: string) => {
   if (value && !value.ok) return json({ ...value, ok: false, error: value.message });
@@ -614,13 +662,86 @@ export const createEditorWebMcpTools = (context: EditorWebMcpToolContext): WebMc
     variants.set(id, variant);
     return variant;
   };
-  const dispatch = (action: EditorAction) => { if (!context.dispatch) throw new Error("Editor mutations are unavailable"); context.dispatch(action); };
+  const dispatch = (action: EditorAction) => {
+    if (!context.dispatch) throw new Error("Editor mutations are unavailable");
+    const issues = validateEditorCommandAction(context.getState().present, action);
+    if (issues.length) throw new Error(`${issues[0].code}: ${issues[0].message}`);
+    const before = context.getState().present;
+    context.dispatch(action);
+    if (context.getState().present === before) throw new Error("ACTION_REJECTED: Editor rejected the action or it made no change");
+  };
+  const command = (input: { aspect: AspectPreset; operationId: string; expectedRevision: number }, action: EditorAction | EditorAction[] | (() => EditorAction | EditorAction[])) => {
+    if (!context.dispatchCommand) return projectResult({ ok: false, code: "COMMANDS_UNAVAILABLE", message: "Transactional editor commands are unavailable" });
+    const { expectedRevision: _revision, ...identity } = input;
+    void _revision;
+    const requestFingerprint = JSON.stringify(identity, (_key, value) => value && typeof value === "object" && !Array.isArray(value) ? Object.fromEntries(Object.entries(value).sort(([a], [b]) => a.localeCompare(b))) : value);
+    // Resolve state-dependent actions only for new commands. A freeze retry may
+    // reference a source clip that the original successful operation removed.
+    let actions: EditorAction[] = [];
+    let preflightFailure: EditorCommand["preflightFailure"];
+    if (!context.getState().commandReceipts?.some((entry) => entry.operationId === input.operationId)) {
+      if (input.expectedRevision === (context.getState().revision ?? 0)) {
+        try {
+          const prepared = typeof action === "function" ? action() : action;
+          actions = Array.isArray(prepared) ? prepared : [prepared];
+        } catch (error) {
+          const message = error instanceof Error ? error.message : "Invalid command";
+          const separator = message.indexOf(":");
+          preflightFailure = {code: separator > 0 ? message.slice(0, separator) : "INVALID_COMMAND", message: separator > 0 ? message.slice(separator + 1).trim() : message};
+        }
+      }
+    }
+    context.dispatchCommand({ type: "history/command", operationId: input.operationId, expectedRevision: input.expectedRevision, requestFingerprint, actions, preflightFailure });
+    const state = context.getState();
+    const receipt = state.lastCommandReceipt;
+    if (!receipt || receipt.operationId !== input.operationId) return projectResult({ ok: false, code: "COMMAND_RECEIPT_MISSING", message: "Command did not return a receipt" });
+    const { fingerprint: _fingerprint, ...response } = receipt;
+    void _fingerprint;
+    return projectResult({ ...response, currentRevision: state.revision ?? 0, aspect: input.aspect, ...(receipt.ok ? { timeline: sanitizeTimeline(activeVersion(state, input.aspect), 25) } : {}) });
+  };
+  const validateSourceMapping = (aspect: AspectPreset, clipId: string, mapping: TimeMapping) => {
+    const clip = activeVersion(context.getState(), aspect).clips.find((item) => item.id === clipId);
+    if (!clip) throw new Error("NOT_FOUND: Clip not found");
+    if (clip.kind !== "video") throw new Error("UNSUPPORTED_MEDIA: Time mapping requires a video clip");
+    const asset = context.getAssets?.().find((item) => item.assetId === clip.assetId);
+    const sourceDurationUs = asset?.mediaMetadata?.durationUs ?? clip.sourceDurationUs ?? clip.trimEndFrame / FPS * 1e6;
+    const issues = validateTimeMapping(mapping, clip.endFrame - clip.startFrame, clip.trimStartFrame, sourceDurationUs, FPS);
+    if (issues.length) throw new Error(`SOURCE_OUT_OF_RANGE: ${issues.join(" ")}`);
+    return { clip, sourceDurationUs };
+  };
   const requireItem = (aspect: AspectPreset, itemType: string, itemId: string) => {
     const version = activeVersion(context.getState(), aspect);
     const exists = itemType === "clip" ? version.clips.some((item) => item.id === itemId) : itemType === "textOverlay" ? version.textOverlays.some((item) => item.id === itemId) : version.audioTracks.some((item) => item.id === itemId);
     if (!exists) throw new Error(`${itemType} not found`);
   };
   return [
+    defineTool({ name: "editor_set_clip_keyframes", title: "Set clip keyframes", description: "Replace clip-local animation channels. Frame controls include the exclusive end boundary; interpolation is linear or hold.", schema: keyframesInput, readOnly: false, execute: (input) => command(input, { type: "set-clip-keyframes", aspect: input.aspect, clipId: input.clipId, keyframes: input.keyframes }) }),
+    defineTool({ name: "editor_upsert_caption_cues", title: "Set caption cues", description: "Atomically add or update caption cues by ID on existing caption lanes. Same-lane overlap is invalid.", schema: captionCuesInput, readOnly: false, execute: (input) => command(input, { type: "upsert-caption-cues", aspect: input.aspect, cues: input.cues }) }),
+    defineTool({ name: "editor_import_captions", title: "Import captions", description: "Import plain SRT/WebVTT atomically. Starts round down and ends round up to frames; unsupported styling and collisions are errors.", schema: captionsImportInput, readOnly: false, execute: (input) => command(input, () => {
+      const parsed = importCaptions({ format: input.format, content: input.content, trackId: input.trackId, idPrefix: input.operationId });
+      if (!parsed.ok) throw new Error(`INVALID_CAPTIONS: ${parsed.issues.map((issue) => issue.message).join(" ")}`);
+      const version = activeVersion(context.getState(), input.aspect);
+      const removals: EditorAction[] = input.mode === "replace" ? (version.captionCues ?? []).filter((cue) => cue.trackId === input.trackId).map((cue) => ({ type: "remove-caption-cue", aspect: input.aspect, cueId: cue.id })) : [];
+      return [...removals, { type: "upsert-caption-cues", aspect: input.aspect, cues: parsed.cues }];
+    }) }),
+    defineTool({ name: "editor_set_audio_ducking", title: "Set audio ducking", description: "Duck a target by a negative dB attenuation during selected narration intervals. Rules combine using strongest attenuation.", schema: duckingInput, readOnly: false, execute: (input) => command(input, { type: "set-ducking-rule", aspect: input.aspect, rule: input.rule }) }),
+    defineTool({ name: "editor_remove_audio_ducking", title: "Remove audio ducking", description: "Remove a ducking rule with explicit confirmation.", schema: removeDuckingInput, readOnly: false, execute: (input) => command(input, { type: "remove-ducking-rule", aspect: input.aspect, ruleId: input.ruleId }) }),
+    defineTool({ name: "editor_freeze_clip_range", title: "Freeze clip interval", description: "Replace a timeline interval inside a video clip with a held source timestamp in microseconds. Duration stays fixed and held audio is muted.", schema: freezeInput, readOnly: false, execute: (input) => command(input, () => {
+      const { clip, sourceDurationUs } = validateSourceMapping(input.aspect, input.clipId, { kind: "hold", sourceTimeUs: input.sourceTimeUs });
+      if (input.startFrame < clip.startFrame || input.endFrame > clip.endFrame || input.endFrame <= input.startFrame) throw new Error("INVALID_INTERVAL: Freeze must be a positive interval inside the clip");
+      const segmentIds = [...(input.startFrame > clip.startFrame ? [`${input.operationId}-before`] : []), `${input.operationId}-hold`, ...(input.endFrame < clip.endFrame ? [`${input.operationId}-after`] : [])];
+      return { type: "freeze-clip-range", aspect: input.aspect, clipId: input.clipId, startFrame: input.startFrame, endFrame: input.endFrame, sourceTimeUs: input.sourceTimeUs, segmentIds, sourceDurationUs };
+    }) }),
+    defineTool({ name: "editor_set_clip_speed_ramp", title: "Set clip speed", description: "Replace positive speed controls; source time integrates the speed curve. Timeline duration is preserved and embedded audio is muted.", schema: speedRampInput, readOnly: false, execute: (input) => command(input, () => {
+      const previous = activeVersion(context.getState(), input.aspect).clips.find(clip => clip.id === input.clipId)?.timeMapping;
+      const mapping: TimeMapping = { kind: "speed", points: input.points, ...(previous?.kind === "speed" && previous.sourceStartTimeUs !== undefined ? {sourceStartTimeUs: previous.sourceStartTimeUs} : {}) };
+      const { sourceDurationUs } = validateSourceMapping(input.aspect, input.clipId, mapping);
+      return { type: "set-clip-time-mapping", aspect: input.aspect, clipId: input.clipId, mapping, sourceDurationUs };
+    }) }),
+    defineTool({ name: "editor_add_track", title: "Add timeline lane", description: "Create a named lane. Requires an explicit aspect, current revision, and retry-safe operation ID.", schema: addTrackInput, readOnly: false, execute: (input) => command(input, { type: "add-track", aspect: input.aspect, track: { id: input.id, kind: input.kind, name: input.name, order: 100000 } }) }),
+    defineTool({ name: "editor_reorder_tracks", title: "Reorder timeline lanes", description: "Set lane order using every track ID exactly once. Earlier video lanes render above later video lanes.", schema: reorderTracksInput, readOnly: false, execute: (input) => command(input, { type: "reorder-tracks", aspect: input.aspect, trackIds: input.trackIds }) }),
+    defineTool({ name: "editor_place_clip", title: "Place clip", description: "Place a clip at an absolute frame on a video lane without ripple or source trim changes.", schema: placeClipInput, readOnly: false, execute: (input) => command(input, { type: "place-clip", aspect: input.aspect, clipId: input.clipId, trackId: input.trackId, startFrame: input.startFrame }) }),
+    defineTool({ name: "editor_set_clip_transform", title: "Set clip transform", description: "Set static transform: x/y in normalized canvas coordinates, raw source scale, rotation in radians, normalized anchor; opacity is 0–1.", schema: clipTransformInput, readOnly: false, execute: (input) => command(input, { type: "update-clip", aspect: input.aspect, clipId: input.clipId, patch: { transform: input.transform, ...(input.opacity !== undefined ? { opacity: input.opacity } : {}) } }) }),
     defineTool({
       name: "editor_get_capabilities",
       title: "Get editor workflow guide",
@@ -630,6 +751,27 @@ export const createEditorWebMcpTools = (context: EditorWebMcpToolContext): WebMc
       execute: () => projectResult({
         ok: true,
         product: "Inkframe browser-native video editor",
+        deterministicCommands: {
+          revision: context.getState().revision ?? 0,
+          requiredMetadata: ["aspect", "expectedRevision", "operationId"],
+          idempotencyScope: "last 100 commands in this editor session",
+          tools: ["editor_add_track", "editor_reorder_tracks", "editor_place_clip", "editor_set_clip_transform", "editor_set_clip_keyframes", "editor_upsert_caption_cues", "editor_import_captions", "editor_set_audio_ducking", "editor_remove_audio_ducking", "editor_freeze_clip_range", "editor_set_clip_speed_ramp"],
+          timing: { fps: FPS, intervals: "integer frames, exclusive end", placement: "absolute; no implicit ripple", sameVideoLaneOverlap: false },
+          transformUnits: { position: "normalized canvas coordinates", scale: "raw source scale", rotation: "radians", anchor: "normalized source coordinates" },
+          keyframes: { frameSpace: "clip-local output frames", properties: ["x", "y", "scale", "rotation", "opacity"], interpolation: ["linear", "hold"], maxPointsPerChannel: 1000 },
+          captions: { formats: ["srt", "vtt"], plainTextOnly: true, startQuantization: "floor", endQuantization: "ceil", maxCuesPerBatch: 1000, maxImportCharacters: 200000, sameLaneOverlap: false },
+          ducking: { attenuationDb: [-60, 0], combination: "strongest attenuation", trigger: "selected narration intervals" },
+          retiming: {
+            preservesTimelineDuration: true,
+            videoOnly: true,
+            positiveSpeedOnly: true,
+            maxSpeedPoints: 1000,
+            embeddedVideoAudio: "muted for every non-normal mapping, including 1x speed maps and held frames",
+            sourceBounds: "validated against asset duration metadata, then retained source duration or trim bound",
+            transitions: "not supported on clips with non-normal mappings; remove adjacent transitions before retiming",
+            normalRestore: "requires an integral source-frame origin; use a constant 1x map to preserve a fractional origin",
+          },
+        },
         recommendedStart: "Use editor_plan_storyboard after importing or listing visual assets.",
         workflows: [
           {
@@ -683,8 +825,8 @@ export const createEditorWebMcpTools = (context: EditorWebMcpToolContext): WebMc
         },
       }),
     }),
-    defineTool({ name: "editor_get_state_summary", title: "Get editor state", description: "Get a compact summary of the current editor canvas and timeline.", schema: emptyInput, readOnly: true, execute: (_input, signal) => { throwIfAborted(signal); const state = context.getState(); const version = activeVersion(state); const visibleOverlays = version.textOverlays.slice(0, 10); return json({ ok: true, activeVersion: state.present.activeVersion, counts: { clips: version.clips.length, textOverlays: version.textOverlays.length, audioTracks: version.audioTracks.length, transitions: version.transitions.length }, textOverlays: visibleOverlays.map(({ id, text, startFrame, endFrame, stylePreset }) => ({ id, text: scrub(text, 120), startFrame, endFrame, stylePreset })), omittedTextOverlays: Math.max(0, version.textOverlays.length - visibleOverlays.length) }); } }),
-    defineTool({ name: "editor_get_project", title: "Inspect editor project", description: "Inspect bounded, sanitized project timelines without exposing files, object URLs, data URLs, or secrets.", schema: projectInput, readOnly: true, execute: (input) => { const state = context.getState(); const maxItems = input.maxItems ?? 10; const aspects = input.aspect ? [input.aspect] : (["reel_9_16", "widescreen_16_9"] as const); const versions = Object.fromEntries(aspects.map((aspect) => [aspect, sanitizeTimeline(state.present.versions[aspect], maxItems)])); return projectResult({ ok: true, activeVersion: state.present.activeVersion, versions, assets: bounded(context.getAssets?.() ?? [], Math.min(maxItems, 25), sanitizeAsset) }); } }),
+    defineTool({ name: "editor_get_state_summary", title: "Get editor state", description: "Get a compact summary of the current editor canvas and timeline.", schema: emptyInput, readOnly: true, execute: (_input, signal) => { throwIfAborted(signal); const state = context.getState(); const version = activeVersion(state); const visibleOverlays = version.textOverlays.slice(0, 10); return json({ ok: true, revision: state.revision ?? 0, activeVersion: state.present.activeVersion, counts: { clips: version.clips.length, textOverlays: version.textOverlays.length, audioTracks: version.audioTracks.length, transitions: version.transitions.length }, textOverlays: visibleOverlays.map(({ id, text, startFrame, endFrame, stylePreset }) => ({ id, text: scrub(text, 120), startFrame, endFrame, stylePreset })), omittedTextOverlays: Math.max(0, version.textOverlays.length - visibleOverlays.length) }); } }),
+    defineTool({ name: "editor_get_project", title: "Inspect editor project", description: "Inspect bounded, sanitized project timelines without exposing files, object URLs, data URLs, or secrets.", schema: projectInput, readOnly: true, execute: (input) => { const state = context.getState(); const maxItems = input.maxItems ?? 10; const aspects = input.aspect ? [input.aspect] : (["reel_9_16", "widescreen_16_9"] as const); const versions = Object.fromEntries(aspects.map((aspect) => [aspect, sanitizeTimeline(state.present.versions[aspect], maxItems)])); return projectResult({ ok: true, revision: state.revision ?? 0, activeVersion: state.present.activeVersion, versions, assets: bounded(context.getAssets?.() ?? [], Math.min(maxItems, 25), sanitizeAsset) }); } }),
     defineTool({ name: "editor_validate_project", title: "Validate editor project", description: "Check export readiness, missing media, unsafe text, timeline gaps, overflow risk, and transition integrity.", schema: validateProjectInput, readOnly: true, execute: (input) => { const aspect = input.aspect ?? context.getState().present.activeVersion; const report = validateEditorVersion(activeVersion(context.getState(), aspect), context.getAssets?.() ?? []); return projectResult({ ok: true, report }); } }),
     defineTool({ name: "editor_get_render_diagnostics", title: "Get render diagnostics", description: "Inspect Elah adapter diagnostics and browser encoding capability alongside project validation.", schema: renderDiagnosticsInput, readOnly: true, execute: (input) => { const aspect = input.aspect ?? context.getState().present.activeVersion; const validation = validateEditorVersion(activeVersion(context.getState(), aspect), context.getAssets?.() ?? []); const runtime = context.getRenderDiagnostics?.(aspect) ?? null; return projectResult({ ok: true, aspect, validation, runtime }); } }),
     defineTool({ name: "editor_capture_frame", title: "Capture preview frame", description: "Seek the active Elah preview, report active timeline items, and optionally return a reduced JPEG data URL without changing project state.", schema: captureFrameInput, readOnly: true, execute: async (input, signal) => { const activeAspect = context.getState().present.activeVersion; const aspect = input.aspect ?? activeAspect; if (aspect !== activeAspect) throw new Error(`Frame capture is read-only. Switch to ${aspect} with editor_switch_canvas first.`); const version = activeVersion(context.getState(), aspect); const duration = Math.max(1, getVersionRenderDurationInFrames(version)); if (input.frame >= duration) throw new Error(`Frame must be below the ${duration} frame timeline duration`); if (!context.captureFrame) throw new Error("Frame capture is unavailable"); const capture = await context.captureFrame(input.frame, input.includeImage, signal); return json({ ok: true, inspection: inspectEditorFrame(version, input.frame), capture }, input.includeImage ? 450000 : MAX_PROJECT_CHARS); } }),
@@ -765,8 +907,8 @@ export const createEditorWebMcpTools = (context: EditorWebMcpToolContext): WebMc
     defineTool({ name: "editor_import_stock_video", title: "Import stock video", description: "Download a selected Pexels video into the browser and append it to both canvas timelines.", schema: importStockInput, readOnly: false, execute: async (input, signal) => { if (!context.importStockVideo) throw new Error("Stock import is unavailable"); const aspect = input.aspect ?? context.getState().present.activeVersion; return callbackResponse(await context.importStockVideo(input.query, input.videoId, aspect, signal), "Stock video imported"); } }),
     defineTool({ name: "editor_search_stock_photos", title: "Search stock photos", description: "Search sanitized Pexels photo metadata for the requested canvas.", schema: searchStockInput, readOnly: true, execute: async (input, signal) => { if (!context.searchStockPhotos) throw new Error("Stock photo search is unavailable"); const aspect = input.aspect ?? context.getState().present.activeVersion; const response = await context.searchStockPhotos(input.query, aspect, signal) as PexelsPhotoSearchResult; return projectResult({ ok: true, aspect, result: sanitizePhotoSearch(response) }); } }),
     defineTool({ name: "editor_import_stock_photo", title: "Import stock photo", description: "Download a selected Pexels photo into the browser and append it to both canvas timelines.", schema: importStockPhotoInput, readOnly: false, execute: async (input, signal) => { if (!context.importStockPhoto) throw new Error("Stock photo import is unavailable"); const aspect = input.aspect ?? context.getState().present.activeVersion; return callbackResponse(await context.importStockPhoto(input.query, input.photoId, aspect, signal), "Stock photo imported"); } }),
-    defineTool({ name: "editor_search_licensed_music", title: "Search licensed music", description: "Search downloadable CC0/CC BY/CC BY-SA music from Jamendo with source and license metadata.", schema: searchLicensedAudioInput, readOnly: true, execute: async (input, signal) => { if (!context.searchLicensedMusic) throw new Error("Licensed music search is unavailable"); return projectResult({ ok: true, result: await context.searchLicensedMusic(input.query, signal) }); } }),
-    defineTool({ name: "editor_import_licensed_music", title: "Import licensed music", description: "Import a selected Jamendo track into this browser and retain its source, creator, and license. Requires confirmation.", schema: importLicensedAudioInput, readOnly: false, execute: async (input, signal) => { if (!context.importLicensedMusic) throw new Error("Licensed music import is unavailable"); const { confirmed: _confirmed, ...request } = input; void _confirmed; return callbackResponse(await context.importLicensedMusic(request, signal), "Licensed music imported"); } }),
+    defineTool({ name: "editor_search_licensed_music", title: "Search licensed music", description: "Search downloadable CC0/CC BY/CC BY-SA music from Freesound with source and license metadata.", schema: searchLicensedAudioInput, readOnly: true, execute: async (input, signal) => { if (!context.searchLicensedMusic) throw new Error("Licensed music search is unavailable"); return projectResult({ ok: true, result: await context.searchLicensedMusic(input.query, signal) }); } }),
+    defineTool({ name: "editor_import_licensed_music", title: "Import licensed music", description: "Import a selected Freesound track into this browser and retain its source, creator, and license. Requires confirmation.", schema: importLicensedAudioInput, readOnly: false, execute: async (input, signal) => { if (!context.importLicensedMusic) throw new Error("Licensed music import is unavailable"); const { confirmed: _confirmed, ...request } = input; void _confirmed; return callbackResponse(await context.importLicensedMusic(request, signal), "Licensed music imported"); } }),
     defineTool({ name: "editor_search_licensed_sfx", title: "Search licensed sound effects", description: "Search CC0/CC BY/CC BY-SA professional sound effects from Freesound with attribution metadata.", schema: searchLicensedAudioInput, readOnly: true, execute: async (input, signal) => { if (!context.searchLicensedSoundEffects) throw new Error("Licensed sound-effect search is unavailable"); return projectResult({ ok: true, result: await context.searchLicensedSoundEffects(input.query, signal) }); } }),
     defineTool({ name: "editor_import_licensed_sfx", title: "Import licensed sound effect", description: "Import a selected Freesound effect into this browser and retain its source, creator, and license. Requires confirmation.", schema: importLicensedAudioInput, readOnly: false, execute: async (input, signal) => { if (!context.importLicensedSoundEffect) throw new Error("Licensed sound-effect import is unavailable"); const { confirmed: _confirmed, ...request } = input; void _confirmed; return callbackResponse(await context.importLicensedSoundEffect(request, signal), "Licensed sound effect imported"); } }),
     defineTool({ name: "editor_import_audio_url", title: "Import audio URL", description: "Download a confirmed HTTPS audio source into the browser and add it to the active timeline.", schema: audioUrlInput, readOnly: false, execute: async (input, signal) => { if (!context.importAudioFromUrl) throw new Error("Remote audio import is unavailable"); const { confirmed: _confirmed, ...request } = input; void _confirmed; return callbackResponse(await context.importAudioFromUrl(request, signal), "Audio imported"); } }),
@@ -1041,12 +1183,12 @@ export const createEditorWebMcpTools = (context: EditorWebMcpToolContext): WebMc
     defineTool({ name: "editor_add_text_overlay", title: "Add text overlay", description: "Add a text overlay to the current or specified canvas.", schema: addInput, readOnly: false, execute: (input) => { const state = context.getState(); const aspect = input.aspect ?? state.present.activeVersion; const { aspect: _aspect, id, ...fields } = input; void _aspect; const overlay = { ...createDefaultTextOverlay(id ?? context.createId?.() ?? `text-${Date.now()}`), ...fields } as TextOverlay; validateRange(overlay.startFrame, overlay.endFrame); dispatch({ type: "add-text-overlay", aspect, overlay }); context.selectText?.(overlay.id); return result("Text overlay added", { aspect, overlayId: overlay.id }); } }),
     defineTool({ name: "editor_update_text_overlay", title: "Update text overlay", description: "Update fields on an existing text overlay.", schema: updateInput, readOnly: false, execute: (input) => { const state = context.getState(); const aspect = input.aspect ?? state.present.activeVersion; const current = activeVersion(state, aspect).textOverlays.find((item) => item.id === input.overlayId); if (!current) throw new Error("Text overlay not found"); const { overlayId, aspect: _aspect, ...patch } = input; void _aspect; validateRange(patch.startFrame ?? current.startFrame, patch.endFrame ?? current.endFrame); dispatch({ type: "update-text-overlay", aspect, overlayId, patch }); context.selectText?.(overlayId); return result("Text overlay updated", { aspect, overlayId }); } }),
     defineTool({ name: "editor_remove_text_overlay", title: "Remove text overlay", description: "Remove a text overlay. Requires explicit confirmation.", schema: removeTextInput, readOnly: false, execute: (input) => { const aspect = input.aspect ?? context.getState().present.activeVersion; if (!activeVersion(context.getState(), aspect).textOverlays.some((item) => item.id === input.overlayId)) throw new Error("Text overlay not found"); dispatch({ type: "remove-text-overlay", aspect, overlayId: input.overlayId }); return result("Text overlay removed", { aspect, overlayId: input.overlayId }); } }),
-    defineTool({ name: "editor_update_clip", title: "Update clip", description: "Update timing, trim, or volume fields on an existing media clip.", schema: updateClipInput, readOnly: false, execute: (input) => { const state = context.getState(); const aspect = input.aspect ?? state.present.activeVersion; const current = activeVersion(state, aspect).clips.find((item) => item.id === input.clipId); if (!current) throw new Error("Clip not found"); const { clipId, aspect: _aspect, ...patch } = input; void _aspect; validateRange(patch.startFrame ?? current.startFrame, patch.endFrame ?? current.endFrame); validateRange(patch.trimStartFrame ?? current.trimStartFrame, patch.trimEndFrame ?? current.trimEndFrame); dispatch({ type: "update-clip", aspect, clipId, patch }); return result("Clip updated", { aspect, clipId }); } }),
+    defineTool({ name: "editor_update_clip", title: "Update clip", description: "Update timing, trim, volume, or export-safe video color grade fields on an existing media clip.", schema: updateClipInput, readOnly: false, execute: (input) => { const state = context.getState(); const aspect = input.aspect ?? state.present.activeVersion; const current = activeVersion(state, aspect).clips.find((item) => item.id === input.clipId); if (!current) throw new Error("Clip not found"); const { clipId, aspect: _aspect, ...patch } = input; void _aspect; validateRange(patch.startFrame ?? current.startFrame, patch.endFrame ?? current.endFrame); validateRange(patch.trimStartFrame ?? current.trimStartFrame, patch.trimEndFrame ?? current.trimEndFrame); dispatch({ type: "update-clip", aspect, clipId, patch }); return result("Clip updated", { aspect, clipId }); } }),
     defineTool({ name: "editor_remove_clip", title: "Remove clip", description: "Remove a clip and its connected transitions. Requires explicit confirmation.", schema: removeClipInput, readOnly: false, execute: (input) => { const aspect = input.aspect ?? context.getState().present.activeVersion; if (!activeVersion(context.getState(), aspect).clips.some((item) => item.id === input.clipId)) throw new Error("Clip not found"); dispatch({ type: "remove-clip", aspect, clipId: input.clipId }); return result("Clip removed", { aspect, clipId: input.clipId }); } }),
-    defineTool({ name: "editor_move_clip", title: "Reorder clip", description: "Move an existing clip one position earlier or later in the timeline.", schema: moveClipInput, readOnly: false, execute: (input) => { const aspect = input.aspect ?? context.getState().present.activeVersion; const version = activeVersion(context.getState(), aspect); const index = version.clips.findIndex((clip) => clip.id === input.clipId); if (index < 0) throw new Error("Clip not found"); if (index + input.offset < 0 || index + input.offset >= version.clips.length) throw new Error("Clip cannot move further in that direction"); dispatch({ type: "move-clip", aspect, clipId: input.clipId, offset: input.offset }); return result("Clip reordered", { aspect, clipId: input.clipId, offset: input.offset }); } }),
+    defineTool({ name: "editor_move_clip", title: "Reorder clip", description: "Move an existing clip one position earlier or later in the timeline.", schema: moveClipInput, readOnly: false, execute: (input) => { const aspect = input.aspect ?? context.getState().present.activeVersion; const version = activeVersion(context.getState(), aspect); const target = version.clips.find((clip) => clip.id === input.clipId); const lane = version.clips.filter((clip) => (clip.trackId ?? DEFAULT_VIDEO_TRACK_ID) === (target?.trackId ?? DEFAULT_VIDEO_TRACK_ID)).sort((a, b) => a.startFrame - b.startFrame); const index = lane.findIndex((clip) => clip.id === input.clipId); if (index < 0) throw new Error("Clip not found"); if (index + input.offset < 0 || index + input.offset >= lane.length) throw new Error("Clip cannot move further in that direction"); dispatch({ type: "move-clip", aspect, clipId: input.clipId, offset: input.offset }); return result("Clip reordered", { aspect, clipId: input.clipId, offset: input.offset }); } }),
     defineTool({ name: "editor_split_clip", title: "Split clip", description: "Split a visual clip at an exact timeline frame.", schema: splitClipInput, readOnly: false, execute: (input) => { const aspect = input.aspect ?? context.getState().present.activeVersion; const version = activeVersion(context.getState(), aspect); const clip = version.clips.find((item) => item.id === input.clipId); if (!clip) throw new Error("Clip not found"); if (input.splitFrame <= clip.startFrame || input.splitFrame >= clip.endFrame) throw new Error("Split frame must be inside the clip"); const base = context.createId?.() ?? `${Date.now()}`; const leftClipId = `${base}-left`; const rightClipId = `${base}-right`; dispatch({ type: "split-clip", aspect, clipId: input.clipId, splitFrame: input.splitFrame, leftClipId, rightClipId }); context.selectClip?.(rightClipId); return result("Clip split", { aspect, leftClipId, rightClipId, splitFrame: input.splitFrame }); } }),
     defineTool({ name: "editor_duplicate_clip", title: "Duplicate clip", description: "Duplicate a visual clip directly after the original.", schema: duplicateClipInput, readOnly: false, execute: (input) => { const aspect = input.aspect ?? context.getState().present.activeVersion; if (!activeVersion(context.getState(), aspect).clips.some((clip) => clip.id === input.clipId)) throw new Error("Clip not found"); const newClipId = `${context.createId?.() ?? Date.now()}-copy`; dispatch({ type: "duplicate-clip", aspect, clipId: input.clipId, newClipId }); context.selectClip?.(newClipId); return result("Clip duplicated", { aspect, sourceClipId: input.clipId, newClipId }); } }),
-    defineTool({ name: "editor_set_transition", title: "Set transition", description: "Set a fade, slide, or wipe transition between adjacent clips.", schema: transitionInput, readOnly: false, execute: (input) => { const state = context.getState(); const aspect = input.aspect ?? state.present.activeVersion; const version = activeVersion(state, aspect); const fromIndex = version.clips.findIndex((clip) => clip.id === input.fromClipId); const toIndex = version.clips.findIndex((clip) => clip.id === input.toClipId); if (fromIndex < 0 || toIndex < 0 || toIndex !== fromIndex + 1) throw new Error("Transition clips must be adjacent"); const maxDuration = Math.max(0, Math.min(getClipDurationInFrames(version.clips[fromIndex]) - 1, getClipDurationInFrames(version.clips[toIndex]) - 1)); if (input.durationInFrames > maxDuration) throw new Error(`Transition duration must be at most ${maxDuration} frames`); const transition: Transition = { id: input.id ?? context.createId?.() ?? `transition-${Date.now()}`, kind: input.kind, durationInFrames: input.durationInFrames, fromClipId: input.fromClipId, toClipId: input.toClipId, easing: input.easing, ...(input.kind !== "fade" ? { direction: input.direction ?? "left" } : {}) }; dispatch({ type: "set-transition", aspect, transition }); return result("Transition set", { aspect, transitionId: transition.id, kind: transition.kind, fromClipId: input.fromClipId, toClipId: input.toClipId, durationInFrames: input.durationInFrames }); } }),
+    defineTool({ name: "editor_set_transition", title: "Set transition", description: "Set a fade, slide, or wipe transition between adjacent clips.", schema: transitionInput, readOnly: false, execute: (input) => { const state = context.getState(); const aspect = input.aspect ?? state.present.activeVersion; const version = activeVersion(state, aspect); const source = version.clips.find((clip) => clip.id === input.fromClipId); const lane = version.clips.filter((clip) => (clip.trackId ?? DEFAULT_VIDEO_TRACK_ID) === (source?.trackId ?? DEFAULT_VIDEO_TRACK_ID)).sort((a, b) => a.startFrame - b.startFrame); const fromIndex = lane.findIndex((clip) => clip.id === input.fromClipId); const toIndex = lane.findIndex((clip) => clip.id === input.toClipId); if (fromIndex < 0 || toIndex < 0 || toIndex !== fromIndex + 1) throw new Error("Transition clips must be adjacent"); const maxDuration = Math.max(0, Math.min(getClipDurationInFrames(lane[fromIndex]) - 1, getClipDurationInFrames(lane[toIndex]) - 1)); if (input.durationInFrames > maxDuration) throw new Error(`Transition duration must be at most ${maxDuration} frames`); const transition: Transition = { id: input.id ?? context.createId?.() ?? `transition-${Date.now()}`, kind: input.kind, durationInFrames: input.durationInFrames, fromClipId: input.fromClipId, toClipId: input.toClipId, easing: input.easing, ...(input.kind !== "fade" ? { direction: input.direction ?? "left" } : {}) }; dispatch({ type: "set-transition", aspect, transition }); return result("Transition set", { aspect, transitionId: transition.id, kind: transition.kind, fromClipId: input.fromClipId, toClipId: input.toClipId, durationInFrames: input.durationInFrames }); } }),
     defineTool({ name: "editor_remove_transition", title: "Remove transition", description: "Remove a transition. Requires explicit confirmation.", schema: removeTransitionInput, readOnly: false, execute: (input) => { const aspect = input.aspect ?? context.getState().present.activeVersion; if (!activeVersion(context.getState(), aspect).transitions.some((transition) => transition.fromClipId === input.fromClipId && transition.toClipId === input.toClipId)) throw new Error("Transition not found"); dispatch({ type: "remove-transition", aspect, fromClipId: input.fromClipId, toClipId: input.toClipId }); return result("Transition removed", { aspect, fromClipId: input.fromClipId, toClipId: input.toClipId }); } }),
     defineTool({ name: "editor_update_audio_track", title: "Update audio track", description: "Update timing, trim, or volume fields on an existing audio track.", schema: updateAudioInput, readOnly: false, execute: (input) => { const state = context.getState(); const aspect = input.aspect ?? state.present.activeVersion; const current = activeVersion(state, aspect).audioTracks.find((item) => item.id === input.trackId); if (!current) throw new Error("Audio track not found"); const { trackId, aspect: _aspect, ...patch } = input; void _aspect; validateRange(patch.startFrame ?? current.startFrame, patch.endFrame ?? current.endFrame); validateRange(patch.trimStartFrame ?? current.trimStartFrame, patch.trimEndFrame ?? current.trimEndFrame); dispatch({ type: "update-audio-track", aspect, trackId, patch }); return result("Audio track updated", { aspect, trackId }); } }),
     defineTool({ name: "editor_remove_audio_track", title: "Remove audio track", description: "Remove an audio track. Requires explicit confirmation.", schema: removeAudioInput, readOnly: false, execute: (input) => { const aspect = input.aspect ?? context.getState().present.activeVersion; if (!activeVersion(context.getState(), aspect).audioTracks.some((item) => item.id === input.trackId)) throw new Error("Audio track not found"); dispatch({ type: "remove-audio-track", aspect, trackId: input.trackId }); return result("Audio track removed", { aspect, trackId: input.trackId }); } }),

@@ -1,145 +1,111 @@
-# Inkframe
+# Inkframe — An Agent-Native Motion Studio
 
-**An agent-native motion studio: compose an editable video timeline, inspect every change, and explicitly approve the final MP4 render.**
+Create an editable short-form video with a browser agent, then inspect, approve, and export it locally.
 
-[Live app](https://inkframe-eta.vercel.app/) · [Open the editor](https://inkframe-eta.vercel.app/editor) · [WebMCP tool reference](./docs/webmcp.md)
+[Live app](https://inkframe-eta.vercel.app/) · [Open the editor](https://inkframe-eta.vercel.app/editor) · [WebMCP tool reference](./docs/webmcp.md) · [MIT License](./LICENSE)
 
-Inkframe combines Next.js, Elah, and WebMCP to make short-form video creation a shared human-agent workflow. A browser agent can inspect the current project, compose structured scenes, adjust timeline items, switch aspect ratios, import licensed audio, and request a local browser export through typed tools. The same edits stay visible and editable in the human interface.
+Inkframe is a browser-native video editor for people and agents to use together. A person sets the creative direction; an agent uses structured WebMCP tools to inspect the project, plan changes, find media, compose a timeline, validate it, and request a local MP4 export. The result remains visible and editable in the same timeline.
 
-## The WebMCP moment
+## Why WebMCP
 
-Most browser agents must reverse-engineer a video editor by inspecting the DOM and clicking controls. Inkframe gives the agent the editor's real actions instead:
+A conventional video editor exposes pixels, menus, drag targets, and transient selection state. That is workable for a person, but brittle for an agent trying to infer whether a click or drag worked.
 
-1. **Plan:** the agent previews scene timings and replacement effects without changing the project.
-2. **Confirm:** a human-approved, content-bound token authorizes exactly that storyboard—not a later mutation.
-3. **Review:** validation, render diagnostics, frame capture, and conservative auto-fixes inspect and improve the same Elah timeline the person uses.
-4. **Credit:** Inkframe produces a copyable stock-media provenance and attribution report.
-5. **Deliver:** Elah renders and encodes the active 9:16 or 16:9 composition entirely in the browser, then reports and downloads the MP4.
+Inkframe exposes the editor's domain actions instead. For example, an agent can call `editor_plan_storyboard`, `editor_import_stock_video`, `editor_set_transition`, and `editor_validate_project` with typed input and structured output. It can inspect exact clip, text, audio, and transition state instead of guessing from the interface.
 
-### Try the judge flow
+The workflow stays human-controlled:
 
-Open the [live editor](https://inkframe-eta.vercel.app/editor) in ChatGPT's in-app browser and ask:
+1. **Plan without mutation.** `editor_plan_storyboard` previews timing, captions, assets, and transitions without changing the project.
+2. **Approve the exact plan.** A one-use, content-bound approval token is required before composition.
+3. **Inspect the edit.** Validation, frame capture, contact sheets, diagnostics, and attribution reporting check the same active timeline the person sees.
+4. **Export locally.** A confirmed request renders an MP4 in the browser with Elah and MediaBunny; source media is not sent to an Inkframe render server.
 
-> Plan a 9-second Reel with three editorial scenes about why browser agents should use structured tools instead of clicking interfaces. Show me the scene timing before changing the editor. After I approve, compose it with punch, rise, and word-reveal motion, validate it, inspect two key frames, safely fix readability problems, report stock-media credits, then ask before exporting and verify the MP4 metadata.
+## What you can do
 
-This demonstrates a complete agent-native task rather than a tool-discovery-only proof: project inspection → structured composition → visible human review → confirmed render.
+- Compose 9:16 Reels or 16:9 videos with visual clips, text overlays, audio, and fade, slide, or wipe transitions.
+- Import local media or search Pexels photos and videos from the editor.
+- Search licensed music and sound effects from Freesound. Imported assets retain provider, creator, source, license, and required-credit metadata.
+- Create a storyboard, save it as an isolated variant, compare it, and apply the chosen version.
+- Trim, split, duplicate, move, and remove clips; edit captions; mix and trim audio; undo and redo changes.
+- Validate export readiness, inspect frames, generate a contact sheet, and obtain a copyable attribution report.
+- Export an MP4 locally and verify its browser-retained artifact metadata.
 
-## WebMCP implementation
+## Try the WebMCP flow
 
-- Route-aware catalogs expose site and editor workflows only while their pages are active.
-- Strict Zod inputs are converted to standards-compatible JSON Schema.
-- Tool handlers read current React state at invocation time instead of capturing stale snapshots.
-- File contents and object URLs never cross the structured tool boundary; native pickers preserve browser security.
-- Tool outputs are bounded and sanitized, and registrations are cleaned up on unmount.
-- `editor_get_capabilities` returns task-oriented workflows and tool groups so agents do not need to scan the entire atomic surface.
-- Storyboard approval tokens are bound to the exact normalized plan; changing a scene invalidates the token and requires approval again.
-- WebMCP hosts that omit an execution context remain supported while supplied abort signals still cancel work.
-- Export jobs expose progress, cancellation, and local artifact metadata without uploading the video.
+Open the [live editor](https://inkframe-eta.vercel.app/editor) in a ChatGPT/Codex browser session with WebMCP enabled, or in Google Chrome with WebMCP enabled. Then ask:
 
-All WebMCP integration work was added on September 1, 2026, during the challenge submission period. The underlying video editor predates the challenge; the agent tool surface, route-aware registration, live state bridge, tests, and judge workflow are the challenge extension.
+> Plan a 16-second vertical 9:16 launch Reel for a boutique travel company promoting a Vietnam escape. Use four scenes: Ha Long Bay, Sapa rice terraces, Vietnamese street food, and lanterns at night. Show scene timing, captions, media-search terms, transitions, and a licensed music direction. Do not change the editor yet.
 
-## What the app includes
+Review the plan, then say:
 
-- `Editor`: import local or Pexels image/video/audio assets; trim, split, duplicate, transition, mix, and export MP4.
-- `Templates`: browse complete Elah-native multi-scene timelines and deep-link into `/editor?template=<id>`.
-- `API routes`: licensed stock-search proxies; media preview, project storage, and export stay in the browser.
+> I approve the storyboard. Import the selected assets, compose the timeline, validate the project, and show the attribution report. Do not export yet.
 
-## Main entrypoints
+This makes the handoff explicit: the agent proposes a plan, the person approves it, and the editor records a structured, inspectable result.
 
-- `/templates`: preset gallery for the editor workflow.
-- `/editor`: timeline editor with asset library, preview, inspector, WebMCP controls, and local export.
+## WebMCP surface
 
-## Presets
+Inkframe registers route-aware tools through `document.modelContext` when WebMCP is available. The editor continues to work normally when it is not.
 
-The template gallery exposes the verified `agent-demo-reel`, a 19-second WebMCP-created
-vertical edit that opens directly in the Elah timeline. Older structured style identifiers
-remain readable for project compatibility, but are not presented as templates because they
-belong to the retired server-rendered pipeline.
+- Site tools: capability discovery, template listing, and safe navigation.
+- Editor tools: project inspection, stock-media search and import, storyboard planning and composition, precise timeline editing, variants, validation, visual QA, attribution, and local export.
+- Safeguards: strict Zod validation, JSON Schema inputs, bounded and sanitized outputs, abort handling, no raw local file data or object URLs in tool responses, and explicit confirmation for destructive actions and export.
 
-Available `stylePreset` values (registered in `src/lib/editor/types.ts`):
-
-| Preset | Description |
-|---|---|
-| `vox-timeline` | Vox-style annotated timeline |
-| `vox-timeline-ribbon` | Ribbon variant of vox-timeline |
-| `vox-timeline-ledger` | Ledger variant of vox-timeline |
-| `world-map-focus` | World map with animated focus point |
-| `regional-map-focus` | Regional map with animated focus point |
-| `film-frame-gallery` | Animated film-frame photo gallery |
-| `editorial-bar-chart` | Editorial animated bar chart |
-| `editorial-stat-ring` | Editorial animated stat ring |
-| `editorial-seat-arc` | Editorial seat arc diagram |
-| `createdaley-opener` | Craig Daley-style documentary opener |
-| `chart-card` | Data chart card overlay |
-| `news-clipping` | Newspaper clipping style overlay |
-| `vox-pull-quote` | Vox-style pull quote with yellow highlighter sweep |
-| `harris-marker` | Johnny Harris-style headline with hand-drawn marker underline/circle |
-| `harris-location` | Johnny Harris-style typewriter location stamp lower third |
+See the complete names, inputs, and agent production loop in [docs/webmcp.md](./docs/webmcp.md).
 
 ## Architecture
 
-- `src/lib/editor`
-  - Editor domain logic, reducers, schema validation, template catalog, and structured preset parsers.
-  - `templates/` is the typed editor preset catalog.
-  - `parsers/` contains structured overlay parsers such as chart-card, stat-ring, and createdaley-opener.
-- `src/components/editor`
-  - Editor UI panels plus `hooks/use-editor-session.ts` for reducer state, asset lifecycle, template hydration, and export.
-- `src/lib/export`
-  - Elah browser-export bridge and local Blob download handling.
-- `src/server`
-  - Bounded stock-provider HTTP helpers and shared request guards.
+```text
+src/lib/editor/          Editor domain, reducers, validation, WebMCP tools, templates
+src/components/editor/   Timeline editor, media library, preview, inspector, session hooks
+src/lib/export/          Browser export bridge and MP4 artifact handling
+src/lib/webmcp/          Route-aware registration and WebMCP types
+src/server/              Stock-media helpers and request guards
+```
 
-Additional notes are in [docs/architecture.md](./docs/architecture.md).
+All editor state lives in `useEditorSession`. The active project contains separate 9:16 and 16:9 timelines, each with clips, text overlays, audio tracks, and transitions.
+
+## Local-first media and data handling
+
+- Pexels and licensed-audio searches return metadata through guarded server routes; selected media downloads into the browser.
+- Projects and local media blobs persist in browser IndexedDB.
+- Elah renders in a Web Worker and MediaBunny encodes the MP4 in the browser.
+- The latest export is kept as a page-scoped Blob URL for playback verification and download. Inkframe does not upload source media or exported MP4s to a render service.
+
+## Run locally
+
+```bash
+npm install
+npm run dev
+```
+
+Open [http://localhost:3000](http://localhost:3000).
+
+### Environment variables
+
+Create `.env.local` when using stock search:
+
+```bash
+PEXELS_API_KEY=...
+FREESOUND_API_KEY=...      # optional: licensed music and sound-effect search
+```
+
+These credentials stay server-side. No storage or render-service credential is required for local export.
 
 ## Commands
 
-- `npm run dev`: start the Next.js app locally.
-- `npm run build`: production Next.js build.
-- `npm run lint`: ESLint checks.
-- `npm run typecheck`: TypeScript checks.
-- `npm run test:run`: run Vitest once.
-- `npm run test:e2e`: run the real Chrome WebMCP compose → inspect → browser-export verification.
-- `npm run test`: watch mode for Vitest.
+```bash
+npm run dev        # Start Next.js with Turbopack
+npm run build      # Production build
+npm run lint       # ESLint
+npm run typecheck  # TypeScript without emitting files
+npm run test       # Vitest watch mode
+npm run test:run   # Run Vitest once
+npm run test:e2e   # Playwright WebMCP compose and export verification
+```
 
-## Test coverage
+## Attribution
 
-The current safety net covers:
+Assets imported from Pexels and Freesound retain their provenance in the media library. Inkframe visibly identifies credits that are required for publishing and `editor_get_attribution_report` returns copyable credit lines for the active timeline.
 
-- editor template catalog lookup
-- editor timeline sanitization and render-track behavior
-- AI editor action parsing and session application
-- Elah project conversion for editor timelines
-- film-frame-gallery data helpers
-- inspector routing for split sub-inspectors
-- regional-map-focus helpers
-- vox-timeline data helpers
-- route-aware WebMCP registration and cleanup
-- editor and site-wide WebMCP contracts
-- browser-host compatibility for tool calls with or without cancellation context
-- non-mutating storyboard planning and content-bound approval tokens
-- safe typography/contrast auto-fixes and stock-media credit reporting
-- fresh-profile Chrome composition, inspection, browser export, and codec verification
+## License
 
-## Runtime and data handling
-
-- Editor assets stay in browser memory through preview and export.
-- Elah renders in a Web Worker and MediaBunny encodes the MP4 locally.
-- Export downloads a browser-created Blob; source media is never sent to Inkframe's server.
-- Projects and local source blobs autosave to browser IndexedDB; they are never uploaded by the editor.
-
-## Environment
-
-Pexels stock search requires:
-
-- `PEXELS_API_KEY` (used only by the metadata search proxy; selected media downloads directly into the browser)
-
-Optional licensed audio search requires:
-
-- `JAMENDO_CLIENT_ID` for downloadable CC0/CC BY/CC BY-SA music
-- `FREESOUND_API_KEY` for CC0/CC BY/CC BY-SA sound effects
-
-Both credentials stay server-side. Imported audio downloads into the browser and retains creator, source, license, and attribution metadata.
-
-No storage or render-service credentials are required for export.
-
-Optional local artifacts and generated media are kept under the workspace `artifacts/` directory when present.
+Inkframe is released under the [MIT License](./LICENSE).

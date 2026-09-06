@@ -13,6 +13,8 @@ import {
   ElahEditorWorkspace,
   ElahTimelineDock,
 } from "@/components/editor/elah";
+import { validateEditorCommandAction } from "@/lib/editor/history";
+import { editorReducer, type EditorAction } from "@/lib/editor/reducer";
 import { createDefaultTextOverlay } from "@/lib/editor/defaults";
 import {
   DEFAULT_TEXT_TRACK_ID,
@@ -23,6 +25,8 @@ import type { EditorTrackKind } from "@/lib/editor/types";
 import type { EditorFrameCapture, EditorVisualReview } from "@/lib/editor/export-state";
 import { analyzeFrameContrast } from "@/lib/editor/webmcp/contrast";
 import { usePlaybackStore, type PreviewHandle } from "@elah/editor";
+import { resolveTimeline } from "@elah/core";
+import { toElahProject } from "@/lib/editor/elah-adapter";
 import { nanoid } from "nanoid";
 import { toast } from "sonner";
 import { useEffect, useRef, useState, type CSSProperties } from "react";
@@ -37,8 +41,28 @@ export const EditorApp = () => {
   const session = useEditorSession();
   const [timelineHeight, setTimelineHeight] = useState(DEFAULT_TIMELINE_HEIGHT);
   const [mobilePanel, setMobilePanel] = useState<MobileWorkspacePanel>("canvas");
+  const [selectedCaptionId, setSelectedCaptionId] = useState<string | null>(null);
   const [visualReview, setVisualReview] = useState<EditorVisualReview | null>(null);
   const previewRef = useRef<PreviewHandle | null>(null);
+  const applyInspectorEdit = (action: EditorAction) => {
+    const issues = validateEditorCommandAction(session.history.present, action);
+    if (issues.length) {
+      toast.error(issues.map((issue) => issue.message).join(" "));
+      return false;
+    }
+    if (editorReducer(session.history.present, action) === session.history.present) {
+      const validNoops: EditorAction["type"][] = ["place-clip", "update-clip", "reorder-tracks", "set-clip-keyframes", "set-clip-time-mapping", "set-ducking-rule", "upsert-caption-cues"];
+      if (validNoops.includes(action.type)) return true;
+      toast.error("This edit cannot be applied. Check track overlap, source bounds, and the 60 second limit.");
+      return false;
+    }
+    session.dispatch(action);
+    if (action.type === "freeze-clip-range") {
+      const source = session.activeVersion.clips.find((clip) => clip.id === action.clipId);
+      session.setSelectedClipId(action.segmentIds[source && action.startFrame > source.startFrame ? 1 : 0] ?? null);
+    }
+    return true;
+  };
 
   useEffect(() => {
     if (!session.statusMessage) {
@@ -56,8 +80,31 @@ export const EditorApp = () => {
     const playback = usePlaybackStore.getState();
     playback.pause();
     playback.setCurrentFrame(frame);
-    await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
-    await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
+    const { project } = toElahProject(session.activeVersion, {
+      assets: session.assetList,
+      assetSources: session.previewAssetSources,
+    });
+    const scene = resolveTimeline(frame, project);
+    const deadline = performance.now() + 10_000;
+    for (;;) {
+      await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
+      const renderer = previewRef.current?.getRenderer();
+      // Render a fresh scene to acquire providers even when playback is paused.
+      renderer?.render({ ...scene });
+      const ready = renderer && scene.videos.every((video) =>
+        renderer.videoLayer?.getProviderForItemId(video.id)?.getCurrent(video.sourceFrame) != null,
+      );
+      if (ready) {
+        renderer.render({ ...scene });
+        break;
+      }
+      if (performance.now() >= deadline) {
+        const pending = scene.videos.filter((video) =>
+          renderer?.videoLayer?.getProviderForItemId(video.id)?.getCurrent(video.sourceFrame) == null,
+        ).map((video) => `${video.id} (source frame ${video.sourceFrame})`);
+        throw new Error(`The requested preview frame could not finish decoding: ${pending.join(", ")}.`);
+      }
+    }
 
     const canvas = previewRef.current?.getCanvas();
     if (!canvas) throw new Error("The preview canvas is not ready.");
@@ -96,18 +143,21 @@ export const EditorApp = () => {
   };
 
   const selectClip = (clipId: string | null) => {
+    setSelectedCaptionId(null);
     session.setSelectedClipId(clipId);
     session.setSelectedTextId(null);
     session.setSelectedAudioId(null);
   };
 
   const selectText = (textId: string | null) => {
+    setSelectedCaptionId(null);
     session.setSelectedTextId(textId);
     session.setSelectedClipId(null);
     session.setSelectedAudioId(null);
   };
 
   const selectAudio = (audioId: string | null) => {
+    setSelectedCaptionId(null);
     session.setSelectedAudioId(audioId);
     session.setSelectedClipId(null);
     session.setSelectedTextId(null);
@@ -165,7 +215,8 @@ export const EditorApp = () => {
 
   const canExport =
     session.activeVersion.clips.length > 0 ||
-    session.activeVersion.textOverlays.length > 0;
+    session.activeVersion.textOverlays.length > 0 ||
+    (session.activeVersion.captionCues?.length ?? 0) > 0;
 
   const handleAddText = (trackId?: string) => {
     const overlayId = nanoid(10);
@@ -272,6 +323,13 @@ export const EditorApp = () => {
           className={`${mobilePanel === "inspector" ? "min-h-0 flex-1 overflow-hidden" : "hidden"} xl:order-none xl:col-start-3 xl:row-start-1 xl:block xl:min-h-0`}
         >
           <EditorRightSidebar
+            version={session.activeVersion}
+            selectedCaptionId={selectedCaptionId}
+            assets={session.assetList}
+            onEdit={applyInspectorEdit}
+            tracks={ensureEditorTracks(session.activeVersion)}
+            onPlaceClip={(clipId, trackId, startFrame) => applyInspectorEdit({ type: "place-clip", aspect: session.activeAspect, clipId, trackId, startFrame })}
+            onReorderTracks={(trackIds) => applyInspectorEdit({ type: "reorder-tracks", aspect: session.activeAspect, trackIds })}
             selectedClip={session.selectedClip}
             selectedTextOverlay={session.selectedTextOverlay}
             selectedAudioTrack={session.selectedAudioTrack}
@@ -279,7 +337,7 @@ export const EditorApp = () => {
             isExporting={session.isExporting}
             onDetachAudio={session.onDetachAudio}
             onUpdateClip={(clipId, patch) => {
-              session.dispatch({ type: "update-clip", aspect: session.activeAspect, clipId, patch });
+              applyInspectorEdit({ type: "update-clip", aspect: session.activeAspect, clipId, patch });
             }}
             onUpdateText={(overlayId, patch) => {
               session.dispatch({
@@ -326,6 +384,7 @@ export const EditorApp = () => {
             onSelectClip={selectClip}
             onSelectText={selectText}
             onSelectAudio={selectAudio}
+            onSelectCaption={(cueId) => { setSelectedCaptionId(cueId); session.setSelectedClipId(null); session.setSelectedTextId(null); session.setSelectedAudioId(null); }}
           />
         </div>
 

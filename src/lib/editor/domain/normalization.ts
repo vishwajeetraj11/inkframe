@@ -6,7 +6,6 @@ import {
 import { PRESET_MIN_DURATIONS_FRAMES } from "../constants";
 import {
   clamp,
-  getClipDurationInFrames,
   normalizeCreatedaleyTexture,
   normalizeTextOverlayFontFamily,
   normalizeTextOverlayFontStyle,
@@ -43,34 +42,8 @@ const normalizeTextOverlayAnimation = (
     : undefined;
 };
 
-export const normalizeClips = (clips: Clip[]): Clip[] => {
-  let cursor = 0;
-
-  return clips.map((clip) => {
-    const originalDuration = getClipDurationInFrames(clip);
-    const trimStartFrame = Math.max(0, toSafeInt(clip.trimStartFrame, 0));
-    const nextTrimEnd = Math.max(
-      trimStartFrame + 1,
-      toSafeInt(clip.trimEndFrame, trimStartFrame + originalDuration),
-    );
-
-    const duration = Math.max(
-      originalDuration,
-      toSafeInt(nextTrimEnd - trimStartFrame, originalDuration),
-    );
-    const nextClip: Clip = {
-      ...clip,
-      startFrame: cursor,
-      endFrame: cursor + duration,
-      trimStartFrame,
-      trimEndFrame: trimStartFrame + duration,
-      volume: clamp(clip.volume, 0, 1),
-    };
-
-    cursor = nextClip.endFrame;
-    return nextClip;
-  });
-};
+export const normalizeClips = (clips: Clip[]): Clip[] =>
+  clips.map((clip) => ({ ...clip, volume: clamp(clip.volume, 0, 1) }));
 
 export const normalizeTextOverlays = (textOverlays: TextOverlay[]): TextOverlay[] =>
   textOverlays
