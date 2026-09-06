@@ -5,6 +5,7 @@ import { sourceTimeAtFrame } from "./time-mapping";
 import { FPS } from "./constants";
 import { ensureEditorTracks } from "./tracks";
 import type { ProjectSession } from "./types";
+import { getActiveTimeline } from "./cutdowns";
 
 const MAX_HISTORY_ENTRIES = 100;
 
@@ -53,7 +54,12 @@ export const createInitialEditorHistory = (): EditorHistoryState => ({
 
 /** Preflight the requested placement before sanitization can hide an invalid edit. */
 export const validateEditorCommandAction = (state: ProjectSession, action: EditorAction) => {
-  const version = state.versions[action.aspect];
+  // Version-scoped preflight only applies to timeline edits. Project-level
+  // actions such as cutdown creation are validated by the main reducer.
+  if (!("aspect" in action)) return [];
+  const version = action.aspect === state.activeVersion
+    ? getActiveTimeline(state)
+    : state.versions[action.aspect];
   let candidate = version;
   const missing = (message: string) => [{ code: "NOT_FOUND", message }];
   switch (action.type) {

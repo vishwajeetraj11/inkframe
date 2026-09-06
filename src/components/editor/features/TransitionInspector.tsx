@@ -31,7 +31,7 @@ export interface TransitionInspectorProps {
 const controlClassName =
   "h-9 w-full border border-[#f2ede3]/15 bg-[#0f0d0a] px-2.5 text-xs text-[#f2ede3] outline-none transition-colors hover:border-[#f2ede3]/35 focus-visible:border-[#ff4f1f] focus-visible:ring-1 focus-visible:ring-[#ff4f1f] disabled:cursor-not-allowed disabled:opacity-45";
 const labelClassName =
-  "app-eyebrow text-[9px] uppercase tracking-[0.18em] text-[#f2ede3]/45";
+  "app-eyebrow text-[9px] text-[#f2ede3]/45";
 
 const displayDuration = (seconds: number): number => Number(seconds.toFixed(2));
 
@@ -50,7 +50,7 @@ export const TransitionInspector = ({
     >
       <header className="flex items-center justify-between gap-3 border-b border-[#f2ede3]/10 px-3 py-2.5">
         <div>
-          <p className="app-eyebrow text-[9px] uppercase tracking-[0.2em] text-[#ff4f1f]">
+          <p className="app-eyebrow text-[9px] text-[#ff4f1f]">
             Edit / transition
           </p>
           <h2 id={headingId} className="mt-0.5 text-sm font-semibold tracking-[-0.01em]">

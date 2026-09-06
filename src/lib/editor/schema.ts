@@ -218,13 +218,31 @@ const versionTimelineSchema = z.object({
   }
 });
 
-export const persistedProjectSchema = z.object({
+const persistedProjectShape = {
   contentVersion: z.literal(1).optional(),
   activeVersion: aspectSchema,
+  activeCutdownId: z.string().min(1).optional(),
   versions: z.object({
     reel_9_16: versionTimelineSchema,
     widescreen_16_9: versionTimelineSchema,
   }),
+  cutdowns: z.array(z.object({
+    id: z.string().min(1),
+    name: z.string().min(1).max(80),
+    sourceAspect: aspectSchema,
+    durationFrames: z.number().int().min(1).max(MAX_DURATION_FRAMES),
+    timeline: versionTimelineSchema,
+  })).optional(),
+};
+
+export const persistedProjectSchema = z.object(persistedProjectShape).superRefine((project, context) => {
+  const ids = new Set<string>();
+  for (const [index, cutdown] of (project.cutdowns ?? []).entries()) {
+    if (ids.has(cutdown.id)) context.addIssue({ code: z.ZodIssueCode.custom, path: ["cutdowns", index, "id"], message: "Cutdown IDs must be unique." });
+    ids.add(cutdown.id);
+    if (cutdown.timeline.aspect !== cutdown.sourceAspect) context.addIssue({ code: z.ZodIssueCode.custom, path: ["cutdowns", index, "timeline", "aspect"], message: "Cutdown timeline aspect must match its source aspect." });
+  }
+  if (project.activeCutdownId && !ids.has(project.activeCutdownId)) context.addIssue({ code: z.ZodIssueCode.custom, path: ["activeCutdownId"], message: "Active cutdown must exist in this project." });
 });
 
 const assetRefSchema = z.object({
@@ -250,7 +268,7 @@ const assetRefSchema = z.object({
 
 export const exportProjectSchema = z
   .object({
-    ...persistedProjectSchema.shape,
+    ...persistedProjectShape,
     assets: z.array(assetRefSchema),
   })
   .superRefine((project, context) => {
@@ -286,10 +304,11 @@ export const exportProjectSchema = z
 
     const assetById = new Map(project.assets.map((asset) => [asset.assetId, asset]));
 
-    const versionEntries = [
+    const versionEntries: Array<readonly [string, typeof project.versions.reel_9_16]> = [
       ["reel_9_16", project.versions.reel_9_16],
       ["widescreen_16_9", project.versions.widescreen_16_9],
-    ] as const;
+      ...(project.cutdowns ?? []).map((cutdown) => [`cutdowns.${cutdown.id}`, cutdown.timeline] as const),
+    ];
 
     for (const [versionName, version] of versionEntries) {
       const duration = getTimelineDurationInFrames(version);
@@ -366,7 +385,7 @@ export const exportProjectSchema = z
       }
     }
 
-    const activeTimeline = project.versions[project.activeVersion];
+    const activeTimeline = project.cutdowns?.find((item) => item.id === project.activeCutdownId)?.timeline ?? project.versions[project.activeVersion];
     const hasRenderableVisuals =
       activeTimeline.clips.length > 0 || activeTimeline.textOverlays.length > 0 || (activeTimeline.captionCues?.length ?? 0) > 0;
 

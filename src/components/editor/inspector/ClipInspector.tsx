@@ -2,8 +2,10 @@ import { InspectorCard } from "@/components/editor/controls/InspectorCard";
 import { LabeledControl } from "@/components/editor/controls/LabeledControl";
 import { ChevronDown, Palette } from "lucide-react";
 import { useRef, useState } from "react";
-import type { Clip, EditorTrack, VideoFilter, VideoFilterPreset } from "@/lib/editor/types";
+import type { AspectPreset, Clip, EditorTrack, VideoFilter, VideoFilterPreset } from "@/lib/editor/types";
 import { cloneVideoFilterPreset, VIDEO_FILTER_PRESETS } from "@/lib/editor/video-filters";
+import { buildReframeTransform, REFRAME_FOCUS_PRESETS } from "@/lib/editor/reframe";
+import { ASPECT_PRESETS } from "@/lib/editor/constants";
 import { framesToSeconds, parseNumber, secondsToFrames } from "./utils";
 
 const inputClass = "app-data min-h-9 w-full border border-white/15 bg-[#100e0b] px-2 py-1 text-neutral-200 outline-none focus-visible:ring-2 focus-visible:ring-[#ff4f1f] disabled:opacity-40";
@@ -29,6 +31,8 @@ const CommitNumber = ({ label, value, disabled, min, max, step = 1, onCommit }: 
 
 interface ClipInspectorProps {
   clip: Clip;
+  sourceDimensions?: { width: number; height: number };
+  targetAspect?: AspectPreset;
   tracks?: readonly EditorTrack[];
   onPlaceClip?: (clipId: string, trackId: string, startFrame: number) => void;
   onReorderTracks?: (trackIds: string[]) => void;
@@ -39,6 +43,8 @@ interface ClipInspectorProps {
 
 export const ClipInspector = ({
   clip,
+  sourceDimensions,
+  targetAspect,
   tracks = [],
   onPlaceClip,
   onReorderTracks,
@@ -60,6 +66,8 @@ export const ClipInspector = ({
     onReorderTracks(ids);
   };
   const transform = clip.transform;
+  const targetDimensions = targetAspect ? ASPECT_PRESETS[targetAspect] : undefined;
+  const canReframe = Boolean(sourceDimensions && targetDimensions);
   const videoFilter = clip.videoFilter ?? VIDEO_FILTER_PRESETS.none;
   const setFilterValue = (
     key: keyof Omit<VideoFilter, "preset">,
@@ -68,6 +76,18 @@ export const ClipInspector = ({
   const setTransform = (patch: Partial<NonNullable<Clip["transform"]>>) => {
     if (transform) onUpdateClip(clip.id, { transform: { ...transform, ...patch } });
   };
+  const applyReframe = (focus: { x: number; y: number }) => {
+    if (!sourceDimensions || !targetDimensions) return;
+    const next = buildReframeTransform({
+      sourceWidth: sourceDimensions.width,
+      sourceHeight: sourceDimensions.height,
+      targetWidth: targetDimensions.width,
+      targetHeight: targetDimensions.height,
+      focus,
+    });
+    if (next) onUpdateClip(clip.id, { transform: next });
+  };
+  const reframeFocus = transform?.anchor ?? REFRAME_FOCUS_PRESETS.center;
   return (
     <InspectorCard title="Clip">
       {onPlaceClip ? <div className="space-y-2 border-b border-white/10 pb-3 text-xs">
@@ -81,7 +101,7 @@ export const ClipInspector = ({
         </div> : null}
       </div> : null}
       <div className="space-y-2 border-b border-white/10 pb-3 text-xs">
-        <p className="app-eyebrow text-[10px] uppercase tracking-[0.16em] text-neutral-400">Transform</p>
+        <p className="app-eyebrow text-[10px] text-neutral-400">Transform</p>
         {!transform ? <>
           <p className="text-[11px] leading-5 text-neutral-400">Auto fit. Enable source-size controls to position and scale this clip.</p>
           <button type="button" disabled={disabled} className={`${inputClass} text-[10px]`} onClick={() => onUpdateClip(clip.id, { transform: { x: 0.5, y: 0.5, scale: 1, rotation: 0, anchor: { x: 0.5, y: 0.5 } } })}>Use source-size transform</button>
@@ -96,6 +116,20 @@ export const ClipInspector = ({
         </>}
         <CommitNumber key={`${clip.id}-opacity-${clip.opacity}`} label="Opacity (%)" value={(clip.opacity ?? 1) * 100} min={0} max={100} disabled={disabled} onCommit={(opacity) => onUpdateClip(clip.id, { opacity: opacity / 100 })} />
       </div>
+      {canReframe ? <div className="space-y-2 border-b border-white/10 py-3 text-xs">
+        <div className="flex items-center justify-between gap-2">
+          <p className="app-eyebrow text-[10px] text-neutral-400">Frame subject</p>
+          <span className="app-data text-[9px] tracking-[0.08em] text-neutral-500">{sourceDimensions!.width}×{sourceDimensions!.height} → {targetDimensions!.width}×{targetDimensions!.height}</span>
+        </div>
+        <p className="text-[11px] leading-5 text-neutral-400">Cover-crop this static frame around the face or subject. The same crop is used in preview and export.</p>
+        <div className="grid grid-cols-3 gap-2">
+          {(["left", "center", "right"] as const).map((position) => <button key={position} type="button" disabled={disabled} className={`${inputClass} text-[10px] capitalize`} onClick={() => applyReframe(REFRAME_FOCUS_PRESETS[position])}>Subject {position}</button>)}
+        </div>
+        <div className="grid grid-cols-2 gap-2">
+          <CommitNumber key={`${clip.id}-reframe-x-${reframeFocus.x}`} label="Subject X (%)" value={Number((reframeFocus.x * 100).toFixed(4))} min={0} max={100} step={0.1} disabled={disabled} onCommit={(x) => applyReframe({ x: x / 100, y: reframeFocus.y })} />
+          <CommitNumber key={`${clip.id}-reframe-y-${reframeFocus.y}`} label="Subject Y (%)" value={Number((reframeFocus.y * 100).toFixed(4))} min={0} max={100} step={0.1} disabled={disabled} onCommit={(y) => applyReframe({ x: reframeFocus.x, y: y / 100 })} />
+        </div>
+      </div> : null}
       <div className="grid grid-cols-2 gap-2 text-xs text-neutral-200">
         <LabeledControl label="Trim Start (s)">
           <input
@@ -143,10 +177,10 @@ export const ClipInspector = ({
       {clip.kind === "video" ? (
         <div className="mt-3 border-t border-white/10 pt-3">
           <div className="mb-2 flex items-center justify-between">
-            <p className="app-eyebrow text-[10px] uppercase tracking-[0.16em] text-neutral-400">
+            <p className="app-eyebrow text-[10px] text-neutral-400">
               Color grade
             </p>
-            <span className="app-data text-[9px] uppercase tracking-[0.08em] text-neutral-500">
+            <span className="app-data text-[9px] tracking-[0.08em] text-neutral-500">
               Preview + export
             </span>
           </div>
@@ -165,7 +199,7 @@ export const ClipInspector = ({
                 const preset = event.currentTarget.value as VideoFilterPreset;
                 onUpdateClip(clip.id, { videoFilter: cloneVideoFilterPreset(preset) });
               }}
-              className="app-data min-h-10 w-full appearance-none border border-white/15 bg-[#100e0b] py-2 pl-9 pr-9 text-[11px] font-semibold uppercase tracking-[0.1em] text-[#f2ede3] outline-none transition hover:border-white/30 focus-visible:border-[#ff4f1f] focus-visible:ring-2 focus-visible:ring-[#ff4f1f]/35 disabled:opacity-40"
+              className="app-data min-h-10 w-full appearance-none border border-white/15 bg-[#100e0b] py-2 pl-9 pr-9 text-[11px] font-semibold tracking-[0.1em] text-[#f2ede3] outline-none transition hover:border-white/30 focus-visible:border-[#ff4f1f] focus-visible:ring-2 focus-visible:ring-[#ff4f1f]/35 disabled:opacity-40"
             >
               {videoFilter.preset === "custom" ? (
                 <option value="custom" disabled>Custom adjustments</option>
@@ -197,7 +231,7 @@ export const ClipInspector = ({
       {clip.kind === "video" ? (
         <div className="border-t border-white/10 pt-3">
           <div className="mb-2 flex items-center justify-between text-[10px] text-neutral-400">
-            <span className="app-eyebrow uppercase tracking-[0.16em]">Clip audio</span>
+            <span className="app-eyebrow">Clip audio</span>
             <span className="app-data">{Math.round(clip.volume * 100)}%</span>
           </div>
           <input
@@ -218,7 +252,7 @@ export const ClipInspector = ({
               type="button"
               disabled={disabled}
               onClick={() => onDetachAudio(clip.id)}
-              className="mt-3 h-9 w-full border border-white/15 px-3 text-[9px] font-semibold uppercase tracking-[0.13em] text-neutral-200 outline-none transition hover:border-[#ff4f1f] hover:text-[#ff9b7d] focus-visible:ring-2 focus-visible:ring-[#ff4f1f] disabled:opacity-40"
+              className="mt-3 h-9 w-full border border-white/15 px-3 text-[9px] font-semibold text-neutral-200 outline-none transition hover:border-[#ff4f1f] hover:text-[#ff9b7d] focus-visible:ring-2 focus-visible:ring-[#ff4f1f] disabled:opacity-40"
             >
               Detach audio
             </button>

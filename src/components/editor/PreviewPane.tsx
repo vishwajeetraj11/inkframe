@@ -118,7 +118,7 @@ export const PreviewPane = ({
         <div className="flex items-center gap-3">
           <span className="h-2 w-2 bg-cyan-300" />
           <div>
-            <p className="app-eyebrow text-[9px] uppercase tracking-[0.18em] text-neutral-400">
+            <p className="app-eyebrow text-[9px] text-neutral-400">
               Program monitor
             </p>
             <h2 className="sr-only">Preview stage</h2>
@@ -152,13 +152,13 @@ export const PreviewPane = ({
         </div>
 
         <div className="flex items-center justify-end gap-3">
-          <span className="app-data text-[10px] uppercase tracking-[0.08em] text-neutral-300">
+          <span className="app-data text-[10px] tracking-[0.08em] text-neutral-300">
             {previewAspectLabel}
           </span>
-          <span className="app-data hidden text-[10px] uppercase tracking-[0.08em] text-neutral-400 sm:inline">
+          <span className="app-data hidden text-[10px] tracking-[0.08em] text-neutral-400 sm:inline">
             {safeWidth}x{safeHeight}
           </span>
-          <span className="app-data text-[10px] uppercase tracking-[0.08em] text-neutral-400">
+          <span className="app-data text-[10px] tracking-[0.08em] text-neutral-400">
             {previewDurationSeconds}s
           </span>
         </div>
@@ -224,7 +224,7 @@ export const PreviewPane = ({
               ) : (
                 <div className="grid h-full place-items-center bg-[radial-gradient(circle_at_50%_38%,#263047,#111827_72%)] px-6 text-center">
                   <div>
-                    <p className="app-panel-label text-sm font-semibold text-neutral-100">
+                    <p className="app-title text-sm font-semibold tracking-normal text-neutral-100">
                       Your monitor is ready
                     </p>
                     <p className="mt-2 max-w-52 text-xs leading-relaxed text-neutral-300">
@@ -243,7 +243,7 @@ export const PreviewPane = ({
           >
             <div className="flex min-h-9 items-center gap-2 border-b border-white/10 px-2.5">
               <Images aria-hidden="true" size={14} className="text-cyan-300" />
-              <p className="app-eyebrow flex-1 text-[9px] uppercase tracking-[0.14em] text-neutral-300">
+              <p className="app-eyebrow flex-1 text-[9px] text-neutral-300">
                 Agent contact sheet · {visualReview.summary.framesCaptured} frames
               </p>
               <button

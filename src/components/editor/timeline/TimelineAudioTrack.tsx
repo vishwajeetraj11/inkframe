@@ -61,12 +61,12 @@ export const TimelineAudioTrack = ({
                       <p className="truncate text-sm font-medium text-white">
                         {truncateLabel(assetNames[track.assetId] ?? track.assetId)}
                       </p>
-                      <p className="truncate text-[10px] uppercase tracking-[0.16em] text-emerald-100/75">
+                      <p className="truncate text-[10px] tracking-[0.02em] text-emerald-100/75">
                         {Math.round(track.volume * 100)}% volume
                       </p>
                     </div>
 
-                    <span className="shrink-0 rounded-full border border-white/12 bg-black/20 px-2 py-1 text-[10px] font-semibold uppercase tracking-[0.16em] text-white/85">
+                    <span className="shrink-0 rounded-full border border-white/12 bg-black/20 px-2 py-1 text-[10px] font-semibold tracking-normal text-white/85">
                       {formatSeconds(track.endFrame - track.startFrame)}
                     </span>
                   </div>

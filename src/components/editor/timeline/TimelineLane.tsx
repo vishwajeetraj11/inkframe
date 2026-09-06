@@ -22,11 +22,11 @@ export const TimelineLane = ({
   return (
     <div className="grid gap-3 md:grid-cols-[8rem_minmax(0,1fr)] md:items-start">
       <div className="space-y-1">
-        <p className="text-xs font-semibold uppercase tracking-[0.24em] text-neutral-300">
+        <p className="text-xs font-semibold tracking-[0.02em] text-neutral-300">
           {title}
         </p>
         <p className="text-xs text-neutral-500">{subtitle}</p>
-        <p className="text-[11px] uppercase tracking-[0.18em] text-neutral-600">{count}</p>
+        <p className="app-data text-[11px] tracking-normal text-neutral-600">{count}</p>
       </div>
 
       <div className="space-y-2">

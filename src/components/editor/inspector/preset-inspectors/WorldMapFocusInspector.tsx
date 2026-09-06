@@ -26,7 +26,7 @@ export const WorldMapFocusInspector = ({
   return (
     <div className="space-y-3 rounded-2xl border border-white/10 bg-[linear-gradient(180deg,rgba(31,28,22,0.92),rgba(24,22,17,0.82))] p-3">
       <div>
-        <p className="app-eyebrow text-[11px] uppercase tracking-[0.22em] text-cyan-200/85">
+        <p className="app-eyebrow text-[11px] text-cyan-200/85">
           World Map Focus
         </p>
         <p className="mt-2 text-[12px] leading-6 text-neutral-400">

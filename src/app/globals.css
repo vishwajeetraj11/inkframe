@@ -6,6 +6,7 @@
   --muted: #948c7c;
   --panel: rgba(20, 18, 14, 0.74);
   --panel-border: rgba(148, 140, 124, 0.35);
+  --editor-divider: rgba(118, 108, 93, 0.34);
   --accent: #ff4f1f;
 }
 
@@ -76,6 +77,17 @@ body {
 
 * {
   box-sizing: border-box;
+}
+
+/* Layout separators stay quiet; interaction accents provide the stronger edges. */
+@media (min-width: 1280px) {
+  .editor-source-panel {
+    border-right: 1px solid var(--editor-divider);
+  }
+
+  .editor-timeline-panel {
+    border-top: 1px solid var(--editor-divider);
+  }
 }
 
 :where(button, input, textarea, select) {
@@ -164,7 +176,11 @@ body {
   letter-spacing: -0.01em;
 }
 
-.app-eyebrow,
+.app-eyebrow {
+  font-family: var(--font-condensed);
+  letter-spacing: 0.04em;
+}
+
 .app-panel-label {
   font-family: var(--font-condensed);
   letter-spacing: 0.16em;

@@ -28,7 +28,7 @@ export const FilmFrameGalleryInspector = ({
     <div className="space-y-3 rounded-2xl border border-white/10 bg-[linear-gradient(180deg,rgba(26,24,19,0.94),rgba(11,10,8,0.88))] p-3">
       <div className="flex items-start justify-between gap-3">
         <div>
-          <p className="app-eyebrow text-[11px] uppercase tracking-[0.22em] text-amber-100/85">
+          <p className="app-eyebrow text-[11px] text-amber-100/85">
             {presetLabel}
           </p>
           <p className="mt-2 max-w-xl text-[12px] leading-6 text-neutral-400">
@@ -36,14 +36,14 @@ export const FilmFrameGalleryInspector = ({
           </p>
         </div>
 
-        <span className="rounded-full border border-white/10 bg-white/[0.05] px-3 py-1 text-[10px] uppercase tracking-[0.18em] text-neutral-400">
+        <span className="rounded-full border border-white/10 bg-white/[0.05] px-3 py-1 text-[10px] tracking-[0.02em] text-neutral-400">
           Image Sequence
         </span>
       </div>
 
       <section className="space-y-3">
         <div>
-          <p className="app-eyebrow text-[10px] uppercase tracking-[0.22em] text-neutral-500">
+          <p className="app-eyebrow text-[10px] text-neutral-500">
             Story Copy
           </p>
         </div>
@@ -80,7 +80,7 @@ export const FilmFrameGalleryInspector = ({
 
       <section className="space-y-3">
         <div>
-          <p className="app-eyebrow text-[10px] uppercase tracking-[0.22em] text-neutral-500">
+          <p className="app-eyebrow text-[10px] text-neutral-500">
             Metadata
           </p>
         </div>

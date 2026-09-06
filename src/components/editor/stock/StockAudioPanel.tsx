@@ -174,14 +174,14 @@ export const StockAudioPanel = ({
     <section className="px-3 pb-4 pt-3" aria-label="Stock sound effects">
       <div className="mb-3 flex items-start justify-between gap-3">
         <div>
-          <p className="app-eyebrow text-[9px] uppercase tracking-[0.18em] text-neutral-400">
+          <p className="app-eyebrow text-[9px] text-neutral-400">
             Quick import
           </p>
-          <h3 className="app-title text-sm font-semibold uppercase text-neutral-50">
+          <h3 className="app-title text-sm font-semibold text-neutral-50">
             Sound effects
           </h3>
         </div>
-        <span className="app-data mt-0.5 text-[9px] uppercase text-neutral-500">
+        <span className="app-data mt-0.5 text-[9px] text-neutral-500">
           Freesound / CC
         </span>
       </div>
@@ -197,7 +197,7 @@ export const StockAudioPanel = ({
           disabled={disabled}
           onChange={(event) => setQuery(event.currentTarget.value)}
           placeholder="Search whooshes, hits, ambience"
-          className="h-10 w-full border border-white/15 bg-white/[0.035] px-3 pr-10 text-xs text-neutral-100 outline-none placeholder:text-neutral-500 focus:border-[#ff4f1f]"
+          className="h-10 w-full border border-white/15 bg-white/[0.035] px-3 pr-10 text-xs text-neutral-100 outline-none placeholder:text-neutral-500 focus:border-white/30"
         />
         <Search
           aria-hidden="true"
@@ -278,7 +278,7 @@ export const StockAudioPanel = ({
                         {audio.creatorName}
                       </a>
                     </p>
-                    <p className="mt-1 flex items-center gap-1.5 text-[8px] uppercase tracking-[0.08em]">
+                    <p className="mt-1 flex items-center gap-1.5 text-[8px] tracking-[0.08em]">
                       <a
                         href={audio.licenseUrl}
                         target="_blank"

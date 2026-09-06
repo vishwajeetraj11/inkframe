@@ -60,12 +60,12 @@ export const TimelineTextTrack = ({
                       <p className="truncate text-sm font-medium text-white">
                         {truncateLabel(overlay.text.replace(/\s+/g, " ").trim() || "Text overlay")}
                       </p>
-                      <p className="truncate text-[10px] uppercase tracking-[0.16em] text-fuchsia-100/75">
+                      <p className="truncate text-[10px] tracking-[0.02em] text-fuchsia-100/75">
                         {TEXT_OVERLAY_STYLE_PRESET_LABELS[overlay.stylePreset]}
                       </p>
                     </div>
 
-                    <span className="shrink-0 rounded-full border border-white/12 bg-black/20 px-2 py-1 text-[10px] font-semibold uppercase tracking-[0.16em] text-white/85">
+                    <span className="shrink-0 rounded-full border border-white/12 bg-black/20 px-2 py-1 text-[10px] font-semibold tracking-normal text-white/85">
                       {formatSeconds(overlay.endFrame - overlay.startFrame)}
                     </span>
                   </div>

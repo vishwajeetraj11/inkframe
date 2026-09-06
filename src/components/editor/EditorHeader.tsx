@@ -3,8 +3,8 @@
 import Link from "next/link";
 import { AspectSwitcher } from "@/components/editor/AspectSwitcher";
 import type { EditorStorageStatus } from "@/components/editor/hooks/editor-session-types";
-import type { AspectPreset } from "@/lib/editor/types";
-import { CloudAlert, CloudCheck, LoaderCircle } from "lucide-react";
+import type { AspectPreset, ProjectCutdown } from "@/lib/editor/types";
+import { CloudAlert, CloudCheck, Download, LoaderCircle } from "lucide-react";
 
 interface WorkspaceStat {
   label: string;
@@ -17,6 +17,10 @@ interface EditorHeaderProps {
   workspaceStats: WorkspaceStat[];
   canExport: boolean;
   onSwitchAspect: (aspect: AspectPreset) => void;
+  cutdowns: ProjectCutdown[];
+  activeCutdownId?: string;
+  onCreateCutdown: () => void;
+  onSwitchCutdown: (id: string) => void;
   onExport: () => void;
   storageStatus: EditorStorageStatus;
   onRetrySave: () => void;
@@ -28,6 +32,10 @@ export const EditorHeader = ({
   workspaceStats,
   canExport,
   onSwitchAspect,
+  cutdowns,
+  activeCutdownId,
+  onCreateCutdown,
+  onSwitchCutdown,
   onExport,
   storageStatus,
   onRetrySave,
@@ -42,7 +50,7 @@ export const EditorHeader = ({
           className="group inline-flex h-[44px] w-[44px] shrink-0 items-center justify-center gap-2.5 outline-none focus-visible:ring-2 focus-visible:ring-cyan-300 sm:w-auto sm:justify-start sm:pr-2"
         >
           <span className="h-2.5 w-2.5 bg-cyan-300 transition-transform duration-200 group-hover:rotate-45" />
-          <span className="app-title hidden text-sm font-semibold uppercase tracking-[0.1em] text-neutral-50 sm:inline">
+          <span className="app-title hidden text-sm font-semibold tracking-[0.1em] text-neutral-50 sm:inline">
             Inkframe
           </span>
         </Link>
@@ -50,12 +58,12 @@ export const EditorHeader = ({
         <span aria-hidden="true" className="hidden h-6 w-px bg-white/10 sm:block" />
 
         <nav aria-label="Studio" className="hidden items-center gap-1 lg:flex">
-          <span className="inline-flex min-h-10 items-center border-b border-cyan-300 px-2.5 text-[9px] font-semibold uppercase tracking-[0.14em] text-neutral-100">
+          <span className="inline-flex min-h-10 items-center border-b border-cyan-300 px-2.5 text-[9px] font-semibold tracking-[0.04em] text-neutral-100">
             Editor
           </span>
           <Link
             href="/templates"
-            className="inline-flex min-h-10 items-center border-b border-transparent px-2.5 text-[9px] font-semibold uppercase tracking-[0.14em] text-neutral-400 transition hover:border-white/20 hover:text-neutral-100 focus-visible:ring-2 focus-visible:ring-cyan-300"
+            className="inline-flex min-h-10 items-center border-b border-transparent px-2.5 text-[9px] font-semibold tracking-[0.04em] text-neutral-400 transition hover:border-white/20 hover:text-neutral-100 focus-visible:ring-2 focus-visible:ring-cyan-300"
           >
             Templates
           </Link>
@@ -65,7 +73,7 @@ export const EditorHeader = ({
           <div className="hidden items-center gap-4 border-r border-white/10 pr-4 2xl:flex">
             {workspaceStats.map((stat) => (
               <span key={stat.label} className="flex items-baseline gap-1.5 whitespace-nowrap">
-                <span className="app-eyebrow text-[10px] uppercase tracking-[0.14em] text-neutral-400">
+                <span className="app-eyebrow text-[10px] text-neutral-400">
                   {stat.label}
                 </span>
                 <span className="app-data text-xs text-neutral-100">{stat.value}</span>
@@ -77,6 +85,10 @@ export const EditorHeader = ({
             activeAspect={activeAspect}
             disabled={isExporting}
             onChange={onSwitchAspect}
+            cutdowns={cutdowns}
+            activeCutdownId={activeCutdownId}
+            onCreateCutdown={onCreateCutdown}
+            onSwitchCutdown={onSwitchCutdown}
           />
 
           {storageIsError ? (
@@ -108,9 +120,21 @@ export const EditorHeader = ({
             type="button"
             disabled={isExporting || !canExport}
             onClick={onExport}
-            className="inline-flex min-h-[44px] items-center justify-center bg-cyan-300 px-2.5 text-[10px] font-semibold text-neutral-950 outline-none transition hover:bg-cyan-200 focus-visible:ring-2 focus-visible:ring-cyan-200 focus-visible:ring-offset-2 focus-visible:ring-offset-[#0f0d0a] disabled:cursor-not-allowed disabled:opacity-45 sm:px-3 xl:min-h-10"
+            aria-label={isExporting ? "Rendering export" : "Export MP4"}
+            title={isExporting ? "Rendering export" : "Export MP4"}
+            className="group relative inline-flex h-[44px] w-[44px] items-center justify-center bg-cyan-300 text-neutral-950 outline-none transition hover:bg-cyan-200 focus-visible:ring-2 focus-visible:ring-cyan-200 focus-visible:ring-offset-2 focus-visible:ring-offset-[#0f0d0a] disabled:cursor-not-allowed disabled:opacity-45 xl:h-10 xl:w-10"
           >
-            {isExporting ? "Rendering…" : "Export"}
+            {isExporting ? (
+              <LoaderCircle aria-hidden="true" size={17} className="animate-spin" />
+            ) : (
+              <Download aria-hidden="true" size={17} strokeWidth={1.8} />
+            )}
+            <span
+              role="tooltip"
+              className="pointer-events-none absolute right-0 top-[calc(100%+8px)] z-50 w-max translate-y-[-2px] border border-white/15 bg-[#17140f] px-2.5 py-1.5 text-[10px] font-medium text-neutral-100 opacity-0 shadow-xl transition duration-150 group-hover:translate-y-0 group-hover:opacity-100 group-focus-visible:translate-y-0 group-focus-visible:opacity-100"
+            >
+              {isExporting ? "Rendering export" : "Export MP4"}
+            </span>
           </button>
         </div>
       </div>

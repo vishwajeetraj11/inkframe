@@ -82,7 +82,7 @@ export const TimelineClipTrack = ({
 
               <div className="relative flex h-full items-center justify-between gap-3">
                 <div className="min-w-0">
-                  <p className="truncate text-xs font-semibold uppercase tracking-[0.18em]">
+                  <p className="truncate text-xs font-semibold tracking-[0.02em]">
                     {entry.clip.kind}
                   </p>
                   <p className="truncate text-sm font-medium text-white">
@@ -90,7 +90,7 @@ export const TimelineClipTrack = ({
                   </p>
                 </div>
 
-                <span className="shrink-0 rounded-full border border-white/12 bg-black/20 px-2 py-1 text-[10px] font-semibold uppercase tracking-[0.16em] text-white/85">
+                <span className="shrink-0 rounded-full border border-white/12 bg-black/20 px-2 py-1 text-[10px] font-semibold tracking-normal text-white/85">
                   {formatSeconds(entry.durationInFrames)}
                 </span>
               </div>

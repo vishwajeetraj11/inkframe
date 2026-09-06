@@ -9,10 +9,10 @@ const EditorApp = dynamic(
     loading: () => (
       <main className="flex min-h-screen items-center justify-center bg-[#0f0d0a] px-6 text-neutral-100">
         <div role="status" aria-live="polite" className="w-full max-w-xl border-y border-white/10 py-8">
-          <p className="app-eyebrow text-[10px] uppercase tracking-[0.2em] text-cyan-300">
+          <p className="app-eyebrow text-[10px] text-cyan-300">
             Loading workspace
           </p>
-          <p className="app-title mt-3 text-4xl font-semibold uppercase leading-none">
+          <p className="app-title mt-3 text-4xl font-semibold leading-none">
             Preparing the cut<span className="text-cyan-300">.</span>
           </p>
           <div className="mt-6 h-px overflow-hidden bg-white/10">

@@ -42,8 +42,8 @@ describe("UX regressions", () => {
       "aria-selected",
       "false",
     );
-    fireEvent.click(screen.getByRole("tab", { name: "Sound FX" }));
-    expect(screen.getByRole("tab", { name: "Sound FX" })).toHaveAttribute(
+    fireEvent.click(screen.getByRole("tab", { name: "Sound effects" }));
+    expect(screen.getByRole("tab", { name: "Sound effects" })).toHaveAttribute(
       "aria-selected",
       "true",
     );

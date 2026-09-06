@@ -376,7 +376,7 @@ export const TextOverlayInspector = ({
       {hasDedicatedInspector ? (
         <section className="space-y-3">
           <div>
-            <p className="app-eyebrow text-[9px] uppercase tracking-[0.22em] text-neutral-500">
+            <p className="app-eyebrow text-[9px] text-neutral-500">
               Placement
             </p>
             <p className="mt-1 text-[10px] text-neutral-500">
@@ -424,7 +424,7 @@ export const TextOverlayInspector = ({
         <div className="editor-inspector-layout">
           <section className="space-y-3">
             <div>
-              <p className="app-eyebrow text-[9px] uppercase tracking-[0.22em] text-neutral-500">
+              <p className="app-eyebrow text-[9px] text-neutral-500">
                 Placement
               </p>
               <p className="mt-1 text-[10px] text-neutral-500">
@@ -502,7 +502,7 @@ export const TextOverlayInspector = ({
 
           <section className="space-y-3">
             <div>
-              <p className="app-eyebrow text-[9px] uppercase tracking-[0.22em] text-neutral-500">
+              <p className="app-eyebrow text-[9px] text-neutral-500">
                 Typography
               </p>
               <p className="mt-1 text-[10px] text-neutral-500">
@@ -604,7 +604,7 @@ export const TextOverlayInspector = ({
             </div>
 
             <div>
-              <p className="app-eyebrow mb-1.5 text-[9px] uppercase tracking-[0.18em] text-neutral-500">
+              <p className="app-eyebrow mb-1.5 text-[9px] text-neutral-500">
                 Type scale
               </p>
               <div aria-label="Typography size presets" className="grid grid-cols-4 gap-1.5">
@@ -614,7 +614,7 @@ export const TextOverlayInspector = ({
                     <button
                       key={preset.label}
                       aria-pressed={active}
-                      className={`h-8 rounded-md border px-1 text-[9px] font-semibold uppercase tracking-[0.08em] transition-colors ${
+                      className={`h-8 rounded-md border px-1 text-[9px] font-semibold tracking-[0.08em] transition-colors ${
                         active
                           ? "border-[#ff4f1f] bg-[#ff4f1f] text-[#0b0907]"
                           : "border-white/10 bg-neutral-950/60 text-neutral-500 hover:border-white/25 hover:text-neutral-200"

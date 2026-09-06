@@ -34,7 +34,7 @@ export const ChartCardInspector = ({
   return (
     <div className="space-y-3 rounded-lg border border-neutral-700/70 bg-neutral-900/45 p-3">
       <div>
-        <p className="text-xs font-semibold uppercase tracking-wide text-neutral-300">
+        <p className="text-xs font-semibold tracking-wide text-neutral-300">
           {presetLabel}
         </p>
         <p className="mt-1 text-[11px] text-neutral-500">

@@ -116,14 +116,14 @@ export const StockVideoPanel = ({
     <section className="px-3 pb-4 pt-3" aria-label="Stock footage">
       <div className="mb-3 flex items-start justify-between gap-3">
         <div>
-          <p className="app-eyebrow text-[9px] uppercase tracking-[0.18em] text-neutral-400">
+          <p className="app-eyebrow text-[9px] text-neutral-400">
             Quick import
           </p>
-          <h3 className="app-title text-sm font-semibold uppercase text-neutral-50">
+          <h3 className="app-title text-sm font-semibold text-neutral-50">
             Stock footage
           </h3>
         </div>
-        <span className="app-data mt-0.5 text-[9px] uppercase text-neutral-500">
+        <span className="app-data mt-0.5 text-[9px] text-neutral-500">
           Pexels / {orientation}
         </span>
       </div>

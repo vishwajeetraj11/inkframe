@@ -38,6 +38,7 @@ import {
   saveProjectSnapshot,
 } from "@/lib/editor/project-storage";
 import type { AspectPreset } from "@/lib/editor/types";
+import { getActiveTimeline } from "@/lib/editor/cutdowns";
 import type { AudioUrlImportInput } from "@/lib/editor/webmcp/tools";
 import type { LicensedAudioImportInput } from "@/lib/editor/webmcp/tools";
 import {
@@ -171,7 +172,8 @@ export const useEditorSession = () => {
   assetsRef.current = assets;
 
   const activeAspect = project.activeVersion;
-  const activeVersion = project.versions[activeAspect];
+  const activeVersion = getActiveTimeline(project);
+  const activeCutdownId = project.activeCutdownId;
   const templateParam = searchParams.get("template");
   const initialTemplate = getTemplateDefinition(templateParam);
 
@@ -179,7 +181,7 @@ export const useEditorSession = () => {
     setSelectedClipId(null);
     setSelectedTextId(null);
     setSelectedAudioId(null);
-  }, [activeAspect]);
+  }, [activeAspect, activeCutdownId]);
 
   useEffect(() => {
     const objectUrls = objectUrlsRef.current;
@@ -765,7 +767,7 @@ export const useEditorSession = () => {
   ): Promise<void> => {
     if (isExporting) return;
     const activeTimelineEnd = getTimelineDurationInFrames(
-      projectRef.current.versions[activeAspect],
+      getActiveTimeline(projectRef.current),
     );
     if (activeTimelineEnd >= MAX_DURATION_FRAMES) {
       const error = new Error("The timeline has reached its 60 second limit.");
@@ -1194,7 +1196,7 @@ export const useEditorSession = () => {
     const currentProject = projectRef.current;
     const currentAssets = assetsRef.current;
     const currentAspect = currentProject.activeVersion;
-    const currentVersion = currentProject.versions[currentAspect];
+    const currentVersion = getActiveTimeline(currentProject);
 
     if (exportInFlightRef.current) {
       return { ok: false, message: "Render already in progress." };
@@ -1465,7 +1467,7 @@ export const useEditorSession = () => {
 
     if (
       selectedClipId &&
-      currentProject.versions[currentProject.activeVersion].clips.some(
+      getActiveTimeline(currentProject).clips.some(
         (clip) => clip.id === selectedClipId && clip.assetId === assetId,
       )
     ) {
@@ -1474,7 +1476,7 @@ export const useEditorSession = () => {
 
     if (
       selectedAudioId &&
-      currentProject.versions[currentProject.activeVersion].audioTracks.some(
+      getActiveTimeline(currentProject).audioTracks.some(
         (track) => track.id === selectedAudioId && track.assetId === assetId,
       )
     ) {
@@ -1540,6 +1542,19 @@ export const useEditorSession = () => {
     dispatch({ type: "switch-aspect", aspect });
   };
 
+  const createShortCutdown = (durationFrames = 15 * FPS) => {
+    const seconds = Math.round(durationFrames / FPS);
+    dispatch({
+      type: "create-cutdown",
+      id: `cutdown-${nanoid(10)}`,
+      name: `${seconds}s cut`,
+      durationFrames,
+      sourceAspect: activeAspect,
+    });
+  };
+
+  const switchCutdown = (id: string) => dispatch({ type: "switch-cutdown", id });
+
   const getRenderDiagnostics = (aspect: AspectPreset = activeAspect) => {
     const currentAssets = Object.values(assetsRef.current);
     const assetSources = Object.fromEntries(
@@ -1569,7 +1584,9 @@ export const useEditorSession = () => {
   return {
     history,
     activeAspect,
+    activeCutdownId,
     activeVersion,
+    cutdowns: project.cutdowns ?? [],
     assetList,
     assetNames,
     exportState,
@@ -1609,6 +1626,8 @@ export const useEditorSession = () => {
     searchStockPhotos,
     searchLicensedMusic,
     searchLicensedSoundEffects,
+    createShortCutdown,
+    switchCutdown,
     switchAspect,
     timelineDurationInFrames,
     undo,

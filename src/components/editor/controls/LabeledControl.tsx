@@ -12,8 +12,8 @@ export const LabeledControl = ({
   label,
 }: LabeledControlProps) => {
   return (
-    <label className={className ?? "space-y-1"}>
-      <span className="block text-neutral-400">{label}</span>
+    <label className={className ?? "space-y-3"}>
+      <span className="block text-[11px] font-medium text-neutral-300">{label}</span>
       {children}
     </label>
   );

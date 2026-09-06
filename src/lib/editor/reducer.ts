@@ -19,6 +19,7 @@ import type { CaptionCue } from "./captions";
 import type { AudioDuckingRule } from "./audio-ducking";
 
 import { DEFAULT_VIDEO_TRACK_ID, ensureEditorTracks } from "./tracks";
+import { createCutdown } from "./cutdowns";
 
 export type EditorAction =
   | {type:"set-clip-keyframes"; aspect:AspectPreset; clipId:string; keyframes:ClipKeyframes}
@@ -29,6 +30,9 @@ export type EditorAction =
   | {type:"set-ducking-rule"; aspect:AspectPreset; rule:AudioDuckingRule}
   | {type:"remove-ducking-rule"; aspect:AspectPreset; ruleId:string}
   | { type: "switch-aspect"; aspect: AspectPreset }
+  | { type: "create-cutdown"; id: string; name: string; durationFrames: number; sourceAspect: AspectPreset }
+  | { type: "switch-cutdown"; id: string }
+  | { type: "remove-cutdown"; id: string }
   | { type: "replace-version"; aspect: AspectPreset; version: VersionTimeline }
   | { type: "add-track"; aspect: AspectPreset; track: EditorTrack }
   | { type: "append-clip"; aspect: AspectPreset; clip: Clip }
@@ -90,7 +94,10 @@ const withUpdatedVersion = (
   aspect: AspectPreset,
   mutate: (version: VersionTimeline) => VersionTimeline,
 ): ProjectSession => {
-  const currentVersion = state.versions[aspect];
+  const activeCutdown = aspect === state.activeVersion
+    ? state.cutdowns?.find((item) => item.id === state.activeCutdownId)
+    : undefined;
+  const currentVersion = activeCutdown?.timeline ?? state.versions[aspect];
   const mutated = mutate(currentVersion);
   if (mutated === currentVersion || JSON.stringify(mutated) === JSON.stringify(currentVersion)) return state;
   const sanitized = sanitizeVersion(mutated);
@@ -99,6 +106,14 @@ const withUpdatedVersion = (
     return state;
   }
 
+  if (activeCutdown) {
+    return {
+      ...state,
+      cutdowns: state.cutdowns?.map((item) => item.id === activeCutdown.id
+        ? { ...item, timeline: sanitized }
+        : item),
+    };
+  }
   return {
     ...state,
     versions: {
@@ -202,7 +217,7 @@ export const editorReducer = (
         return {...version,clips:version.clips.flatMap(item=>item.id===clip.id?segments:[item]), duckingRules: remapDucking(version, "video", clip.id, segments.filter(segment => !segment.timeMapping || segment.timeMapping.kind === "normal").map(segment => segment.id))};
       });
     case "switch-aspect": {
-      if (action.aspect === state.activeVersion) {
+      if (action.aspect === state.activeVersion && !state.activeCutdownId) {
         return state;
       }
 
@@ -212,6 +227,7 @@ export const editorReducer = (
       return {
         ...state,
         activeVersion: action.aspect,
+        activeCutdownId: undefined,
         versions: shouldInitializeTarget
           ? {
               ...state.versions,
@@ -221,6 +237,30 @@ export const editorReducer = (
               ),
             }
           : state.versions,
+      };
+    }
+    case "create-cutdown": {
+      if (state.cutdowns?.some((item) => item.id === action.id)) return state;
+      const cutdown = createCutdown(state.versions[action.sourceAspect], action);
+      if (!cutdown) return state;
+      return {
+        ...state,
+        activeVersion: action.sourceAspect,
+        activeCutdownId: cutdown.id,
+        cutdowns: [...(state.cutdowns ?? []), cutdown],
+      };
+    }
+    case "switch-cutdown": {
+      const cutdown = state.cutdowns?.find((item) => item.id === action.id);
+      if (!cutdown || cutdown.id === state.activeCutdownId) return state;
+      return { ...state, activeVersion: cutdown.sourceAspect, activeCutdownId: cutdown.id };
+    }
+    case "remove-cutdown": {
+      if (!state.cutdowns?.some((item) => item.id === action.id)) return state;
+      return {
+        ...state,
+        activeCutdownId: state.activeCutdownId === action.id ? undefined : state.activeCutdownId,
+        cutdowns: state.cutdowns.filter((item) => item.id !== action.id),
       };
     }
     case "replace-version": {

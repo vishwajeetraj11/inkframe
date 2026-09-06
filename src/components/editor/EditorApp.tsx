@@ -255,6 +255,10 @@ export const EditorApp = () => {
         workspaceStats={workspaceStats}
         canExport={canExport}
         onSwitchAspect={session.switchAspect}
+        cutdowns={session.cutdowns}
+        activeCutdownId={session.activeCutdownId}
+        onCreateCutdown={() => session.createShortCutdown()}
+        onSwitchCutdown={session.switchCutdown}
         onExport={() => {
           void session.onExport();
         }}
@@ -303,7 +307,7 @@ export const EditorApp = () => {
 
         <div
           id="mobile-canvas-panel"
-          className={`${mobilePanel === "canvas" ? "min-h-0 min-w-0 flex-1" : "hidden"} xl:order-none xl:col-start-2 xl:row-start-1 xl:block xl:min-w-0 xl:border-b xl:border-white/10`}
+          className={`${mobilePanel === "canvas" ? "min-h-0 min-w-0 flex-1" : "hidden"} xl:order-none xl:col-start-2 xl:row-start-1 xl:block xl:min-w-0`}
         >
           <PreviewPane
             previewRef={previewRef}
@@ -368,7 +372,7 @@ export const EditorApp = () => {
 
         <div
           id="mobile-timeline-panel"
-          className={`${mobilePanel === "timeline" ? "relative min-h-0 min-w-0 flex-1" : "hidden"} xl:order-none xl:col-span-3 xl:col-start-1 xl:row-start-2 xl:block xl:min-h-0 xl:border-t`}
+          className={`${mobilePanel === "timeline" ? "relative min-h-0 min-w-0 flex-1" : "hidden"} editor-timeline-panel xl:order-none xl:col-span-3 xl:col-start-1 xl:row-start-2 xl:block xl:min-h-0`}
         >
           <TimelineResizeHandle
             height={timelineHeight}

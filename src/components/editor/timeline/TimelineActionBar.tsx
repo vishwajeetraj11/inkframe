@@ -122,7 +122,7 @@ export const TimelineActionBar = ({
       <div className="relative" ref={trackMenuRef}>
         <button
           type="button"
-          className="inline-flex h-[44px] w-[44px] shrink-0 items-center justify-center gap-1.5 border-l border-white/10 px-0 text-[9px] font-semibold uppercase tracking-[0.12em] text-neutral-200 outline-none transition hover:bg-white/[0.05] hover:text-white focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[#ff4f1f] disabled:opacity-30 sm:w-auto sm:px-3 xl:h-9"
+          className="inline-flex h-[44px] w-[44px] shrink-0 items-center justify-center gap-1.5 border-l border-white/10 px-0 text-[9px] font-semibold tracking-[0.02em] text-neutral-200 outline-none transition hover:bg-white/[0.05] hover:text-white focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[#ff4f1f] disabled:opacity-30 sm:w-auto sm:px-3 xl:h-9"
           disabled={disabled}
           onClick={() => setTrackMenuOpen((open) => !open)}
           aria-haspopup="menu"
@@ -163,7 +163,7 @@ export const TimelineActionBar = ({
       </div>
       <button
         type="button"
-        className="inline-flex h-[44px] w-[44px] shrink-0 items-center justify-center gap-2 border-l border-white/10 px-0 text-[9px] font-semibold uppercase tracking-[0.12em] text-neutral-200 outline-none transition hover:bg-white/[0.05] hover:text-white focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[#ff4f1f] disabled:opacity-30 sm:w-auto sm:px-3 xl:h-9"
+        className="inline-flex h-[44px] w-[44px] shrink-0 items-center justify-center gap-2 border-l border-white/10 px-0 text-[9px] font-semibold tracking-[0.02em] text-neutral-200 outline-none transition hover:bg-white/[0.05] hover:text-white focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[#ff4f1f] disabled:opacity-30 sm:w-auto sm:px-3 xl:h-9"
         disabled={disabled}
         onClick={() => {
           const activeTrack = activeTrackId ? engine.getTrack(activeTrackId) : undefined;

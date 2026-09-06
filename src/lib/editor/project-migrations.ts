@@ -47,5 +47,10 @@ export const migrateProjectContent = (input: unknown): ProjectSession => {
     }
     versions[aspect] = normalized;
   }
-  return { ...parsed.data, contentVersion: PROJECT_CONTENT_VERSION, versions };
+  const cutdowns = parsed.data.cutdowns?.map((cutdown) => {
+    const timeline = sanitizeVersion(cutdown.timeline);
+    if (!timeline) throw new Error(`The saved cutdown ${cutdown.name} has invalid placement or exceeds the duration limit.`);
+    return { ...cutdown, timeline };
+  });
+  return { ...parsed.data, contentVersion: PROJECT_CONTENT_VERSION, versions, cutdowns };
 };

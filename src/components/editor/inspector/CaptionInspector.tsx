@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { nanoid } from "nanoid";
+import { Captions, Plus } from "lucide-react";
 import { importCaptions, type CaptionCue } from "@/lib/editor/captions";
 import type { EditorAction } from "@/lib/editor/reducer";
 import type { VersionTimeline } from "@/lib/editor/types";
@@ -9,7 +10,7 @@ import { ensureEditorTracks } from "@/lib/editor/tracks";
 import { LabeledControl } from "@/components/editor/controls/LabeledControl";
 
 const fieldClass = "min-h-9 w-full border border-white/15 bg-[#100e0b] px-2 py-1 text-xs text-neutral-200 outline-none focus-visible:ring-2 focus-visible:ring-[#ff4f1f] disabled:opacity-40";
-const buttonClass = `${fieldClass} text-[10px] uppercase tracking-wide hover:border-[#ff4f1f]`;
+const buttonClass = `${fieldClass} text-[10px] tracking-wide hover:border-[#ff4f1f]`;
 
 export const CaptionInspector = ({ version, disabled, onEdit, selectedCueId }: {
   version: VersionTimeline;
@@ -42,9 +43,15 @@ export const CaptionInspector = ({ version, disabled, onEdit, selectedCueId }: {
   };
 
   return <details open={selectedCue ? true : undefined} className="border-t border-white/10 pt-3">
-    <summary className="cursor-pointer text-xs font-semibold uppercase tracking-wide text-neutral-200">Captions</summary>
+    <summary className="flex cursor-pointer list-none items-center gap-1.5 text-xs font-semibold tracking-wide text-neutral-200 marker:hidden">
+      <Captions aria-hidden="true" className="h-4 w-4 text-neutral-400" strokeWidth={1.8} />
+      Captions
+    </summary>
     <fieldset disabled={disabled} className="mt-3 space-y-3 text-xs disabled:opacity-40">
-      <button type="button" className={buttonClass} onClick={addTrack}>Add caption track</button>
+      <button type="button" className={`${buttonClass} inline-flex items-center justify-center gap-1.5`} onClick={addTrack}>
+        <Plus aria-hidden="true" className="h-3.5 w-3.5" strokeWidth={1.8} />
+        Add caption track
+      </button>
       {tracks.length > 0 ? <>
         <LabeledControl label="Caption track"><select aria-label="Caption track" className={fieldClass} value={trackId} onChange={(event) => { setChosenTrack(event.target.value); reset(); }}>{tracks.map((track) => <option key={track.id} value={track.id}>{track.name}</option>)}</select></LabeledControl>
         <form className="space-y-2" onSubmit={(event) => {

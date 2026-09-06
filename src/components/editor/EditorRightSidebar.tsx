@@ -44,6 +44,13 @@ export const EditorRightSidebar = ({
   onUpdateAudio,
   onRemoveAudio,
 }: EditorRightSidebarProps) => {
+  const sourceMetadata = selectedClip
+    ? assets.find((asset) => asset.assetId === selectedClip.assetId)?.mediaMetadata
+    : undefined;
+  const sourceDimensions = sourceMetadata?.width && sourceMetadata.height
+    ? { width: sourceMetadata.width, height: sourceMetadata.height }
+    : undefined;
+
   return (
     <aside
       aria-label="Inspector"
@@ -55,6 +62,8 @@ export const EditorRightSidebar = ({
         textOverlay={selectedTextOverlay}
         audioTrack={selectedAudioTrack}
         assetNames={assetNames}
+        sourceDimensions={sourceDimensions}
+        targetAspect={version?.aspect}
         disabled={isExporting}
         tracks={tracks}
         onPlaceClip={onPlaceClip}

@@ -50,11 +50,11 @@ export const EditorSidebar = ({
   return (
     <aside
       aria-label="Media and elements"
-      className="editor-source-panel flex h-full min-h-0 flex-col bg-[#15120e] xl:border-r"
+      className="editor-source-panel flex h-full min-h-0 flex-col bg-[#15120e]"
     >
       <div className="flex items-center justify-between border-b border-white/10 px-3 py-2">
         <div>
-          <p className="app-eyebrow text-[9px] tracking-[0.18em] text-neutral-400">
+          <p className="app-eyebrow text-[9px] text-neutral-400">
             Source rail
           </p>
           <h2 className="app-title text-sm font-semibold text-neutral-50">
@@ -75,19 +75,26 @@ export const EditorSidebar = ({
             type="button"
             role="tab"
             aria-selected={activeSource === source}
+            aria-label={label}
+            title={label}
             onClick={() => setActiveSource(source)}
-            className={`relative flex h-11 items-center justify-center gap-1 border-r border-white/10 px-1 text-[7px] font-semibold tracking-[0.02em] whitespace-nowrap outline-none transition last:border-r-0 focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[#ff4f1f] xl:h-10 ${
+            className={`group relative flex h-11 min-w-0 items-center justify-center border-r border-white/10 px-1 text-[7px] font-semibold tracking-[0.02em] outline-none transition last:border-r-0 focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[#ff4f1f] xl:h-10 ${
               activeSource === source
                 ? "text-[#f2ede3]"
                 : "text-neutral-500 hover:bg-white/[0.025] hover:text-neutral-200"
             }`}
           >
-            <span aria-hidden="true">
+            <span aria-hidden="true" className="shrink-0">
               {source === "project" ? <FolderOpen className="h-3.5 w-3.5" strokeWidth={1.7} /> : null}
               {source === "footage" ? <Film className="h-3.5 w-3.5" strokeWidth={1.7} /> : null}
               {source === "sound-effects" ? <Volume2 className="h-3.5 w-3.5" strokeWidth={1.7} /> : null}
             </span>
-            {label}
+            <span
+              role="tooltip"
+              className="pointer-events-none absolute left-1/2 top-[calc(100%+8px)] z-50 w-max -translate-x-1/2 translate-y-[-2px] border border-white/15 bg-[#17140f] px-2.5 py-1.5 text-[10px] font-medium text-neutral-100 opacity-0 shadow-xl transition duration-150 group-hover:translate-y-0 group-hover:opacity-100 group-focus-visible:translate-y-0 group-focus-visible:opacity-100"
+            >
+              {label}
+            </span>
             {activeSource === source ? (
               <span
                 aria-hidden="true"

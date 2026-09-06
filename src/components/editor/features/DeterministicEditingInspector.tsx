@@ -10,10 +10,10 @@ import type { AudioItemRef } from "@/lib/editor/audio-ducking";
 import { CaptionInspector } from "@/components/editor/inspector/CaptionInspector";
 import { LabeledControl } from "@/components/editor/controls/LabeledControl";
 
-const fieldClass = "min-h-9 w-full border border-white/15 bg-[#100e0b] px-2 py-1 text-xs text-neutral-200 outline-none focus-visible:ring-2 focus-visible:ring-[#ff4f1f] disabled:opacity-40";
-const buttonClass = `${fieldClass} text-[10px] uppercase tracking-wide hover:border-[#ff4f1f]`;
+const fieldClass = "min-h-9 w-full border border-white/20 bg-[#100e0b] px-2 py-1 text-xs text-neutral-100 outline-none disabled:opacity-40";
+const buttonClass = `${fieldClass} text-[10px] tracking-wide hover:border-[#ff4f1f]`;
 const sectionClass = "border-t border-white/10 pt-3";
-const summaryClass = "cursor-pointer text-xs font-semibold uppercase tracking-wide text-neutral-200";
+const summaryClass = "cursor-pointer text-xs font-semibold text-neutral-100";
 type Edit = (action: EditorAction) => boolean;
 const propertyLabels: Record<KeyframeProperty, string> = {
   x: "Position X (%)", y: "Position Y (%)", scale: "Source scale", rotation: "Rotation (degrees)", opacity: "Opacity (%)",
@@ -115,9 +115,16 @@ const DuckingInspector = ({ version, assetNames, onEdit }: { version: VersionTim
   const target = items.find((item) => key(item.ref) === targetKey) ?? items[0];
   const choices = items.filter((item) => key(item.ref) !== (target && key(target.ref)));
   const trigger = choices.find((item) => key(item.ref) === triggerKey) ?? choices[0];
+  if (items.length < 2) return <details className={sectionClass}>
+    <summary className={summaryClass}>Audio ducking</summary>
+    <div className="mt-3 border border-dashed border-white/15 bg-white/[0.02] p-3">
+      <p className="text-sm font-medium text-neutral-200">Add two audio sources</p>
+      <p className="mt-1 text-[11px] leading-5 text-neutral-400">Choose one soundtrack and one narration source to create a ducking rule.</p>
+    </div>
+  </details>;
   return <details className={sectionClass}>
     <summary className={summaryClass}>Audio ducking</summary>
-    <form className="mt-3 space-y-2 text-xs" onSubmit={(event) => {
+    <form className="mt-3 space-y-3 text-xs" onSubmit={(event) => {
       event.preventDefault(); if (!target || !trigger) return;
       if (onEdit({ type: "set-ducking-rule", aspect: version.aspect, rule: { id: editingRuleId ?? `duck-${nanoid(8)}`, target: target.ref, triggers: [trigger.ref, ...additionalTriggers.filter((ref) => key(ref) !== key(trigger.ref) && key(ref) !== key(target.ref))], attenuationDb, attackFrames, releaseFrames } })) { setEditingRuleId(null); setAdditionalTriggers([]); }
     }}>

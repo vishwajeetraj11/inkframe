@@ -1,7 +1,7 @@
 "use client";
 
 import { useRef } from "react";
-import { Film, ImageIcon, Music2 } from "lucide-react";
+import { Film, ImageIcon, Music2, Upload } from "lucide-react";
 import type { AssetKind, AssetRef } from "@/lib/editor/types";
 
 // Elah's public drag contract. Kept local so this light source-rail component
@@ -74,28 +74,30 @@ export const MediaLibrary = ({
       <button
         type="button"
         disabled={disabled}
+        aria-label="Add media"
+        title="Choose a video, image, or audio file"
         onClick={() => inputRef.current?.click()}
         className="group flex min-h-20 w-full items-center gap-3 border border-dashed border-white/20 bg-white/[0.025] p-3 text-left outline-none transition hover:border-cyan-300/70 hover:bg-cyan-300/[0.04] focus-visible:ring-2 focus-visible:ring-cyan-300 disabled:cursor-not-allowed disabled:opacity-50"
       >
-        <span className="min-w-0 flex-1">
-          <span className="app-title block text-sm font-semibold uppercase text-neutral-50">
-            Import footage
-          </span>
-          <span className="mt-0.5 block text-[10px] leading-4 text-neutral-300">
-            Video, stills, or audio stay local.
-          </span>
-        </span>
         <span
           aria-hidden="true"
-          className="inline-flex h-11 w-11 shrink-0 items-center justify-center border border-white/15 text-lg text-cyan-300 transition group-hover:border-cyan-300"
+          className="inline-flex h-10 w-10 shrink-0 items-center justify-center border border-white/15 text-cyan-300 transition group-hover:border-cyan-300"
         >
-          +
+          <Upload className="h-4 w-4" strokeWidth={1.8} />
+        </span>
+        <span className="min-w-0 flex-1">
+          <span className="app-title block text-sm font-semibold text-neutral-50">
+            Add media
+          </span>
+          <span className="mt-0.5 block text-[10px] leading-4 text-neutral-300">
+            Upload a video, image, or audio file.
+          </span>
         </span>
       </button>
 
       <div className="mt-4">
         <div className="flex items-center justify-between border-b border-white/10 pb-2">
-          <h3 className="app-eyebrow text-[9px] font-semibold uppercase tracking-[0.16em] text-neutral-300">
+          <h3 className="app-eyebrow text-[9px] font-semibold text-neutral-300">
             Project media
           </h3>
           <span className="app-data text-[9px] text-neutral-400">{assets.length}</span>
@@ -133,7 +135,7 @@ export const MediaLibrary = ({
                 </span>
                 <div className="min-w-0 flex-1">
                   <p className="truncate text-xs font-medium text-neutral-100">{asset.name}</p>
-                  <p className="app-data mt-1 text-[9px] uppercase tracking-[0.08em] text-neutral-400">
+                  <p className="app-data mt-1 text-[9px] tracking-[0.08em] text-neutral-400">
                     {kindLabel[asset.kind]} · {asset.attribution ? providerLabel[asset.attribution.provider] : asset.externalUrl ? "Built-in" : bytesToLabel(asset.size)}
                   </p>
                   {asset.attribution ? (

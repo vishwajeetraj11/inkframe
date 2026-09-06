@@ -3,7 +3,7 @@
 import { AudioInspector } from "@/components/editor/inspector/AudioInspector";
 import { ClipInspector } from "@/components/editor/inspector/ClipInspector";
 import { TextOverlayInspector } from "@/components/editor/inspector/TextOverlayInspector";
-import type { AudioTrack, Clip, TextOverlay, EditorTrack } from "@/lib/editor/types";
+import type { AudioTrack, Clip, TextOverlay, EditorTrack, AspectPreset } from "@/lib/editor/types";
 
 interface InspectorProps {
   captionSelected?: boolean;
@@ -11,6 +11,8 @@ interface InspectorProps {
   textOverlay: TextOverlay | null;
   audioTrack: AudioTrack | null;
   assetNames?: Record<string, string>;
+  sourceDimensions?: { width: number; height: number };
+  targetAspect?: AspectPreset;
   disabled?: boolean;
   tracks?: readonly EditorTrack[];
   onPlaceClip?: (clipId: string, trackId: string, startFrame: number) => void;
@@ -28,6 +30,8 @@ export const Inspector = ({
   textOverlay,
   audioTrack,
   assetNames = {},
+  sourceDimensions,
+  targetAspect,
   disabled,
   tracks,
   onPlaceClip,
@@ -43,17 +47,12 @@ export const Inspector = ({
   return (
     <section className="space-y-3 bg-[#15120e] p-3">
       <div className="flex items-center justify-between gap-3 border-b border-white/10 pb-2">
-        <div>
-          <p className="app-eyebrow text-[9px] uppercase tracking-[0.18em] text-neutral-400">
-            Properties
-          </p>
-          <h2 className="app-title text-sm font-semibold uppercase text-neutral-50">
-            Inspector
-          </h2>
-        </div>
+        <h2 className="app-title text-sm font-semibold text-neutral-50">
+          Inspector
+        </h2>
 
         {activeKind ? (
-          <span className="app-data border border-white/10 px-2 py-1 text-[9px] uppercase tracking-[0.08em] text-neutral-300">
+          <span className="app-data border border-white/10 px-2 py-1 text-[9px] tracking-[0.08em] text-neutral-300">
             {activeKind}
           </span>
         ) : null}
@@ -61,7 +60,7 @@ export const Inspector = ({
 
       {!clip && !textOverlay && !audioTrack && !captionSelected ? (
         <div className="border border-dashed border-white/15 bg-white/[0.02] px-3 py-4">
-          <p className="app-title text-sm font-semibold uppercase text-neutral-100">
+          <p className="app-title text-sm font-semibold text-neutral-100">
             Nothing selected
           </p>
           <p className="mt-1 text-xs leading-5 text-neutral-400">
@@ -73,6 +72,8 @@ export const Inspector = ({
       {clip ? (
         <ClipInspector
           clip={clip}
+          sourceDimensions={sourceDimensions}
+          targetAspect={targetAspect}
           disabled={disabled}
           tracks={tracks}
           onPlaceClip={onPlaceClip}

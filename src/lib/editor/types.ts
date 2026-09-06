@@ -286,11 +286,23 @@ export interface VersionMap {
   widescreen_16_9: VersionTimeline;
 }
 
+export interface ProjectCutdown {
+  id: string;
+  name: string;
+  sourceAspect: AspectPreset;
+  durationFrames: number;
+  timeline: VersionTimeline;
+}
+
 export interface ProjectSession {
   /** Project content format; independent of the IndexedDB storage layout. */
   contentVersion?: 1;
   activeVersion: AspectPreset;
+  /** Selected derived version. Omitted for the full-duration aspect master. */
+  activeCutdownId?: string;
   versions: VersionMap;
+  /** Derived edits retained alongside the two full-duration masters. */
+  cutdowns?: ProjectCutdown[];
 }
 
 export interface ExportProject extends ProjectSession {

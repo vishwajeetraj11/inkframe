@@ -46,7 +46,7 @@ export const MobileWorkspaceNav = ({
           }`}
         >
           <Icon aria-hidden="true" size={16} strokeWidth={1.8} />
-          <span className="app-eyebrow truncate text-[8px] font-semibold uppercase tracking-[0.1em]">
+          <span className="app-eyebrow truncate text-[8px] font-semibold">
             {panel.label}
           </span>
           {active ? (

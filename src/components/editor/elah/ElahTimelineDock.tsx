@@ -81,7 +81,7 @@ export const ElahTimelineDock = ({
       <div className="flex min-h-11 items-center overflow-visible border-b border-white/10 sm:pl-3 xl:min-h-10">
         <div className="hidden items-center gap-2 sm:flex">
           <span className="h-2 w-2 bg-cyan-300" />
-          <span className="app-eyebrow text-[9px] uppercase tracking-[0.16em] text-neutral-300">
+          <span className="app-eyebrow text-[9px] text-neutral-300">
             Elah interactive timeline
           </span>
         </div>
