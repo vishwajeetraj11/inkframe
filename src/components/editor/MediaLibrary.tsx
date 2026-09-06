@@ -123,10 +123,13 @@ export const MediaLibrary = ({
                 className="group flex min-h-12 cursor-grab items-center gap-2 py-1.5 active:cursor-grabbing"
               >
                 <span
-                  aria-hidden="true"
+                  aria-label={`${kindLabel[asset.kind]} media`}
+                  title={kindLabel[asset.kind]}
                   className="app-data inline-flex h-9 w-9 shrink-0 items-center justify-center bg-white/[0.06] text-[10px] font-semibold text-neutral-200"
                 >
-                  {asset.kind.slice(0, 3).toUpperCase()}
+                  {asset.kind === "video" ? <Film aria-hidden="true" className="h-4 w-4" strokeWidth={1.8} /> : null}
+                  {asset.kind === "image" ? <ImageIcon aria-hidden="true" className="h-4 w-4" strokeWidth={1.8} /> : null}
+                  {asset.kind === "audio" ? <Music2 aria-hidden="true" className="h-4 w-4" strokeWidth={1.8} /> : null}
                 </span>
                 <div className="min-w-0 flex-1">
                   <p className="truncate text-xs font-medium text-neutral-100">{asset.name}</p>

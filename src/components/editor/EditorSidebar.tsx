@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { Film, FolderOpen, Volume2 } from "lucide-react";
 import type { AspectPreset, AssetKind, AssetRef } from "@/lib/editor/types";
 import { MediaLibrary } from "@/components/editor/MediaLibrary";
 import { StockAudioPanel } from "@/components/editor/stock/StockAudioPanel";
@@ -53,10 +54,10 @@ export const EditorSidebar = ({
     >
       <div className="flex items-center justify-between border-b border-white/10 px-3 py-2">
         <div>
-          <p className="app-eyebrow text-[9px] uppercase tracking-[0.18em] text-neutral-400">
+          <p className="app-eyebrow text-[9px] tracking-[0.18em] text-neutral-400">
             Source rail
           </p>
-          <h2 className="app-title text-sm font-semibold uppercase text-neutral-50">
+          <h2 className="app-title text-sm font-semibold text-neutral-50">
             Build the cut
           </h2>
         </div>
@@ -65,9 +66,9 @@ export const EditorSidebar = ({
 
       <div className="grid grid-cols-3 border-b border-white/10" role="tablist" aria-label="Media source">
         {([
-          ["project", "Project"],
-          ["footage", "Footage"],
-          ["sound-effects", "Sound FX"],
+          ["project", "Project", FolderOpen],
+          ["footage", "Footage", Film],
+          ["sound-effects", "Sound effects", Volume2],
         ] as const).map(([source, label]) => (
           <button
             key={source}
@@ -75,12 +76,17 @@ export const EditorSidebar = ({
             role="tab"
             aria-selected={activeSource === source}
             onClick={() => setActiveSource(source)}
-            className={`relative h-11 border-r border-white/10 text-[8px] font-semibold uppercase tracking-[0.1em] outline-none transition last:border-r-0 focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[#ff4f1f] xl:h-10 ${
+            className={`relative flex h-11 items-center justify-center gap-1 border-r border-white/10 px-1 text-[7px] font-semibold tracking-[0.02em] whitespace-nowrap outline-none transition last:border-r-0 focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[#ff4f1f] xl:h-10 ${
               activeSource === source
                 ? "text-[#f2ede3]"
                 : "text-neutral-500 hover:bg-white/[0.025] hover:text-neutral-200"
             }`}
           >
+            <span aria-hidden="true">
+              {source === "project" ? <FolderOpen className="h-3.5 w-3.5" strokeWidth={1.7} /> : null}
+              {source === "footage" ? <Film className="h-3.5 w-3.5" strokeWidth={1.7} /> : null}
+              {source === "sound-effects" ? <Volume2 className="h-3.5 w-3.5" strokeWidth={1.7} /> : null}
+            </span>
             {label}
             {activeSource === source ? (
               <span
