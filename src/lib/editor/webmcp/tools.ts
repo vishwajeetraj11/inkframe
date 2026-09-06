@@ -533,9 +533,7 @@ const getAttributionReport = (
       ? "Pexels"
       : attribution.provider === "freesound"
         ? "Freesound"
-        : attribution.provider === "jamendo"
-          ? "Jamendo"
-          : "Mixkit";
+        : "Mixkit";
     return [{
       assetId: scrub(asset.assetId, 128),
       assetName: scrub(asset.name, 160),

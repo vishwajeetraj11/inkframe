@@ -195,7 +195,7 @@ const assetRefSchema = z.object({
   externalUrl: z.string().url().optional(),
   attribution: z
     .object({
-      provider: z.enum(["pexels", "mixkit", "jamendo", "freesound"]),
+      provider: z.enum(["pexels", "mixkit", "freesound"]),
       sourceUrl: z.string().url(),
       creatorName: z.string().min(1).max(160),
       creatorUrl: z.string().url(),

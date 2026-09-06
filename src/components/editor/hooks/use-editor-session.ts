@@ -987,10 +987,13 @@ export const useEditorSession = () => {
           size: file.size,
           file,
           objectUrl,
-          ...(input.sourceUrl
+        ...(input.sourceUrl
             ? {
                 attribution: {
-                  provider: input.provider ?? ("mixkit" as const),
+                  // Legacy callers may still identify Jamendo audio, but the
+                  // editor's supported attribution providers are Mixkit and
+                  // Freesound. Normalize the retired provider at the boundary.
+                  provider: input.provider === "freesound" ? "freesound" : "mixkit",
                   sourceUrl: input.sourceUrl,
                   creatorName: input.creatorName ?? "Audio creator",
                   creatorUrl: input.creatorUrl ?? input.sourceUrl,
