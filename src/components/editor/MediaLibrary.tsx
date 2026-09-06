@@ -44,6 +44,7 @@ const providerLabel: Record<
 > = {
   pexels: "Pexels",
   mixkit: "Mixkit",
+  jamendo: "Jamendo",
   freesound: "Freesound",
 };
 
