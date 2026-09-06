@@ -1,6 +1,7 @@
 "use client";
 
 import { useRef } from "react";
+import { Film, ImageIcon, Music2 } from "lucide-react";
 import type { AssetKind, AssetRef } from "@/lib/editor/types";
 
 // Elah's public drag contract. Kept local so this light source-rail component
@@ -43,7 +44,6 @@ const providerLabel: Record<
 > = {
   pexels: "Pexels",
   mixkit: "Mixkit",
-  jamendo: "Jamendo",
   freesound: "Freesound",
 };
 
