@@ -121,7 +121,7 @@ export interface AssetRef {
   size: number;
   externalUrl?: string;
   attribution?: {
-    provider: "pexels" | "mixkit" | "jamendo" | "freesound";
+    provider: "pexels" | "mixkit" | "freesound";
     sourceUrl: string;
     creatorName: string;
     creatorUrl: string;
