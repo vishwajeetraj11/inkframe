@@ -18,6 +18,40 @@ active page.
 
 ## Editor tools
 
+### Cut uploaded videos to music
+
+Upload 1–30 video files and one audio file, then ask the browser agent to make a
+montage (up to 60 seconds). Example: “Use these videos and this song to make a
+30-second montage. Choose the strongest moments and cut to the rhythm.”
+
+1. `editor_list_assets` identifies the uploaded media and duration metadata.
+2. `editor_inspect_video_moments` returns six timestamped source frames per video
+   as a contact-sheet JPEG. The calling agent reviews these images, chooses the
+   video order, and supplies `preferredStartSeconds` for each video.
+3. `editor_plan_beat_montage` analyzes a selected music window and returns a
+   read-only timing preview: beat estimates, source trims, proposed shots,
+   warnings, a plan ID and revision. Options include `durationSeconds`,
+   `musicStartSeconds`, `minShotSeconds`, `maxShotSeconds`, and `preserveText`.
+4. `editor_apply_beat_montage` applies that exact plan with `planId`, `aspect`,
+   `expectedRevision`, `operationId`, and `confirmed: true`. Play the timeline
+   to assess the edit, or restore it with one `editor_undo`.
+
+Plans expire after 30 minutes and become stale when the project or media changes.
+Applying replaces the aspect master's footage, music, transitions and captions;
+video audio is muted. Text is preserved by default, retaining its lanes and
+timing but clipped to the new duration. Select an aspect master first if a
+cutdown is active. Repeated operation IDs are retry-safe.
+
+The first version estimates energy onsets, not musical downbeats. It reports low
+confidence and uses duration-based cuts when no suitable beats are found. Videos
+cycle in the supplied order if the edit needs more footage. Contact sheets are
+sparse visual evidence, not full motion analysis: the calling agent makes content
+choices and should not claim it watched every frame. The plan is a timing preview;
+rendered playback is available after applying. Audio analysis stays in the browser
+and accepts files up to 32 MB. Cross-origin media must allow browser access.
+
+### Tool catalog
+
 Discovery and inspection:
 
 - `editor_get_capabilities`

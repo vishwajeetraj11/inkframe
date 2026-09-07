@@ -1,4 +1,7 @@
 import { z } from "zod";
+import { createBeatMontageTools } from "./beat-tools";
+import type { analyzeMusicUrl } from "./beat-audio-browser";
+import type { sampleVideoMoments } from "./beat-video-browser";
 import {
   getWebMCPExecuteSignal,
   type WebMcpTool,
@@ -347,6 +350,8 @@ export interface EditorWebMcpCallbackResult {
 }
 
 export interface EditorWebMcpToolContext {
+  analyzeMusic?: (assetId: string, options: { startSeconds: number; durationSeconds: number }, signal: AbortSignal) => ReturnType<typeof analyzeMusicUrl>;
+  sampleVideoMoments?: (assetId: string, durationSeconds: number, signal: AbortSignal) => ReturnType<typeof sampleVideoMoments>;
   /** Always return the current state; do not pass a render-time snapshot. */
   getState: () => EditorHistoryState;
   /** Resolve the currently selected master or cutdown for delivery operations. */
@@ -902,6 +907,7 @@ export const createEditorWebMcpTools = (context: EditorWebMcpToolContext): WebMc
     if (!exists) throw new Error(`${itemType} not found`);
   };
   return [
+    ...createBeatMontageTools(context, command),
     defineTool({ name: "editor_set_clip_keyframes", title: "Set clip keyframes", description: "Replace clip-local animation channels. Frame controls include the exclusive end boundary; interpolation is linear or hold.", schema: keyframesInput, readOnly: false, execute: (input) => command(input, { type: "set-clip-keyframes", aspect: input.aspect, clipId: input.clipId, keyframes: input.keyframes }) }),
     defineTool({ name: "editor_upsert_caption_cues", title: "Set caption cues", description: "Atomically add or update caption cues by ID on existing caption lanes. Same-lane overlap is invalid.", schema: captionCuesInput, readOnly: false, execute: (input) => command(input, { type: "upsert-caption-cues", aspect: input.aspect, cues: input.cues }) }),
     defineTool({ name: "editor_import_captions", title: "Import captions", description: "Import plain SRT/WebVTT atomically. Starts round down and ends round up to frames; unsupported styling and collisions are errors.", schema: captionsImportInput, readOnly: false, execute: (input) => command(input, () => {
@@ -962,6 +968,11 @@ export const createEditorWebMcpTools = (context: EditorWebMcpToolContext): WebMc
         recommendedStart: "Use editor_plan_storyboard after importing or listing visual assets.",
         workflows: [
           {
+            id: "cut-to-music",
+            label: "Choose video moments and cut to uploaded music",
+            steps: ["editor_list_assets", "editor_inspect_video_moments", "editor_plan_beat_montage", "editor_apply_beat_montage", "editor_capture_contact_sheet", "editor_validate_project"],
+          },
+          {
             id: "create-review-export",
             label: "Create, review, and export a video",
             steps: [
@@ -995,6 +1006,7 @@ export const createEditorWebMcpTools = (context: EditorWebMcpToolContext): WebMc
           },
         ],
         toolGroups: {
+          beatMontage: ["editor_inspect_video_moments", "editor_plan_beat_montage", "editor_apply_beat_montage"],
           discover: ["editor_get_capabilities", "editor_get_state_summary", "editor_list_assets"],
           compose: ["editor_plan_storyboard", "editor_compose_storyboard", "editor_create_variant", "editor_apply_variant"],
           inspect: ["editor_validate_project", "editor_get_render_diagnostics", "editor_capture_frame", "editor_capture_contact_sheet", "editor_get_attribution_report"],

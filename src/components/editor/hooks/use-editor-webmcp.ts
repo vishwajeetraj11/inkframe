@@ -100,6 +100,20 @@ const createTools: WebMcpToolFactory<EditorWebMcpBridge> = (getCurrent) =>
     getState: () => getCurrent().history,
     getActiveVersion: () => getActiveTimeline(getCurrent().history.present),
     getAssets: () => getCurrent().assets,
+    analyzeMusic: async (assetId, options, signal) => {
+      const current = getCurrent();
+      const url = current.assetSources?.[assetId] ?? current.assets.find((asset) => asset.assetId === assetId)?.externalUrl;
+      if (!url) throw new Error("Music source unavailable; reimport the audio file");
+      const { analyzeMusicUrl } = await import("@/lib/editor/webmcp/beat-audio-browser");
+      return analyzeMusicUrl(url, { ...options, signal });
+    },
+    sampleVideoMoments: async (assetId, durationSeconds, signal) => {
+      const current = getCurrent();
+      const url = current.assetSources?.[assetId] ?? current.assets.find((asset) => asset.assetId === assetId)?.externalUrl;
+      if (!url) throw new Error("Video source unavailable; reimport the video file");
+      const { sampleVideoMoments } = await import("@/lib/editor/webmcp/beat-video-browser");
+      return sampleVideoMoments(url, { durationSeconds, signal });
+    },
     dispatch: (action) => flushSync(() => getCurrent().dispatch(action)),
     dispatchCommand: (action) => flushSync(() => getCurrent().dispatch(action)),
     undo: () => flushSync(() => getCurrent().undo()),

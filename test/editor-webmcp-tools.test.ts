@@ -128,6 +128,9 @@ describe("editor WebMCP tools", () => {
   it("exposes the safe initial catalog", () => {
     const { tools } = setup();
     expect(tools.map((tool) => tool.name)).toEqual([
+      "editor_inspect_video_moments",
+      "editor_plan_beat_montage",
+      "editor_apply_beat_montage",
       "editor_set_clip_keyframes",
       "editor_upsert_caption_cues",
       "editor_import_captions",
@@ -247,7 +250,7 @@ describe("editor WebMCP tools", () => {
       "editor_set_clip_keyframes", "editor_upsert_caption_cues", "editor_import_captions",
       "editor_set_audio_ducking", "editor_remove_audio_ducking", "editor_freeze_clip_range", "editor_set_clip_speed_ramp",
     ]));
-    expect(guide.workflows[0].steps).toEqual(
+    expect(guide.workflows.find((workflow: { id: string }) => workflow.id === "create-review-export").steps).toEqual(
       expect.arrayContaining([
         "editor_plan_storyboard",
         "editor_capture_contact_sheet",
