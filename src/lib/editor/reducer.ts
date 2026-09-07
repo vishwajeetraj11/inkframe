@@ -89,6 +89,28 @@ export type EditorAction =
     }
   | { type: "remove-audio-track"; aspect: AspectPreset; trackId: string };
 
+/** Shared by direct mutations and command preflight; omitted grades stay optional. */
+export const validateVideoFilterGrades = (version: VersionTimeline) => {
+  const issues: { code: "INVALID_VALUE"; entityId: string; message: string }[] = [];
+  for (const clip of version.clips) {
+    if (!clip.videoFilter) continue;
+    const filter = clip.videoFilter as unknown as Record<string, unknown>;
+    for (const [field, limit] of [
+      ["exposure", 2], ["temperature", 1], ["tint", 1],
+      ["shadows", 1], ["highlights", 1],
+    ] as const) {
+      const value = filter[field];
+      if (value !== undefined && (typeof value !== "number" || !Number.isFinite(value) || value < -limit || value > limit)) {
+        issues.push({ code: "INVALID_VALUE", entityId: clip.id, message: `${field} must be finite and between ${-limit} and ${limit}.` });
+      }
+    }
+    if (filter.toneCurve !== undefined && filter.toneCurve !== "linear" && filter.toneCurve !== "filmic") {
+      issues.push({ code: "INVALID_VALUE", entityId: clip.id, message: "toneCurve must be linear or filmic." });
+    }
+  }
+  return issues;
+};
+
 const withUpdatedVersion = (
   state: ProjectSession,
   aspect: AspectPreset,
@@ -100,6 +122,7 @@ const withUpdatedVersion = (
   const currentVersion = activeCutdown?.timeline ?? state.versions[aspect];
   const mutated = mutate(currentVersion);
   if (mutated === currentVersion || JSON.stringify(mutated) === JSON.stringify(currentVersion)) return state;
+  if (validateVideoFilterGrades(mutated).length > 0) return state;
   const sanitized = sanitizeVersion(mutated);
 
   if (!sanitized) {

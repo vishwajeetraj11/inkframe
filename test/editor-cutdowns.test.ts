@@ -12,7 +12,7 @@ const source = () => ({
     transform: { x: 0.1, y: -0.2, scale: 1.8, rotation: 0, anchor: { x: 0.7, y: 0.3 } },
     keyframes: { x: [{ id: "start", frame: 0, value: 0, interpolation: "linear" as const }, { id: "late", frame: 800, value: 1, interpolation: "linear" as const }] },
   }],
-  textOverlays: [{ id: "title", text: "Title", startFrame: 300, endFrame: 700, x: 50, y: 50, fontSize: 64, color: "#fff", fontFamily: "sans" as const, fontWeight: 700, fontStyle: "normal" as const, stylePreset: "classic" as const, createdaleyTexture: "plain" as const }],
+  textOverlays: [{ id: "title", text: "Title", startFrame: 300, endFrame: 700, x: 50, y: 50, fontSize: 64, color: "#fff", fontFamily: "sans" as const, fontWeight: 700, fontStyle: "normal" as const, stylePreset: "classic" as const }],
 });
 
 describe("project cutdowns", () => {

@@ -1,4 +1,5 @@
 import type { VideoFilter, VideoFilterPreset } from "./types";
+import { legacyVideoFilterToCss, NEUTRAL_COLOR_GRADE } from "./color-grading";
 
 export const VIDEO_FILTER_PRESETS: Record<VideoFilterPreset, VideoFilter> = {
   none: { preset: "none", brightness: 1, contrast: 1, saturation: 1, sepia: 0, grayscale: 0, hueRotate: 0 },
@@ -10,17 +11,11 @@ export const VIDEO_FILTER_PRESETS: Record<VideoFilterPreset, VideoFilter> = {
 };
 
 export const cloneVideoFilterPreset = (preset: VideoFilterPreset): VideoFilter => ({
+  ...NEUTRAL_COLOR_GRADE,
   ...VIDEO_FILTER_PRESETS[preset],
 });
 
-export const videoFilterToCss = (filter: VideoFilter | undefined): string => {
-  if (!filter || filter.preset === "none") return "none";
-  return [
-    `brightness(${filter.brightness})`,
-    `contrast(${filter.contrast})`,
-    `saturate(${filter.saturation})`,
-    `sepia(${filter.sepia})`,
-    `grayscale(${filter.grayscale})`,
-    `hue-rotate(${filter.hueRotate}deg)`,
-  ].join(" ");
-};
+/** Source-canvas legacy pass only. Never apply this to the whole preview.
+ * Follow with applyColorGradeToPixels for the additive grading controls. */
+export const videoFilterToCss = (filter: VideoFilter | undefined): string =>
+  legacyVideoFilterToCss(filter);

@@ -1,4 +1,4 @@
-import { Sparkles } from "lucide-react";
+import { Clapperboard, Sparkles, Waves, Zap } from "lucide-react";
 import { FeatureIconButton } from "./FeatureIconButton";
 
 /** Effects rendered by the same Elah resolver in preview and browser export. */
@@ -24,9 +24,9 @@ const MOTION_LABELS: Record<TextMotionEffect, string> = {
 };
 
 const TIMING_PRESETS = [
-  { label: "Snap", seconds: 0.2 },
-  { label: "Smooth", seconds: 0.4 },
-  { label: "Cinematic", seconds: 0.65 },
+  { label: "Snap", shortLabel: "0.2s", seconds: 0.2, icon: Zap },
+  { label: "Smooth", shortLabel: "0.4s", seconds: 0.4, icon: Waves },
+  { label: "Cinematic", shortLabel: "0.65s", seconds: 0.65, icon: Clapperboard },
 ] as const;
 
 export interface TextMotionInspectorValue {
@@ -133,16 +133,19 @@ export const TextMotionInspector = ({
                 <button
                   key={preset.label}
                   aria-pressed={active}
-                  className={`h-8 min-w-0 overflow-hidden border px-2 text-[11px] font-medium normal-case tracking-normal transition-colors ${
+                  aria-label={preset.label}
+                  className={`flex h-7 min-w-0 items-center justify-center gap-1.5 overflow-hidden border px-1.5 text-[10px] font-medium normal-case tracking-normal transition-colors ${
                     active
                       ? "border-[#ff4f1f] bg-[#ff4f1f] text-[#0b0907]"
                       : "border-[#f2ede3]/12 text-[#f2ede3]/55 hover:border-[#f2ede3]/35 hover:text-[#f2ede3]"
                   }`}
                   disabled={disabled}
                   onClick={() => onUpdate({ duration: preset.seconds })}
+                  title={`${preset.label} timing (${preset.seconds}s)`}
                   type="button"
                 >
-                  {preset.label}
+                  <preset.icon aria-hidden="true" size={12} strokeWidth={2} />
+                  <span className="app-data truncate">{preset.shortLabel}</span>
                 </button>
               );
             })}

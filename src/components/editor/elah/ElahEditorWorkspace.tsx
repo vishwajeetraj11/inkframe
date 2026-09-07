@@ -9,7 +9,7 @@ import {
   useState,
   type ReactNode,
 } from "react";
-import type { AssetRef, VersionTimeline } from "@/lib/editor/types";
+import type { AssetRef, VersionTimeline, VideoFilter } from "@/lib/editor/types";
 import { sanitizeVersion } from "@/lib/editor/timeline";
 import {
   fromElahProject,
@@ -20,6 +20,7 @@ import { ElahEditorProvider } from "./ElahEditorProvider";
 import { ElahMediaLibraryBridge } from "./ElahMediaLibraryBridge";
 
 interface ElahEditorWorkspaceProps {
+  colorPreview?: Readonly<Record<string, VideoFilter>> | null;
   version: VersionTimeline;
   assets: readonly AssetRef[];
   assetSources: Readonly<Record<string, string>>;
@@ -28,6 +29,7 @@ interface ElahEditorWorkspaceProps {
 }
 
 export const ElahEditorWorkspace = ({
+  colorPreview,
   version,
   assets,
   assetSources,
@@ -65,6 +67,12 @@ export const ElahEditorWorkspace = ({
   const handleProjectChange = useCallback(
     (project: ElahProject) => {
       const next = fromElahProject(project, sidecarRef.current);
+      // A temporary comparison must never enter saved history through native edits.
+      if (colorPreview) {
+        next.version.clips = next.version.clips.map((clip) => colorPreview[clip.id]
+          ? { ...clip, videoFilter: version.clips.find((original) => original.id === clip.id)?.videoFilter }
+          : clip);
+      }
       const sanitizedVersion = sanitizeVersion(next.version);
       if (!sanitizedVersion || next.rejected) {
         // A fresh accepted projection forces the native engine back to the
@@ -94,17 +102,29 @@ export const ElahEditorWorkspace = ({
       });
       onVersionChange(sanitizedVersion);
     },
-    [assetSources, assets, onVersionChange, sourceSignature],
+    [assetSources, assets, onVersionChange, sourceSignature, colorPreview, version],
   );
 
   const syncSignature = `${versionSignature}:${sourceSignature}`;
   const projectForProvider =
     elahEcho?.syncSignature === syncSignature ? elahEcho.project : projection.project;
+  const previewProject = useMemo(() => {
+    if (!colorPreview) return projectForProvider;
+    const project = structuredClone(projectForProvider);
+    for (const clips of Object.values(project.clips)) {
+      for (const clip of clips) {
+        if (colorPreview[clip.id] && (clip.type === "video" || clip.type === "image")) {
+          (clip as typeof clip & { videoFilter?: VideoFilter }).videoFilter = colorPreview[clip.id];
+        }
+      }
+    }
+    return project;
+  }, [colorPreview, projectForProvider]);
 
   return (
     <ElahEditorProvider
       className="contents"
-      project={projectForProvider}
+      project={previewProject}
       onProjectChange={handleProjectChange}
     >
       <ElahMediaLibraryBridge

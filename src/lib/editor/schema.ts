@@ -7,7 +7,6 @@ import {
 } from "./constants";
 import { getTimelineDurationInFrames, validateVersionPlacement, sanitizeTransitions } from "./timeline";
 import {
-  CREATEDALEY_OPENER_TEXTURES,
   EDITOR_TRACK_KINDS,
   TEXT_OVERLAY_FONT_FAMILIES,
   TEXT_OVERLAY_FONT_STYLES,
@@ -37,7 +36,7 @@ const speedPointSchema=z.object({frame:z.number().int().min(0).max(MAX_DURATION_
 const timeMappingSchema=z.discriminatedUnion("kind",[
  z.object({kind:z.literal("normal")}).strict(),z.object({kind:z.literal("hold"),sourceTimeUs:z.number().nonnegative().finite().max(Number.MAX_SAFE_INTEGER)}).strict(),
  z.object({kind:z.literal("speed"),points:z.array(speedPointSchema).min(1),sourceStartTimeUs:z.number().nonnegative().finite().max(Number.MAX_SAFE_INTEGER).optional()}).strict()]);
-const videoFilterSchema = z.object({
+export const videoFilterSchema = z.object({
   preset: z.enum(["none", "cinematic", "warm", "cool", "vintage", "mono", "custom"]),
   brightness: z.number().min(0.5).max(1.5),
   contrast: z.number().min(0.5).max(1.5),
@@ -45,6 +44,12 @@ const videoFilterSchema = z.object({
   sepia: z.number().min(0).max(1),
   grayscale: z.number().min(0).max(1),
   hueRotate: z.number().min(-30).max(30),
+  exposure: z.number().finite().min(-2).max(2).optional(),
+  temperature: z.number().finite().min(-1).max(1).optional(),
+  tint: z.number().finite().min(-1).max(1).optional(),
+  shadows: z.number().finite().min(-1).max(1).optional(),
+  highlights: z.number().finite().min(-1).max(1).optional(),
+  toneCurve: z.enum(["linear", "filmic"]).optional(),
 }).strict();
 const captionCueSchema=z.object({id:z.string().min(1),trackId:z.string().min(1),startFrame:z.number().int().min(0),endFrame:z.number().int().min(1),text:z.string().min(1)});
 const audioRefSchema=z.object({kind:z.enum(["audio","video"]),id:z.string().min(1)});
@@ -104,7 +109,6 @@ const textOverlaySchema = z
     fontStyle: z.enum(TEXT_OVERLAY_FONT_STYLES).default("normal"),
     textAlign: z.enum(["left", "center", "right"]).default("center"),
     stylePreset: z.enum(TEXT_OVERLAY_STYLE_PRESETS).default("classic"),
-    createdaleyTexture: z.enum(CREATEDALEY_OPENER_TEXTURES).default("plain"),
     contrast: z.literal("outline").optional(),
     animation: z
       .object({
@@ -117,7 +121,6 @@ const textOverlaySchema = z
         durationFrames: z.number().int().min(0).max(MAX_DURATION_FRAMES),
       })
       .optional(),
-    syncMediaToTimelineEvents: z.boolean().default(false),
   })
   .superRefine((overlay, context) => {
     if (overlay.endFrame <= overlay.startFrame) {

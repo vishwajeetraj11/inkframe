@@ -2,46 +2,12 @@ import { InspectorCard } from "@/components/editor/controls/InspectorCard";
 import { LabeledControl } from "@/components/editor/controls/LabeledControl";
 import { TextMotionInspector } from "@/components/editor/features/TextMotionInspector";
 import { FPS } from "@/lib/editor/constants";
-import { STYLE_PRESET_SEQUENCE } from "@/components/editor/hooks/editor-session-config";
-import { hasCustomInspector } from "@/lib/editor/domain/preset-guards";
 import type {
   TextOverlay,
   TextOverlayAnimationKind,
 } from "@/lib/editor/types";
-import {
-  isChartCardStylePreset,
-  isVoxTimelineStylePreset,
-  TEXT_OVERLAY_FONT_FAMILIES,
-  TEXT_OVERLAY_FONT_STYLES,
-  TEXT_OVERLAY_STYLE_PRESET_LABELS,
-} from "@/lib/editor/types";
-import { ChartCardInspector } from "./preset-inspectors/ChartCardInspector";
-import { CreatedaleyOpenerInspector } from "./preset-inspectors/CreatedaleyOpenerInspector";
-import { EditorialStatRingInspector } from "./preset-inspectors/EditorialStatRingInspector";
-import { FilmFrameGalleryInspector } from "./preset-inspectors/FilmFrameGalleryInspector";
-import { RegionalMapFocusInspector } from "./preset-inspectors/RegionalMapFocusInspector";
-import { VoxTimelineInspector } from "./preset-inspectors/VoxTimelineInspector";
-import { WorldMapFocusInspector } from "./preset-inspectors/WorldMapFocusInspector";
-import {
-  buildChartCardText,
-  buildCreatedaleyOpenerText,
-  buildEditorialStatRingText,
-  buildFilmFrameGalleryText,
-  buildRegionalMapFocusText,
-  buildVoxTimelineText,
-  buildWorldMapFocusText,
-  getEditableChartCardData,
-  getEditableCreatedaleyOpenerData,
-  getEditableEditorialStatRingData,
-  getEditableFilmFrameGalleryData,
-  getEditableRegionalMapFocusData,
-  getEditableVoxTimelineData,
-  getEditableWorldMapFocusData,
-  getOptionalWorldMapCountryName,
-  getSelectedWorldMapCountryName,
-  getWorldMapCountryOptions,
-  parseNumber,
-} from "./utils";
+import { TEXT_OVERLAY_FONT_FAMILIES, TEXT_OVERLAY_FONT_STYLES } from "@/lib/editor/types";
+import { parseNumber } from "./utils";
 
 const INSPECTOR_INPUT_CLASS =
   "min-h-9 w-full rounded-lg border border-white/10 bg-neutral-950/70 px-2.5 py-1.5 text-xs text-neutral-100 outline-none transition focus:border-cyan-300/35 focus:ring-2 focus:ring-cyan-300/12";
@@ -49,35 +15,49 @@ const INSPECTOR_COLOR_INPUT_CLASS =
   "h-9 w-full rounded-lg border border-white/10 bg-neutral-950/70 p-1 outline-none transition focus:border-cyan-300/35 focus:ring-2 focus:ring-cyan-300/12";
 
 const TEXT_SIZE_PRESETS = [
-  { label: "Caption", size: 32 },
-  { label: "Body", size: 48 },
-  { label: "Title", size: 64 },
-  { label: "Hero", size: 88 },
+  { label: "Caption", previewSize: "0.75rem", size: 32 },
+  { label: "Body", previewSize: "0.875rem", size: 48 },
+  { label: "Title", previewSize: "1rem", size: 64 },
+  { label: "Hero", previewSize: "1.25rem", size: 88 },
 ] as const;
 
-/**
- * Factory for creating preset-specific update handlers
- * Reduces boilerplate for handlers that follow the same pattern:
- * - Check if data exists
- * - Apply updater function to data
- * - Build text from updated data
- * - Call onUpdateText with new text
- */
-const createPresetUpdateHandler =
-  <TData,>(
-    data: TData | null,
-    builder: (data: TData) => string,
-    onUpdateText: (overlayId: string, patch: Partial<Omit<TextOverlay, "id">>) => void,
-    overlayId: string,
-  ) =>
-  (updater: (current: TData) => TData) => {
-    if (!data) {
-      return;
-    }
-    onUpdateText(overlayId, {
-      text: builder(updater(data)),
-    });
-  };
+const TEXT_OVERLAY_FONT_OPTIONS: Record<
+  TextOverlay["fontFamily"],
+  { label: string; stack: string }
+> = {
+  sans: {
+    label: "Condensed Sans",
+    stack: 'var(--font-condensed), "Barlow Condensed", "Arial Narrow", sans-serif',
+  },
+  modern: {
+    label: "Modern Sans",
+    stack: 'var(--font-modern), "Sora", "Trebuchet MS", sans-serif',
+  },
+  serif: {
+    label: "Editorial Serif",
+    stack: 'var(--font-cormorant-garamond), "Cormorant Garamond", Georgia, serif',
+  },
+  cursive: {
+    label: "Handwritten",
+    stack: 'var(--font-cormorant-garamond), "Cormorant Garamond", Georgia, cursive',
+  },
+  mono: {
+    label: "Mono",
+    stack: 'var(--font-mono), "IBM Plex Mono", "SFMono-Regular", monospace',
+  },
+  display: {
+    label: "Display",
+    stack: 'var(--font-display), "Barlow Condensed", "Arial Narrow", sans-serif',
+  },
+  editorial: {
+    label: "Editorial Serif",
+    stack: 'var(--font-serif), "Source Serif 4", Georgia, serif',
+  },
+  rounded: {
+    label: "Rounded Sans",
+    stack: 'var(--font-sans), "Plus Jakarta Sans", "Segoe UI", sans-serif',
+  },
+};
 
 interface TextOverlayInspectorProps {
   disabled?: boolean;
@@ -85,343 +65,23 @@ interface TextOverlayInspectorProps {
   overlay: TextOverlay;
 }
 
-const renderPresetInspector = (props: {
-  createdaleyOpenerData: ReturnType<typeof getEditableCreatedaleyOpenerData> | null;
-  editorialStatRingData: ReturnType<typeof getEditableEditorialStatRingData> | null;
-  worldMapFocusData: ReturnType<typeof getEditableWorldMapFocusData> | null;
-  regionalMapFocusData: ReturnType<typeof getEditableRegionalMapFocusData> | null;
-  filmFrameGalleryData: ReturnType<typeof getEditableFilmFrameGalleryData> | null;
-  voxTimelineData: ReturnType<typeof getEditableVoxTimelineData> | null;
-  chartCardData: ReturnType<typeof getEditableChartCardData> | null;
-  overlay: TextOverlay;
-  disabled?: boolean;
-  onUpdateText: (overlayId: string, patch: Partial<Omit<TextOverlay, "id">>) => void;
-  updateCreatedaleyOpener: (updater: (current: ReturnType<typeof getEditableCreatedaleyOpenerData>) => ReturnType<typeof getEditableCreatedaleyOpenerData>) => void;
-  updateEditorialStatRing: (updater: (current: ReturnType<typeof getEditableEditorialStatRingData>) => ReturnType<typeof getEditableEditorialStatRingData>) => void;
-  updateWorldMapFocus: (updater: (current: ReturnType<typeof getEditableWorldMapFocusData>) => ReturnType<typeof getEditableWorldMapFocusData>) => void;
-  updateRegionalMapFocus: (updater: (current: ReturnType<typeof getEditableRegionalMapFocusData>) => ReturnType<typeof getEditableRegionalMapFocusData>) => void;
-  updateFilmFrameGallery: (updater: (current: ReturnType<typeof getEditableFilmFrameGalleryData>) => ReturnType<typeof getEditableFilmFrameGalleryData>) => void;
-  updateVoxTimeline: (updater: (current: ReturnType<typeof getEditableVoxTimelineData>) => ReturnType<typeof getEditableVoxTimelineData>) => void;
-  updateChartCard: (updater: (current: ReturnType<typeof getEditableChartCardData>) => ReturnType<typeof getEditableChartCardData>) => void;
-  selectedCountryName?: string;
-  countryOptions: string[];
-  selectedRegionalPrimaryCountryName?: string;
-  selectedRegionalSecondaryCountryName: string;
-  regionalCountryOptions: string[];
-}) => {
-  const {
-    createdaleyOpenerData,
-    editorialStatRingData,
-    worldMapFocusData,
-    regionalMapFocusData,
-    filmFrameGalleryData,
-    voxTimelineData,
-    chartCardData,
-    overlay,
-    disabled,
-    onUpdateText,
-    updateCreatedaleyOpener,
-    updateEditorialStatRing,
-    updateWorldMapFocus,
-    updateRegionalMapFocus,
-    updateFilmFrameGallery,
-    updateVoxTimeline,
-    updateChartCard,
-    selectedCountryName,
-    countryOptions,
-    selectedRegionalPrimaryCountryName,
-    selectedRegionalSecondaryCountryName,
-    regionalCountryOptions,
-  } = props;
-
-  // Check in priority order - first match wins
-  if (createdaleyOpenerData) {
-    return (
-      <CreatedaleyOpenerInspector
-        data={createdaleyOpenerData}
-        disabled={disabled}
-        overlay={overlay}
-        onUpdateOverlay={(patch) => onUpdateText(overlay.id, patch)}
-        onUpdateText={updateCreatedaleyOpener}
-      />
-    );
-  }
-
-  if (editorialStatRingData) {
-    return (
-      <EditorialStatRingInspector
-        data={editorialStatRingData}
-        disabled={disabled}
-        overlay={overlay}
-        onUpdateOverlay={(patch) => onUpdateText(overlay.id, patch)}
-        onUpdateText={updateEditorialStatRing}
-      />
-    );
-  }
-
-  if (worldMapFocusData && selectedCountryName) {
-    return (
-      <WorldMapFocusInspector
-        countryOptions={countryOptions}
-        data={worldMapFocusData}
-        disabled={disabled}
-        selectedCountryName={selectedCountryName}
-        onUpdateText={updateWorldMapFocus}
-      />
-    );
-  }
-
-  if (regionalMapFocusData && selectedRegionalPrimaryCountryName) {
-    return (
-      <RegionalMapFocusInspector
-        countryOptions={regionalCountryOptions}
-        data={regionalMapFocusData}
-        disabled={disabled}
-        overlay={overlay}
-        primaryCountryName={selectedRegionalPrimaryCountryName}
-        secondaryCountryName={selectedRegionalSecondaryCountryName}
-        onUpdateText={updateRegionalMapFocus}
-      />
-    );
-  }
-
-  if (filmFrameGalleryData) {
-    return (
-      <FilmFrameGalleryInspector
-        data={filmFrameGalleryData}
-        disabled={disabled}
-        overlay={overlay}
-        onUpdateText={updateFilmFrameGallery}
-      />
-    );
-  }
-
-  if (voxTimelineData) {
-    return (
-      <VoxTimelineInspector
-        data={voxTimelineData}
-        disabled={disabled}
-        overlay={overlay}
-        onUpdateOverlay={(patch) => onUpdateText(overlay.id, patch)}
-        onUpdateText={updateVoxTimeline}
-      />
-    );
-  }
-
-  if (chartCardData) {
-    return (
-      <ChartCardInspector
-        data={chartCardData}
-        disabled={disabled}
-        overlay={overlay}
-        onUpdateOverlay={(patch) => onUpdateText(overlay.id, patch)}
-        onUpdateText={updateChartCard}
-      />
-    );
-  }
-
-  // Fallback: simple text editor
-  return (
-    <LabeledControl className="block space-y-1 text-xs text-neutral-200" label="Text">
-      <textarea
-        disabled={disabled}
-        value={overlay.text}
-        onChange={(event) => {
-          onUpdateText(overlay.id, {
-            text: event.currentTarget.value,
-          });
-        }}
-        className={`${INSPECTOR_INPUT_CLASS} min-h-12`}
-      />
-    </LabeledControl>
-  );
-};
-
 export const TextOverlayInspector = ({
   disabled,
   onUpdateText,
   overlay,
 }: TextOverlayInspectorProps) => {
-  const hasDedicatedInspector = hasCustomInspector(overlay.stylePreset);
-  const stylePresetOptions = Array.from(
-    new Set(
-      STYLE_PRESET_SEQUENCE.includes(overlay.stylePreset)
-        ? STYLE_PRESET_SEQUENCE
-        : [overlay.stylePreset, ...STYLE_PRESET_SEQUENCE],
-    ),
-  );
-  const chartCardData = isChartCardStylePreset(overlay.stylePreset)
-    ? getEditableChartCardData(overlay.text)
-    : null;
-  const editorialStatRingData =
-    overlay.stylePreset === "editorial-stat-ring"
-      ? getEditableEditorialStatRingData(overlay.text)
-      : null;
-  const worldMapFocusData =
-    overlay.stylePreset === "world-map-focus"
-      ? getEditableWorldMapFocusData(overlay.text)
-      : null;
-  const regionalMapFocusData =
-    overlay.stylePreset === "regional-map-focus"
-      ? getEditableRegionalMapFocusData(overlay.text)
-      : null;
-  const filmFrameGalleryData =
-    overlay.stylePreset === "film-frame-gallery"
-      ? getEditableFilmFrameGalleryData(overlay.text)
-      : null;
-  const createdaleyOpenerData =
-    overlay.stylePreset === "createdaley-opener"
-      ? getEditableCreatedaleyOpenerData(overlay.text)
-      : null;
-  const voxTimelineData =
-    isVoxTimelineStylePreset(overlay.stylePreset)
-      ? getEditableVoxTimelineData(overlay.text)
-      : null;
-
-  const updateChartCard = createPresetUpdateHandler(
-    chartCardData,
-    buildChartCardText,
-    onUpdateText,
-    overlay.id,
-  );
-
-  const updateCreatedaleyOpener = createPresetUpdateHandler(
-    createdaleyOpenerData,
-    buildCreatedaleyOpenerText,
-    onUpdateText,
-    overlay.id,
-  );
-
-  const updateEditorialStatRing = createPresetUpdateHandler(
-    editorialStatRingData,
-    buildEditorialStatRingText,
-    onUpdateText,
-    overlay.id,
-  );
-
-  const updateWorldMapFocus = createPresetUpdateHandler(
-    worldMapFocusData,
-    buildWorldMapFocusText,
-    onUpdateText,
-    overlay.id,
-  );
-
-  const updateRegionalMapFocus = createPresetUpdateHandler(
-    regionalMapFocusData,
-    buildRegionalMapFocusText,
-    onUpdateText,
-    overlay.id,
-  );
-
-  const updateFilmFrameGallery = createPresetUpdateHandler(
-    filmFrameGalleryData,
-    buildFilmFrameGalleryText,
-    onUpdateText,
-    overlay.id,
-  );
-
-  const updateVoxTimeline = createPresetUpdateHandler(
-    voxTimelineData,
-    buildVoxTimelineText,
-    onUpdateText,
-    overlay.id,
-  );
-
-  const selectedCountryName = worldMapFocusData
-    ? getSelectedWorldMapCountryName(worldMapFocusData.country)
-    : undefined;
-  const countryOptions = selectedCountryName
-    ? getWorldMapCountryOptions(selectedCountryName)
-    : [];
-  const selectedRegionalPrimaryCountryName = regionalMapFocusData
-    ? getSelectedWorldMapCountryName(regionalMapFocusData.primaryCountry)
-    : undefined;
-  const selectedRegionalSecondaryCountryName = regionalMapFocusData
-    ? getOptionalWorldMapCountryName(regionalMapFocusData.secondaryCountry)
-    : "";
-  const regionalCountryOptions = selectedRegionalPrimaryCountryName
-    ? getWorldMapCountryOptions(
-        selectedRegionalPrimaryCountryName,
-        selectedRegionalSecondaryCountryName,
-      )
-    : [];
-
   return (
     <InspectorCard title="Text Overlay">
-      {renderPresetInspector({
-        createdaleyOpenerData,
-        editorialStatRingData,
-        worldMapFocusData,
-        regionalMapFocusData,
-        filmFrameGalleryData,
-        voxTimelineData,
-        chartCardData,
-        overlay,
-        disabled,
-        onUpdateText,
-        updateCreatedaleyOpener,
-        updateEditorialStatRing,
-        updateWorldMapFocus,
-        updateRegionalMapFocus,
-        updateFilmFrameGallery,
-        updateVoxTimeline,
-        updateChartCard,
-        selectedCountryName,
-        countryOptions,
-        selectedRegionalPrimaryCountryName,
-        selectedRegionalSecondaryCountryName,
-        regionalCountryOptions,
-      })}
+      <LabeledControl className="block space-y-1 text-xs text-neutral-200" label="Text">
+        <textarea
+          disabled={disabled}
+          value={overlay.text}
+          onChange={(event) => onUpdateText(overlay.id, { text: event.currentTarget.value })}
+          className={`${INSPECTOR_INPUT_CLASS} min-h-12`}
+        />
+      </LabeledControl>
 
-      {hasDedicatedInspector ? (
-        <section className="space-y-3">
-          <div>
-            <p className="app-eyebrow text-[9px] text-neutral-500">
-              Placement
-            </p>
-            <p className="mt-1 text-[10px] text-neutral-500">
-              Fine-tune where this preset sits on the canvas.
-            </p>
-          </div>
-
-          <div className="grid grid-cols-2 gap-3 text-[11px] text-neutral-200">
-            <LabeledControl label="X (%)">
-              <input
-                type="number"
-                min={0}
-                max={100}
-                step={1}
-                disabled={disabled}
-                value={overlay.x}
-                onChange={(event) => {
-                  onUpdateText(overlay.id, {
-                    x: parseNumber(event.currentTarget.value, overlay.x),
-                  });
-                }}
-                className={INSPECTOR_INPUT_CLASS}
-              />
-            </LabeledControl>
-
-            <LabeledControl label="Y (%)">
-              <input
-                type="number"
-                min={0}
-                max={100}
-                step={1}
-                disabled={disabled}
-                value={overlay.y}
-                onChange={(event) => {
-                  onUpdateText(overlay.id, {
-                    y: parseNumber(event.currentTarget.value, overlay.y),
-                  });
-                }}
-                className={INSPECTOR_INPUT_CLASS}
-              />
-            </LabeledControl>
-          </div>
-        </section>
-      ) : (
-        <div className="editor-inspector-layout">
+      <div className="editor-inspector-layout">
           <section className="space-y-3">
             <div>
               <p className="app-eyebrow text-[9px] text-neutral-500">
@@ -506,7 +166,7 @@ export const TextOverlayInspector = ({
                 Typography
               </p>
               <p className="mt-1 text-[10px] text-neutral-500">
-                Control the family, weight, style, and active preset.
+                Control the family, weight, style, and alignment.
               </p>
             </div>
 
@@ -514,6 +174,9 @@ export const TextOverlayInspector = ({
               <LabeledControl label="Font Family">
                 <select
                   disabled={disabled}
+                  style={{
+                    fontFamily: TEXT_OVERLAY_FONT_OPTIONS[overlay.fontFamily].stack,
+                  }}
                   value={overlay.fontFamily}
                   onChange={(event) => {
                     onUpdateText(overlay.id, {
@@ -523,8 +186,12 @@ export const TextOverlayInspector = ({
                   className={INSPECTOR_INPUT_CLASS}
                 >
                   {TEXT_OVERLAY_FONT_FAMILIES.map((fontFamily) => (
-                    <option key={fontFamily} value={fontFamily}>
-                      {fontFamily}
+                    <option
+                      key={fontFamily}
+                      style={{ fontFamily: TEXT_OVERLAY_FONT_OPTIONS[fontFamily].stack }}
+                      value={fontFamily}
+                    >
+                      {TEXT_OVERLAY_FONT_OPTIONS[fontFamily].label}
                     </option>
                   ))}
                 </select>
@@ -583,38 +250,25 @@ export const TextOverlayInspector = ({
                 </select>
               </LabeledControl>
 
-              <LabeledControl label="Style Preset">
-                <select
-                  disabled={disabled}
-                  value={overlay.stylePreset}
-                  onChange={(event) => {
-                    onUpdateText(overlay.id, {
-                      stylePreset: event.currentTarget.value as TextOverlay["stylePreset"],
-                    });
-                  }}
-                  className={INSPECTOR_INPUT_CLASS}
-                >
-                  {stylePresetOptions.map((stylePreset) => (
-                    <option key={stylePreset} value={stylePreset}>
-                      {TEXT_OVERLAY_STYLE_PRESET_LABELS[stylePreset]}
-                    </option>
-                  ))}
-                </select>
-              </LabeledControl>
             </div>
 
             <div>
               <p className="app-eyebrow mb-1.5 text-[9px] text-neutral-500">
                 Type scale
               </p>
-              <div aria-label="Typography size presets" className="grid grid-cols-4 gap-1.5">
+              <div
+                aria-label="Typography size presets"
+                className="grid grid-cols-4 gap-1.5"
+                role="group"
+              >
                 {TEXT_SIZE_PRESETS.map((preset) => {
                   const active = overlay.fontSize === preset.size;
                   return (
                     <button
                       key={preset.label}
+                      aria-label={`${preset.label} size ${preset.size}`}
                       aria-pressed={active}
-                      className={`h-8 rounded-md border px-1 text-[9px] font-semibold tracking-[0.08em] transition-colors ${
+                      className={`flex h-12 flex-col items-center justify-center gap-0.5 rounded-md border px-1 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#ff4f1f]/45 ${
                         active
                           ? "border-[#ff4f1f] bg-[#ff4f1f] text-[#0b0907]"
                           : "border-white/10 bg-neutral-950/60 text-neutral-500 hover:border-white/25 hover:text-neutral-200"
@@ -623,7 +277,19 @@ export const TextOverlayInspector = ({
                       onClick={() => onUpdateText(overlay.id, { fontSize: preset.size })}
                       type="button"
                     >
-                      {preset.label}
+                      <span
+                        aria-hidden="true"
+                        className="block max-w-full truncate font-semibold leading-none"
+                        style={{ fontSize: preset.previewSize }}
+                      >
+                        Aa
+                      </span>
+                      <span className="text-[8px] font-semibold uppercase leading-none tracking-[0.08em]">
+                        {preset.label}
+                      </span>
+                      <span aria-hidden="true" className="text-[8px] leading-none opacity-70">
+                        {preset.size}px
+                      </span>
                     </button>
                   );
                 })}
@@ -633,8 +299,7 @@ export const TextOverlayInspector = ({
               </p>
             </div>
           </section>
-        </div>
-      )}
+      </div>
 
       <TextMotionInspector
         disabled={disabled}

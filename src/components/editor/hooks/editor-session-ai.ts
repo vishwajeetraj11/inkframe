@@ -5,12 +5,10 @@ import type { AspectPreset, ProjectSession, VersionTimeline } from "@/lib/editor
 import { nanoid } from "nanoid";
 import {
   fitSceneFramesToBudget,
+  DEFAULT_TEXT_OVERLAY_STYLE,
   getAdaptiveFontSize,
-  getPresetPositionFallback,
   normalizeFontWeight,
-  OVERLAY_DEFAULTS_BY_PRESET,
   secondsToFrames,
-  STYLE_PRESET_SEQUENCE,
 } from "./editor-session-config";
 import type { LocalAsset } from "./editor-session-types";
 
@@ -146,10 +144,7 @@ export const applyAIEditorActions = ({
     const durationInFrames = matchingEntry?.durationInFrames ?? sceneFrames[index];
     const startFrame =
       matchingEntry?.startFrame ?? sceneFrames.slice(0, index).reduce((sum, value) => sum + value, 0);
-    const fallbackStylePreset = STYLE_PRESET_SEQUENCE[index % STYLE_PRESET_SEQUENCE.length];
-    const resolvedStylePreset = scene.stylePreset ?? fallbackStylePreset;
-    const styleDefaults = OVERLAY_DEFAULTS_BY_PRESET[resolvedStylePreset];
-    const fallbackPosition = getPresetPositionFallback(resolvedStylePreset, index);
+    const styleDefaults = DEFAULT_TEXT_OVERLAY_STYLE;
     const fontSize = scene.fontSize
       ? Math.round(scene.fontSize)
       : getAdaptiveFontSize(styleDefaults.fontSize, scene.text);
@@ -168,8 +163,8 @@ export const applyAIEditorActions = ({
       text: scene.text,
       startFrame,
       endFrame: startFrame + durationInFrames,
-      x: Math.min(Math.max(scene.x ?? fallbackPosition.x, 12), 88),
-      y: Math.min(Math.max(scene.y ?? fallbackPosition.y, 16), maxSafeY),
+      x: Math.min(Math.max(scene.x ?? styleDefaults.x, 12), 88),
+      y: Math.min(Math.max(scene.y ?? styleDefaults.y, 16), maxSafeY),
       fontSize: Math.min(Math.max(fontSize, 32), 170),
       color: scene.color ?? styleDefaults.color,
       fontFamily: readableFontFamily,
@@ -181,9 +176,7 @@ export const applyAIEditorActions = ({
         out: scene.animation?.out ?? "fade",
         durationFrames: secondsToFrames(scene.animation?.durationSeconds ?? 0.4),
       },
-      stylePreset: resolvedStylePreset,
-      createdaleyTexture:
-        resolvedStylePreset === "editorial-seat-arc" ? "warm-editorial" : "plain",
+      stylePreset: "classic",
     } satisfies VersionTimeline["textOverlays"][number];
   });
 

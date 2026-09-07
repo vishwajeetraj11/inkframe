@@ -71,7 +71,6 @@ describe("editor WebMCP diagnostics", () => {
       x: -4,
       y: 96,
       fontSize: 12,
-      stylePreset: "vox-timeline",
       animation: { in: "rise", out: "fade", durationFrames: 80 },
     };
 
@@ -82,11 +81,10 @@ describe("editor WebMCP diagnostics", () => {
       x: 6,
       y: 90,
       fontSize: 32,
-      stylePreset: "classic",
       animation: { durationFrames: 30 },
     });
     expect(fixed.changes.map((change) => change.field)).toEqual(
-      expect.arrayContaining(["x", "y", "fontSize", "stylePreset", "animation"]),
+      expect.arrayContaining(["x", "y", "fontSize", "animation"]),
     );
   });
 

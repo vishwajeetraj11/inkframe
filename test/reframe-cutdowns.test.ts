@@ -31,7 +31,7 @@ describe("project cutdowns", () => {
     source.textOverlays = [{ ...source.textOverlays[0] ?? {
       id: "title", text: "Title", startFrame: 0, endFrame: 90, x: 50, y: 50,
       fontSize: 48, color: "#fff", fontFamily: "sans", fontWeight: 700,
-      fontStyle: "normal", stylePreset: "classic", createdaleyTexture: "plain",
+      fontStyle: "normal", stylePreset: "classic",
     }}];
     const cutdown = createCutdown(source, { id: "short", name: "Short", durationFrames: 45 });
     expect(cutdown?.timeline.clips[0]).toMatchObject({ startFrame: 0, endFrame: 45, trimEndFrame: 45 });

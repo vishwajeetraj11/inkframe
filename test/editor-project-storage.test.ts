@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { createDefaultClip, createInitialProjectSession } from "@/lib/editor/defaults";
+import { createDefaultClip, createDefaultTextOverlay, createInitialProjectSession } from "@/lib/editor/defaults";
 import { migrateProjectContent } from "@/lib/editor/project-migrations";
 import { validateVersionPlacement } from "@/lib/editor/domain/version";
 import { loadProjectSnapshot, saveProjectSnapshot } from "@/lib/editor/project-storage";
@@ -76,6 +76,32 @@ describe("project content migration", () => {
     expect(migrated.versions.reel_9_16.clips[0].trackId).toBe("inkframe-video");
     expect(migrateProjectContent(migrated)).toEqual(migrated);
     expect(legacy.contentVersion).toBeUndefined();
+  });
+
+  it("migrates retired text presets without mutating legacy input", () => {
+    const legacy = legacyProject() as unknown as {
+      versions: { reel_9_16: { textOverlays: Record<string, unknown>[] } };
+    };
+    legacy.versions.reel_9_16.textOverlays = [{
+      ...createDefaultTextOverlay("legacy-text"),
+      stylePreset: "vox-timeline",
+      createdaleyTexture: "dots",
+      syncMediaToTimelineEvents: true,
+    }];
+
+    const migrated = migrateProjectContent(legacy);
+
+    expect(migrated.versions.reel_9_16.textOverlays[0]).toMatchObject({
+      id: "legacy-text",
+      stylePreset: "classic",
+    });
+    expect(migrated.versions.reel_9_16.textOverlays[0]).not.toHaveProperty("createdaleyTexture");
+    expect(migrated.versions.reel_9_16.textOverlays[0]).not.toHaveProperty("syncMediaToTimelineEvents");
+    expect(legacy.versions.reel_9_16.textOverlays[0]).toMatchObject({
+      stylePreset: "vox-timeline",
+      createdaleyTexture: "dots",
+      syncMediaToTimelineEvents: true,
+    });
   });
 
   it("rejects unknown versions and invalid content explicitly", () => {

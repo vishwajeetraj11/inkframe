@@ -4,6 +4,37 @@ import { sanitizeVersion } from "./domain/version";
 
 export const PROJECT_CONTENT_VERSION = 1 as const;
 
+const normalizeRetiredTextPresets = (input: unknown): unknown => {
+  if (typeof input !== "object" || input === null) return input;
+
+  const project = structuredClone(input) as Record<string, unknown>;
+  const normalizeTimeline = (value: unknown): void => {
+    if (typeof value !== "object" || value === null) return;
+    const timeline = value as Record<string, unknown>;
+    if (!Array.isArray(timeline.textOverlays)) return;
+    timeline.textOverlays = timeline.textOverlays.map((value) => {
+      if (typeof value !== "object" || value === null) return value;
+      const overlay = value as Record<string, unknown>;
+      const current = { ...overlay };
+      delete current.createdaleyTexture;
+      delete current.syncMediaToTimelineEvents;
+      return { ...current, stylePreset: "classic" };
+    });
+  };
+
+  if (typeof project.versions === "object" && project.versions !== null) {
+    for (const timeline of Object.values(project.versions)) normalizeTimeline(timeline);
+  }
+  if (Array.isArray(project.cutdowns)) {
+    for (const cutdown of project.cutdowns) {
+      if (typeof cutdown === "object" && cutdown !== null) {
+        normalizeTimeline((cutdown as Record<string, unknown>).timeline);
+      }
+    }
+  }
+  return project;
+};
+
 /** Upgrade content independently of the IndexedDB asset-storage layout. */
 export const migrateProjectContent = (input: unknown): ProjectSession => {
   if (
@@ -13,7 +44,7 @@ export const migrateProjectContent = (input: unknown): ProjectSession => {
   ) {
     throw new Error("The saved project uses an unsupported content version.");
   }
-  const parsed = persistedProjectSchema.safeParse(input);
+  const parsed = persistedProjectSchema.safeParse(normalizeRetiredTextPresets(input));
   if (!parsed.success) {
     throw new Error("The saved project is invalid or from an unsupported editor version.");
   }

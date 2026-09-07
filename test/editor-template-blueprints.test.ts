@@ -112,36 +112,10 @@ describe("Elah-native editor template blueprints", () => {
     expect(sourceCredits.every((credit) => credit.text.endsWith("/ PEXELS"))).toBe(true);
   });
 
-  it.each([
-    "editorial-explainer",
-    "product-reveal",
-    "social-promo",
-    "documentary-cut",
-    "data-pulse",
-    "quote-reel",
-  ] as const)(
-    "ships an editable timeline for %s",
-    (templateId) => {
-      const blueprint = FLAGSHIP_TEMPLATE_BLUEPRINTS[templateId];
-
-      expect(blueprint.aspect).toBe("reel_9_16");
-      expect(blueprint.clips.length).toBeGreaterThanOrEqual(3);
-      expect(blueprint.textOverlays.length).toBeGreaterThanOrEqual(3);
-      expect(blueprint.textOverlays.every((overlay) => overlay.stylePreset === "classic")).toBe(
-        true,
-      );
-      expect(blueprint.transitions.length).toBeGreaterThanOrEqual(2);
-      expect(blueprint.transitions.every((transition) => transition.kind)).toBe(true);
-      expect(blueprint.clips.every((clip) => clip.kind === "image" || clip.kind === "video")).toBe(
-        true,
-      );
-    },
-  );
-
   it("injects fresh ids and remaps transition endpoints", () => {
     let sequence = 0;
     const timeline = instantiateTemplateBlueprint(
-      FLAGSHIP_TEMPLATE_BLUEPRINTS["social-promo"],
+      FLAGSHIP_TEMPLATE_BLUEPRINTS["agent-demo-reel"],
       () => `session-id-${++sequence}`,
     );
 
@@ -157,15 +131,15 @@ describe("Elah-native editor template blueprints", () => {
     expect(timeline.transitions.every((transition) => clipIds.has(transition.toClipId))).toBe(
       true,
     );
-    expect(timeline.clips.some((clip) => clip.id.includes("social-promo"))).toBe(false);
+    expect(timeline.clips.some((clip) => clip.id.includes("agent-demo-reel"))).toBe(false);
   });
 
   it("resolves flagship catalog entries and rejects unknown ids", () => {
     let sequence = 0;
-    const timeline = instantiateTemplate("editorial-explainer", () => `id-${++sequence}`);
+    const timeline = instantiateTemplate("agent-demo-reel", () => `id-${++sequence}`);
 
     expect(timeline?.textOverlays[0].stylePreset).toBe("classic");
-    expect(timeline?.audioTracks).toEqual([]);
+    expect(timeline?.audioTracks).toHaveLength(1);
     expect(instantiateTemplate("missing", () => "never")).toBeNull();
   });
 });

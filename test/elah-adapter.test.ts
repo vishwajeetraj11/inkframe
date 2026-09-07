@@ -54,9 +54,7 @@ const version: VersionTimeline = {
       fontWeight: 650,
       fontStyle: "italic",
       stylePreset: "classic",
-      createdaleyTexture: "plain",
       contrast: "outline",
-      syncMediaToTimelineEvents: false,
     },
     {
       id: "text-preset",
@@ -70,9 +68,7 @@ const version: VersionTimeline = {
       fontFamily: "serif",
       fontWeight: 800,
       fontStyle: "normal",
-      stylePreset: "editorial-stat-ring",
-      createdaleyTexture: "newsprint-grain",
-      syncMediaToTimelineEvents: true,
+      stylePreset: "classic",
     },
   ],
   audioTracks: [
@@ -177,7 +173,7 @@ describe("Inkframe ↔ Elah timeline adapter", () => {
     });
     expect(projected.sidecar.canonicalVersion).toEqual(version);
     expect(nativeClips.find((clip) => clip.id === "text-preset")).toMatchObject({
-      content: "95%\n42% growth",
+      content: "42% growth",
       fontSize: 72,
     });
     expect(nativeClips.find((clip) => clip.id === "text-classic")).toMatchObject({
@@ -186,17 +182,12 @@ describe("Inkframe ↔ Elah timeline adapter", () => {
       strokeWidth: 4,
     });
     expect(nativeClips.find((clip) => clip.id === "text-preset")).toMatchObject({
-      fontFamily: '"Cormorant Garamond", Georgia, serif',
+      fontFamily: '"Source Serif 4", "Cormorant Garamond", Georgia, serif',
     });
-    expect(projected.diagnostics).toEqual([
-      expect.objectContaining({
-        code: "preset-projected-as-text",
-        entityId: "text-preset",
-      }),
-    ]);
+    expect(projected.diagnostics).toEqual([]);
   });
 
-  it("round-trips without losing Inkframe-only preset metadata", () => {
+  it("round-trips without losing Inkframe-only text metadata", () => {
     const projected = toElahProject(version, { assets });
     const restored = fromElahProject(projected.project, projected.sidecar);
 
@@ -279,7 +270,7 @@ describe("Inkframe ↔ Elah timeline adapter", () => {
     );
   });
 
-  it("accepts Elah text edits while retaining the canonical preset", () => {
+  it("accepts Elah text edits while retaining canonical text settings", () => {
     const projected = toElahProject(version, { assets });
     const textClip = Object.values(projected.project.clips)
       .flat()
@@ -301,9 +292,7 @@ describe("Inkframe ↔ Elah timeline adapter", () => {
       startFrame: 75,
       endFrame: 155,
       x: 40,
-      stylePreset: "editorial-stat-ring",
-      createdaleyTexture: "newsprint-grain",
-      syncMediaToTimelineEvents: true,
+      stylePreset: "classic",
     });
   });
 

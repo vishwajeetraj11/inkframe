@@ -295,3 +295,163 @@ console.log(`Elah ${packageJson.version} text motion and audio fades ready.`);
 // Apply the shared deterministic evaluator only after legacy motion/fade hooks.
 await import("./patch-elah-deterministic.mjs");
 await import("./patch-elah-video-filters.mjs");
+
+// INKFRAME_COLOR_GRADING_V1. Keep this after the legacy filter installer so a
+// clean install and a previously patched 0.4.1 install converge to the same code.
+// The pure TS implementation is the single source of pixel math for capture,
+// preview textures, and the export worker. Generated files live only in dist.
+const gradingMarker = "INKFRAME_COLOR_GRADING_V1";
+const gradingOrientationMarker = "INKFRAME_COLOR_GRADING_ORIENTATION_V2";
+const { default: ts } = await import("typescript");
+const gradingSource = await readFile(join(process.cwd(), "src/lib/editor/color-grading.ts"), "utf8");
+const gradingJs = ts.transpileModule(gradingSource, {
+  compilerOptions: { target: ts.ScriptTarget.ES2020, module: ts.ModuleKind.ES2020 },
+}).outputText;
+const gradingRuntimePath = join(packageRoot, "dist", "inkframe-color-grading.mjs");
+const gradingRuntime = gradingJs + `
+// ${gradingMarker}: one reusable scratch surface per renderer/worker module.
+// drawImage copies decoded media; never modify provider frames or cached assets.
+let scratch;
+// Public, media-free diagnostic. Set __INKFRAME_GRADING_DIAGNOSTICS__ = {}
+// before a redraw to inspect the last upload; leave unset for no per-frame log.
+globalThis.__INKFRAME_GRADING_RUNTIME__ = 'orientation-v2-diagnostic-v1';
+export function gradeMedia(source, filter) {
+    const legacyFilter = legacyVideoFilterToCss(filter);
+    const needsGrade = hasColorGrade(filter);
+    if (legacyFilter === 'none' && !needsGrade) return source;
+    const width = source.displayWidth ?? source.naturalWidth ?? source.width;
+    const height = source.displayHeight ?? source.naturalHeight ?? source.height;
+    if (!(width > 0 && height > 0)) throw new Error('Inkframe grade: invalid media dimensions');
+    if (!scratch) scratch = new OffscreenCanvas(width, height);
+    if (scratch.width !== width) scratch.width = width;
+    if (scratch.height !== height) scratch.height = height;
+    const ctx = scratch.getContext('2d', { willReadFrequently: true, colorSpace: 'srgb' });
+    if (!ctx) throw new Error('Inkframe grade: Canvas2D unavailable');
+    if (legacyFilter !== 'none' && !('filter' in ctx)) throw new Error('Inkframe grade: Canvas2D filters unavailable');
+    ctx.filter = legacyFilter;
+    ctx.clearRect(0, 0, width, height);
+    ctx.drawImage(source, 0, 0, width, height);
+    ctx.filter = 'none';
+    if (needsGrade) {
+        const image = ctx.getImageData(0, 0, width, height);
+        applyColorGradeToPixels(image.data, filter);
+        ctx.putImageData(image, 0, 0);
+    }
+    return scratch;
+}
+
+// ${gradingOrientationMarker}: provider ImageBitmaps already contain flipY.
+// Unlike ImageBitmap, their graded canvas honors UNPACK_FLIP_Y_WEBGL. Preserve
+// the original bitmap upload semantics, restoring shared GL state even on error.
+export function uploadGradedVideo(texture, gl, frame, filter) {
+    const graded = gradeMedia(frame, filter);
+    const convertedBitmap = graded !== frame &&
+        typeof ImageBitmap !== 'undefined' && frame instanceof ImageBitmap;
+    const diagnostics = globalThis.__INKFRAME_GRADING_DIAGNOSTICS__;
+    const diagnostic = diagnostics && typeof diagnostics === 'object' ? diagnostics : null;
+    if (diagnostic) Object.assign(diagnostic, {
+        runtime: 'orientation-v2-diagnostic-v1',
+        uploads: (diagnostic.uploads ?? 0) + 1,
+        sourceType: frame.constructor?.name ?? 'unknown',
+        outputType: graded.constructor?.name ?? 'unknown',
+        convertedBitmap,
+        previousFlip: gl.getParameter(gl.UNPACK_FLIP_Y_WEBGL),
+        uploadFlip: convertedBitmap ? false : gl.getParameter(gl.UNPACK_FLIP_Y_WEBGL),
+        restoredFlip: null,
+        succeeded: false,
+    });
+    if (!convertedBitmap) {
+        const uploaded = texture.upload(gl, graded);
+        if (diagnostic) Object.assign(diagnostic, { succeeded: uploaded, restoredFlip: gl.getParameter(gl.UNPACK_FLIP_Y_WEBGL) });
+        return uploaded;
+    }
+    const previousFlip = gl.getParameter(gl.UNPACK_FLIP_Y_WEBGL);
+    try {
+        gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, false);
+        const uploaded = texture.upload(gl, graded);
+        if (diagnostic) diagnostic.succeeded = uploaded;
+        return uploaded;
+    } finally {
+        gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, previousFlip);
+        if (diagnostic) diagnostic.restoredFlip = gl.getParameter(gl.UNPACK_FLIP_Y_WEBGL);
+    }
+}
+`;
+
+// Validate every anchor before writing this extension. Unknown layouts fail
+// loudly instead of silently shipping preview-only or export-only grading.
+const gradingEdits = new Map();
+function replaceOne(source, before, after, label) {
+  if (source.split(before).length !== 2) throw new Error(`Inkframe grading: expected one ${label} anchor`);
+  return source.replace(before, after);
+}
+const layerPaths = ["VideoLayer", "ImageLayer"].map(name => join(packageRoot, "dist/renderer/gpu/layers", `${name}.js`));
+for (const [index, path] of layerPaths.entries()) {
+  let source = await readFile(path, "utf8");
+  if (!source.includes(gradingMarker)) {
+    source = `// ${gradingMarker}\nimport { gradeMedia } from '../../../inkframe-color-grading.mjs';\n` + source;
+    if (index === 0) {
+      source = replaceOne(source, "texture.upload(ctx.gl, frame)", "texture.upload(ctx.gl, gradeMedia(frame, item.videoFilter))", "video texture upload");
+    } else {
+      source = replaceOne(source, "if (res.image && !res.uploaded) {", "const gradeKey = JSON.stringify(item.videoFilter ?? null);\n        if (res.image && (!res.uploaded || res.gradeKey !== gradeKey)) {", "image upload guard");
+      source = replaceOne(source, "gl.UNSIGNED_BYTE, res.image.source);", "gl.UNSIGNED_BYTE, gradeMedia(res.image.source, item.videoFilter));", "image texture upload");
+      source = replaceOne(source, "res.uploaded = true;", "res.uploaded = true;\n            res.gradeKey = gradeKey;", "image cache invalidation");
+    }
+  }
+  if (index === 0 && !source.includes(gradingOrientationMarker)) {
+    source = replaceOne(source,
+      "import { gradeMedia } from '../../../inkframe-color-grading.mjs';",
+      `// ${gradingOrientationMarker}\nimport { uploadGradedVideo } from '../../../inkframe-color-grading.mjs';`,
+      "video grading orientation import");
+    source = replaceOne(source,
+      "texture.upload(ctx.gl, gradeMedia(frame, item.videoFilter))",
+      "uploadGradedVideo(texture, ctx.gl, frame, item.videoFilter)",
+      "video grading orientation upload");
+  }
+  gradingEdits.set(path, source);
+}
+let gradeResolver = await readFile(resolverPath, "utf8");
+if (!gradeResolver.includes(gradingMarker)) {
+  gradeResolver = replaceOne(gradeResolver, "    const byDepth = (a, b) => a.zIndex - b.zIndex;", `    // ${gradingMarker}: include images and synthetic transition participants.
+    const grades = new Map(Object.values(project.clips).flat().map(clip => [clip.id, clip.videoFilter]));
+    for (const item of [...scene.videos, ...scene.images]) {
+        const filter = grades.get(item.id);
+        if (filter) item.videoFilter = filter;
+    }
+    const byDepth = (a, b) => a.zIndex - b.zIndex;`, "scene grade propagation");
+}
+gradingEdits.set(resolverPath, gradeResolver);
+let gradeWorker = await readFile(exportWorkerPath, "utf8");
+if (!gradeWorker.includes(gradingMarker)) {
+  gradeWorker = `// ${gradingMarker}\nimport { gradeMedia } from '../inkframe-color-grading.mjs';\n` + gradeWorker;
+  const oldFilterBlock = /                \/\/ INKFRAME_VIDEO_FILTER_PATCH_V1: Canvas2D[^\n]*\n[\s\S]*?                ctx\.filter = 'none';/g;
+  const matches = [...gradeWorker.matchAll(oldFilterBlock)];
+  if (matches.length !== 1) throw new Error('Inkframe grading: expected one legacy export filter block');
+  gradeWorker = gradeWorker.replace(oldFilterBlock, `                // INKFRAME_VIDEO_FILTER_PATCH_V1 / INKFRAME_VIDEO_FILTER_RESET_PATCH_V2: replaced by shared pixels.
+                drawMedia(ctx, gradeMedia(wrapped.canvas, entry.item.videoFilter), entry.item.transform, stageW, stageH);`);
+  gradeWorker = replaceOne(gradeWorker, "drawMedia(ctx, bitmap, entry.item.transform, stageW, stageH);", "drawMedia(ctx, gradeMedia(bitmap, entry.item.videoFilter), entry.item.transform, stageW, stageH);", "export image draw");
+  gradeWorker = replaceOne(gradeWorker, "await createImageBitmap(wrapped.canvas);", "await createImageBitmap(gradeMedia(wrapped.canvas, fromVideo.videoFilter));", "export video transition snapshot");
+  gradeWorker = replaceOne(gradeWorker, "transitionSnapshots.set(tr.id, { source: bmp, owned: false });", "transitionSnapshots.set(tr.id, { source: await createImageBitmap(gradeMedia(bmp, fromImage.videoFilter)), owned: true });", "export image transition snapshot");
+}
+gradingEdits.set(exportWorkerPath, gradeWorker);
+const sceneTypesPath = join(packageRoot, "dist/resolver/scene.d.ts");
+for (const path of [typesPath, sceneTypesPath]) {
+  let source = await readFile(path, "utf8");
+  if (!source.includes(gradingMarker)) {
+    source = replaceOne(source, "        hueRotate: number;", `        hueRotate: number;
+        /** ${gradingMarker} */
+        exposure?: number;
+        temperature?: number;
+        tint?: number;
+        shadows?: number;
+        highlights?: number;
+        toneCurve?: 'linear' | 'filmic';`, "native grading type");
+    if (path === sceneTypesPath) {
+      source = replaceOne(source, "export interface ActiveImageClip extends ActiveClipBase {", "export interface ActiveImageClip extends ActiveClipBase {\n    videoFilter?: ActiveVideoClip['videoFilter'];", "active image grade type");
+    }
+  }
+  gradingEdits.set(path, source);
+}
+gradingEdits.set(gradingRuntimePath, gradingRuntime);
+for (const [path, source] of gradingEdits) await writeFile(path, source);
+console.log(`Elah ${packageJson.version} shared per-clip pixel grading ready.`);

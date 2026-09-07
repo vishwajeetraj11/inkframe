@@ -3,14 +3,11 @@ import {
   type Clip,
   type TextOverlay,
 } from "../types";
-import { PRESET_MIN_DURATIONS_FRAMES } from "../constants";
 import {
   clamp,
-  normalizeCreatedaleyTexture,
   normalizeTextOverlayFontFamily,
   normalizeTextOverlayFontStyle,
   normalizeTextOverlayFontWeight,
-  normalizeTextOverlayStylePreset,
   toSafeInt,
 } from "./helpers";
 
@@ -49,13 +46,11 @@ export const normalizeTextOverlays = (textOverlays: TextOverlay[]): TextOverlay[
   textOverlays
     .map((overlay) => {
       const startFrame = Math.max(0, toSafeInt(overlay.startFrame, 0));
-      const stylePreset = normalizeTextOverlayStylePreset(overlay.stylePreset);
       const requestedEndFrame = Math.max(
         startFrame + 1,
         toSafeInt(overlay.endFrame, startFrame + 1),
       );
-      const minDurationInFrames = PRESET_MIN_DURATIONS_FRAMES[stylePreset] ?? 1;
-      const endFrame = Math.max(startFrame + minDurationInFrames, requestedEndFrame);
+      const endFrame = Math.max(startFrame + 1, requestedEndFrame);
 
       return {
         ...overlay,
@@ -72,16 +67,10 @@ export const normalizeTextOverlays = (textOverlays: TextOverlay[]): TextOverlay[
             ? overlay.textAlign
             : "center"
         ) as TextOverlay["textAlign"],
-        stylePreset,
-        createdaleyTexture: normalizeCreatedaleyTexture(
-          (overlay as Partial<TextOverlay>).createdaleyTexture,
-        ),
+        stylePreset: "classic" as const,
         animation: normalizeTextOverlayAnimation(
           (overlay as Partial<TextOverlay>).animation,
           endFrame - startFrame,
-        ),
-        syncMediaToTimelineEvents: Boolean(
-          (overlay as Partial<TextOverlay>).syncMediaToTimelineEvents,
         ),
       };
     })

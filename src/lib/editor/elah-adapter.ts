@@ -25,12 +25,6 @@ import {
   DEFAULT_VIDEO_TRACK_ID,
   ensureEditorTracks,
 } from "./tracks";
-import { parseChartCardText } from "./chart-card";
-import { parseCreatedaleyOpenerText } from "./createdaley-opener";
-import { parseEditorialStatRingText } from "./editorial-stat-ring";
-import { parseFilmFrameGalleryText } from "./film-frame-gallery";
-import { parseRegionalMapFocusText } from "./regional-map-focus";
-import { parseVoxTimelineText } from "./vox-timeline";
 
 const ELah_SCHEMA_VERSION = 1;
 const ELah_TRACK_HEIGHT = 40;
@@ -39,7 +33,6 @@ const VIDEO_AUDIO_TRACK_PREFIX = "inkframe-video-audio-";
 
 export type ElahAdapterDiagnosticCode =
   | "missing-asset-source"
-  | "preset-projected-as-text"
   | "unsupported-elah-clip"
   | "unsupported-elah-transition"
   | "missing-asset-id"
@@ -61,7 +54,7 @@ export interface ElahProjectionSnapshot {
 
 /**
  * Inkframe remains the source of truth for properties Elah does not model, such
- * as preset ids, italic text, numeric font weights, and Createdaley settings.
+ * as italic text, numeric font weights, and canonical editing metadata.
  */
 export interface InkframeElahSidecar {
   schemaVersion: 1;
@@ -101,6 +94,7 @@ const cloneVersion = (version: VersionTimeline): VersionTimeline => ({
   tracks: version.tracks?.map((track) => ({ ...track })),
   clips: version.clips.map((clip) => ({
     ...clip,
+    ...(clip.videoFilter ? { videoFilter: structuredClone(clip.videoFilter) } : {}),
     ...(clip.transform ? { transform: { ...clip.transform, anchor: { ...clip.transform.anchor } } } : {}),
   })),
   textOverlays: version.textOverlays.map((overlay) => ({ ...overlay })),
@@ -116,24 +110,6 @@ const clampVolume = (volume: number | undefined, fallback = 1): number =>
 
 const transitionKind = (transition: Transition): ElahTransition["kind"] =>
   transition.kind ?? (transition.type === "crossfade" ? "fade" : "fade");
-
-const backgroundPalette = (
-  preset: TextOverlay["stylePreset"],
-): { from: string; to: string; accent: string } => {
-  if (preset === "editorial-mono" || preset === "news-clipping") {
-    return { from: "#f3efe4", to: "#d8d0bf", accent: "#ff4f1f" };
-  }
-  if (preset === "sticker-cutout") {
-    return { from: "#ffd84d", to: "#ff8a4c", accent: "#14120f" };
-  }
-  if (preset.includes("map") || preset.includes("chart") || preset.includes("stat")) {
-    return { from: "#dbe4d2", to: "#b7c6a7", accent: "#244c3a" };
-  }
-  if (preset.includes("vox") || preset === "createdaley-opener") {
-    return { from: "#efe4d0", to: "#d8c6aa", accent: "#ff4f1f" };
-  }
-  return { from: "#111827", to: "#202a3d", accent: "#22d3ee" };
-};
 
 const backgroundTransform = (
   width: number,
@@ -154,80 +130,23 @@ const transformForOverlay = (overlay: TextOverlay): ElahTransform => ({
   anchor: { x: 0.5, y: 0.5 },
 });
 
-const firstStructuredHeadline = (text: string): string => {
-  const lines = text
-    .split("\n")
-    .map((line) => line.trim())
-    .filter(Boolean);
-  const explicit = lines.find((line) => /^headline\s*:/i.test(line));
-  return (explicit ?? lines[0] ?? "Text")
-    .replace(/^headline\s*:/i, "")
-    .replace(/\[\[|\]\]/g, "")
-    .trim();
-};
-
-/**
- * Structured presets retain their full canonical payload in the sidecar, but
- * Elah should receive presentation copy instead of serialized metadata.
- */
-const presentationTextForOverlay = (overlay: TextOverlay): string => {
-  if (overlay.stylePreset === "createdaley-opener") {
-    return parseCreatedaleyOpenerText(overlay.text).wordmark;
-  }
-  if (
-    overlay.stylePreset === "vox-timeline" ||
-    overlay.stylePreset === "vox-timeline-ribbon" ||
-    overlay.stylePreset === "vox-timeline-ledger"
-  ) {
-    return parseVoxTimelineText(overlay.text).headline;
-  }
-  if (overlay.stylePreset === "chart-card" || overlay.stylePreset === "editorial-seat-arc") {
-    return parseChartCardText(overlay.text).headline;
-  }
-  if (overlay.stylePreset === "editorial-stat-ring") {
-    const parsed = parseEditorialStatRingText(overlay.text);
-    return `${parsed.value}${parsed.suffix}\n${parsed.headline}`;
-  }
-  if (overlay.stylePreset === "film-frame-gallery") {
-    return parseFilmFrameGalleryText(overlay.text).headline;
-  }
-  if (overlay.stylePreset === "regional-map-focus") {
-    return parseRegionalMapFocusText(overlay.text).headline;
-  }
-  if (overlay.stylePreset === "world-map-focus" || overlay.stylePreset === "editorial-bar-chart") {
-    return firstStructuredHeadline(overlay.text);
-  }
-  return overlay.text;
-};
-
-const presentationFontSizeForOverlay = (overlay: TextOverlay): number => {
-  const structuredMinimums: Partial<Record<TextOverlay["stylePreset"], number>> = {
-    "createdaley-opener": 64,
-    "vox-timeline": 56,
-    "vox-timeline-ribbon": 56,
-    "vox-timeline-ledger": 56,
-    "chart-card": 52,
-    "editorial-stat-ring": 52,
-    "editorial-seat-arc": 52,
-    "film-frame-gallery": 52,
-    "world-map-focus": 52,
-    "regional-map-focus": 52,
-    "editorial-bar-chart": 52,
-  };
-  return Math.max(overlay.fontSize, structuredMinimums[overlay.stylePreset] ?? 0);
-};
-
 const ELah_FONT_BY_INKFRAME: Record<TextOverlayFontFamily, string> = {
   sans: '"Barlow Condensed", "Arial Narrow", sans-serif',
-  modern: '"Avenir Next", Avenir, "Trebuchet MS", "Helvetica Neue", sans-serif',
-  serif: '"Cormorant Garamond", Georgia, serif',
+  modern: '"Sora", "Avenir Next", Avenir, "Trebuchet MS", sans-serif',
+  serif: '"Source Serif 4", "Cormorant Garamond", Georgia, serif',
   cursive: '"Cormorant Garamond", Georgia, cursive',
   mono: '"IBM Plex Mono", "SFMono-Regular", Consolas, monospace',
+  display: '"Barlow Condensed", "Arial Narrow", sans-serif',
+  editorial: '"Source Serif 4", Georgia, serif',
+  rounded: '"Plus Jakarta Sans", "Segoe UI", sans-serif',
 };
 
 const toInkframeFontFamily = (fontFamily: string | undefined): TextOverlayFontFamily => {
   const normalized = fontFamily?.toLowerCase() ?? "";
   if (normalized.includes("mono")) return "mono";
+  if (normalized.includes("barlow")) return "sans";
+  if (normalized.includes("source serif")) return "serif";
+  if (normalized.includes("jakarta") || normalized.includes("rounded")) return "rounded";
   if (
     normalized.includes("avenir") ||
     normalized.includes("trebuchet") ||
@@ -343,7 +262,7 @@ export const toElahProject = (
       sourceStartFrame: 0,
       sourceDurationFrames: totalFrames,
       shapeKind: "rect",
-      shapeFill: backgroundPalette("classic").from,
+      shapeFill: "#111827",
       shapeStrokeWidth: 0,
       transform: backgroundTransform(preset.width, preset.height),
       volume: 1,
@@ -351,24 +270,6 @@ export const toElahProject = (
       locked: true,
       disabled: false,
     },
-    ...version.textOverlays.map((overlay) => ({
-      id: `inkframe-background-${overlay.id}`,
-      trackId: backgroundTrack.id,
-      type: "shape" as const,
-      name: `${overlay.stylePreset} background`,
-      startFrame: overlay.startFrame,
-      durationFrames: durationOf(overlay.startFrame, overlay.endFrame),
-      sourceStartFrame: 0,
-      sourceDurationFrames: durationOf(overlay.startFrame, overlay.endFrame),
-      shapeKind: "rect" as const,
-      shapeFill: backgroundPalette(overlay.stylePreset).from,
-      shapeStrokeWidth: 0,
-      transform: backgroundTransform(preset.width, preset.height),
-      volume: 1,
-      opacity: 1,
-      locked: true,
-      disabled: false,
-    })),
   ];
 
   for (const clip of version.clips) {
@@ -450,18 +351,18 @@ export const toElahProject = (
       id: overlay.id,
       trackId,
       type: "text",
-      name: overlay.stylePreset === "classic" ? "Text" : `Preset · ${overlay.stylePreset}`,
+      name: "Text",
       startFrame: overlay.startFrame,
       durationFrames: durationOf(overlay.startFrame, overlay.endFrame),
       sourceStartFrame: 0,
       sourceDurationFrames: durationOf(overlay.startFrame, overlay.endFrame),
-      content: presentationTextForOverlay(overlay),
-      fontSize: presentationFontSizeForOverlay(overlay),
+      content: overlay.text,
+      fontSize: overlay.fontSize,
       color: overlay.color,
       ...(overlay.contrast === "outline"
         ? {
             strokeColor: "#17120f",
-            strokeWidth: Math.max(2, Math.round(presentationFontSizeForOverlay(overlay) * 0.07)),
+            strokeWidth: Math.max(2, Math.round(overlay.fontSize * 0.07)),
           }
         : {}),
       fontFamily: ELah_FONT_BY_INKFRAME[overlay.fontFamily],
@@ -484,14 +385,6 @@ export const toElahProject = (
     };
     projectionSnapshots[overlay.id] = projectSnapshot(elahClip);
     mappedTextOverlayIds.push(overlay.id);
-
-    if (overlay.stylePreset !== "classic") {
-      diagnostics.push({
-        code: "preset-projected-as-text",
-        entityId: overlay.id,
-        message: `Preset ${overlay.stylePreset} is shown as editable text in Elah; its canonical preset data remains in the sidecar.`,
-      });
-    }
 
     clipsByTrack[trackId].push(elahClip);
   }
@@ -769,7 +662,9 @@ export const fromElahProject = (
           ? { opacity: native.opacity }
           : {}),
         ...(native.type === "video" && (nativeVideoFilter || original?.videoFilter)
-          ? { videoFilter: structuredClone(nativeVideoFilter ?? original?.videoFilter) }
+          // Elah may return only its supported filter fields. Keep optional
+          // canonical grades while allowing explicit native values to win.
+          ? { videoFilter: structuredClone({ ...original?.videoFilter, ...nativeVideoFilter }) as NonNullable<Clip["videoFilter"]> }
           : {}),
         id: native.id,
         assetId,
@@ -868,13 +763,6 @@ export const fromElahProject = (
           : native.fontWeight === "bold"
             ? 700
             : 400;
-      const syncMediaToTimelineEvents = original?.syncMediaToTimelineEvents;
-      const expectedPresentationText = original
-        ? presentationTextForOverlay(original)
-        : undefined;
-      const expectedPresentationFontSize = original
-        ? presentationFontSizeForOverlay(original)
-        : undefined;
       textById.set(native.id, {
         id: native.id,
         trackId: resolvePersistedTrackId(
@@ -883,7 +771,7 @@ export const fromElahProject = (
           DEFAULT_TEXT_TRACK_ID,
         ),
         text:
-          original && native.content === expectedPresentationText
+          original && native.content === original.text
             ? original.text
             : (native.content ?? original?.text ?? "Text"),
         startFrame: Math.max(0, Math.round(native.startFrame)),
@@ -899,7 +787,7 @@ export const fromElahProject = (
             ? native.transform.y * 100
             : (original?.y ?? 50),
         fontSize:
-          original && native.fontSize === expectedPresentationFontSize
+          original && native.fontSize === original.fontSize
             ? original.fontSize
             : (native.fontSize ?? original?.fontSize ?? 64),
         color: native.color ?? original?.color ?? "#ffffff",
@@ -911,7 +799,6 @@ export const fromElahProject = (
           ? { textAlign: native.textAlign }
           : {}),
         stylePreset: original?.stylePreset ?? "classic",
-        createdaleyTexture: original?.createdaleyTexture ?? "plain",
         ...(original?.contrast ? { contrast: original.contrast } : {}),
         ...(native.textAnimation
           ? {
@@ -929,11 +816,6 @@ export const fromElahProject = (
               },
             }
           : {}),
-        ...(syncMediaToTimelineEvents !== undefined
-          ? { syncMediaToTimelineEvents }
-          : original
-            ? {}
-            : { syncMediaToTimelineEvents: false }),
       });
       continue;
     }

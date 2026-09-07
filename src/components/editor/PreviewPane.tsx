@@ -8,8 +8,7 @@ import {
 } from "@elah/editor";
 import { ASPECT_PRESETS } from "@/lib/editor/constants";
 import { getVersionRenderDurationInFrames } from "@/lib/editor/timeline";
-import type { AspectPreset, VersionTimeline } from "@/lib/editor/types";
-import { videoFilterToCss } from "@/lib/editor/video-filters";
+import type { AspectPreset, VersionTimeline, VideoFilter } from "@/lib/editor/types";
 import type { EditorVisualReview } from "@/lib/editor/export-state";
 import { Images, Pause, Play, Redo2, Square, Undo2, X } from "lucide-react";
 import { useEffect, useMemo, type RefObject } from "react";
@@ -24,6 +23,7 @@ interface PreviewPaneProps {
   previewRef?: RefObject<PreviewHandle | null>;
   visualReview?: EditorVisualReview | null;
   onDismissVisualReview?: () => void;
+  colorPreview?: Record<string, VideoFilter> | null;
 }
 
 export const PreviewPane = ({
@@ -36,6 +36,7 @@ export const PreviewPane = ({
   previewRef,
   visualReview,
   onDismissVisualReview,
+  colorPreview,
 }: PreviewPaneProps) => {
   const preset = ASPECT_PRESETS[aspect] ?? ASPECT_PRESETS.reel_9_16;
   const demuxerFactory = useMemo(() => createDefaultDemuxerFactory(), []);
@@ -44,13 +45,6 @@ export const PreviewPane = ({
   const pause = usePlaybackStore((state) => state.pause);
   const togglePlayPause = usePlaybackStore((state) => state.togglePlayPause);
   const setCurrentFrame = usePlaybackStore((state) => state.setCurrentFrame);
-  const activeVideoClip = version.clips.find(
-    (clip) =>
-      clip.kind === "video" &&
-      currentFrame >= clip.startFrame &&
-      currentFrame < clip.endFrame,
-  );
-  const previewFilter = videoFilterToCss(activeVideoClip?.videoFilter);
 
   const stop = () => {
     pause();
@@ -121,7 +115,9 @@ export const PreviewPane = ({
             <p className="app-eyebrow text-[9px] text-neutral-400">
               Program monitor
             </p>
-            <h2 className="sr-only">Preview stage</h2>
+            <h2 className="app-title text-sm font-semibold text-neutral-50">
+              Program
+            </h2>
           </div>
         </div>
 
@@ -184,7 +180,7 @@ export const PreviewPane = ({
                     clearColor={[0.02, 0.02, 0.025, 1]}
                     preserveDrawingBuffer
                     className="h-full w-full"
-                    style={{ width: "100%", height: "100%", filter: previewFilter }}
+                    style={{ width: "100%", height: "100%" }}
                   />
                   <div className="absolute inset-x-0 bottom-0 z-20 flex min-h-11 items-center gap-2 border-t border-white/10 bg-black/75 px-2 backdrop-blur-sm xl:min-h-10">
                     <button

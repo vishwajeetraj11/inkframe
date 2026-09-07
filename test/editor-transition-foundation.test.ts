@@ -20,7 +20,7 @@ const version: VersionTimeline = {
   textOverlays: [{
     id: "title", text: "Hello", startFrame: 0, endFrame: 60, x: 50, y: 50,
     fontSize: 56, color: "#fff", fontFamily: "sans", fontWeight: 700,
-    fontStyle: "normal", stylePreset: "classic", createdaleyTexture: "plain",
+    fontStyle: "normal", stylePreset: "classic",
     animation: { in: "fade", out: "fade", durationFrames: 12 },
   }],
   audioTracks: [{

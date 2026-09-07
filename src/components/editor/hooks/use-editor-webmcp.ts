@@ -22,6 +22,7 @@ import type {
 } from "./editor-session-types";
 import { nanoid } from "nanoid";
 import { flushSync } from "react-dom";
+import { captureColorComparison } from "@/lib/editor/webmcp/color-evidence";
 
 export interface EditorWebMcpBridge {
   history: EditorHistoryState;
@@ -29,6 +30,7 @@ export interface EditorWebMcpBridge {
   undo: () => void;
   redo: () => void;
   assets: readonly AssetRef[];
+  assetSources?: Readonly<Record<string, string>>;
   selectClip: (clipId: string) => void;
   selectText: (overlayId: string) => void;
   selectAudio: (trackId: string) => void;
@@ -123,6 +125,14 @@ const createTools: WebMcpToolFactory<EditorWebMcpBridge> = (getCurrent) =>
       return capture;
     },
     publishVisualReview: (review) => getCurrent().publishVisualReview(review),
+    captureColorComparison: async (aspect, clipId, before, after, signal) => {
+      const current = getCurrent();
+      return captureColorComparison({
+        version: current.history.present.versions[aspect],
+        assets: current.assets.map((asset) => ({ ...asset, objectUrl: current.assetSources?.[asset.assetId] })),
+        clipId, before, after, signal,
+      });
+    },
     getRenderDiagnostics: (aspect) => getCurrent().getRenderDiagnostics(aspect),
     removeAsset: (assetId, signal) => {
       if (signal.aborted) throw signal.reason;

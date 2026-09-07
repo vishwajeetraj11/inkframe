@@ -5,45 +5,22 @@ export const MIN_SCENE_DURATION_FRAMES = FPS;
 export const MAX_SCENE_DURATION_FRAMES = FPS * 20;
 export const ALL_ASPECTS: AspectPreset[] = ["reel_9_16", "widescreen_16_9"];
 
-export const STYLE_PRESET_SEQUENCE: VersionTimeline["textOverlays"][number]["stylePreset"][] = [
-  "classic",
-];
-
-export const OVERLAY_DEFAULTS_BY_PRESET: Record<
-  VersionTimeline["textOverlays"][number]["stylePreset"],
-  {
-    x: number;
-    y: number;
-    fontSize: number;
-    color: string;
-    fontFamily: VersionTimeline["textOverlays"][number]["fontFamily"];
-    fontWeight: number;
-    fontStyle: VersionTimeline["textOverlays"][number]["fontStyle"];
-  }
-> = {
-  classic: { x: 50, y: 70, fontSize: 74, color: "#f8fafc", fontFamily: "serif", fontWeight: 700, fontStyle: "normal" },
-  "impact-grid": { x: 50, y: 49, fontSize: 126, color: "#f5f5f5", fontFamily: "sans", fontWeight: 900, fontStyle: "normal" },
-  "grid-kinetic": { x: 50, y: 49, fontSize: 132, color: "#f5f7f5", fontFamily: "sans", fontWeight: 900, fontStyle: "normal" },
-  "hero-slam": { x: 50, y: 54, fontSize: 112, color: "#f8fafc", fontFamily: "sans", fontWeight: 900, fontStyle: "normal" },
-  "sticker-cutout": { x: 50, y: 58, fontSize: 92, color: "#111827", fontFamily: "sans", fontWeight: 900, fontStyle: "normal" },
-  "editorial-mono": { x: 50, y: 50, fontSize: 78, color: "#0f172a", fontFamily: "mono", fontWeight: 800, fontStyle: "normal" },
-  "vox-explainer": { x: 46, y: 43, fontSize: 84, color: "#111827", fontFamily: "sans", fontWeight: 900, fontStyle: "normal" },
-  "vox-timeline": { x: 50, y: 46, fontSize: 88, color: "#111827", fontFamily: "serif", fontWeight: 700, fontStyle: "normal" },
-  "vox-timeline-ribbon": { x: 50, y: 46, fontSize: 86, color: "#111827", fontFamily: "serif", fontWeight: 700, fontStyle: "normal" },
-  "vox-timeline-ledger": { x: 50, y: 46, fontSize: 84, color: "#111827", fontFamily: "serif", fontWeight: 700, fontStyle: "normal" },
-  "vox-typography": { x: 50, y: 46, fontSize: 92, color: "#f4ece6", fontFamily: "serif", fontWeight: 800, fontStyle: "italic" },
-  "world-map-focus": { x: 50, y: 48, fontSize: 84, color: "#f4f7fb", fontFamily: "serif", fontWeight: 700, fontStyle: "normal" },
-  "regional-map-focus": { x: 50, y: 46, fontSize: 82, color: "#1f2b21", fontFamily: "serif", fontWeight: 700, fontStyle: "normal" },
-  "film-frame-gallery": { x: 50, y: 50, fontSize: 80, color: "#f4efe5", fontFamily: "serif", fontWeight: 700, fontStyle: "normal" },
-  "editorial-bar-chart": { x: 50, y: 42, fontSize: 78, color: "#111827", fontFamily: "serif", fontWeight: 700, fontStyle: "normal" },
-  "editorial-stat-ring": { x: 50, y: 40, fontSize: 92, color: "#151515", fontFamily: "serif", fontWeight: 700, fontStyle: "normal" },
-  "editorial-seat-arc": { x: 50, y: 38, fontSize: 74, color: "#121212", fontFamily: "serif", fontWeight: 700, fontStyle: "normal" },
-  "chart-card": { x: 50, y: 38, fontSize: 68, color: "#121212", fontFamily: "serif", fontWeight: 700, fontStyle: "normal" },
-  "news-clipping": { x: 50, y: 34, fontSize: 96, color: "#121212", fontFamily: "serif", fontWeight: 800, fontStyle: "normal" },
-  "createdaley-opener": { x: 50, y: 46, fontSize: 96, color: "#202124", fontFamily: "serif", fontWeight: 600, fontStyle: "normal" },
-  "vox-pull-quote": { x: 50, y: 52, fontSize: 132, color: "#f8f6f1", fontFamily: "serif", fontWeight: 600, fontStyle: "normal" },
-  "harris-marker": { x: 50, y: 48, fontSize: 168, color: "#ffffff", fontFamily: "sans", fontWeight: 800, fontStyle: "normal" },
-  "harris-location": { x: 30, y: 78, fontSize: 96, color: "#ffffff", fontFamily: "sans", fontWeight: 700, fontStyle: "normal" },
+export const DEFAULT_TEXT_OVERLAY_STYLE: {
+  x: number;
+  y: number;
+  fontSize: number;
+  color: string;
+  fontFamily: VersionTimeline["textOverlays"][number]["fontFamily"];
+  fontWeight: number;
+  fontStyle: VersionTimeline["textOverlays"][number]["fontStyle"];
+} = {
+  x: 50,
+  y: 70,
+  fontSize: 74,
+  color: "#f8fafc",
+  fontFamily: "serif",
+  fontWeight: 700,
+  fontStyle: "normal",
 };
 
 const clamp = (value: number, min: number, max: number): number =>
@@ -71,81 +48,6 @@ export const normalizeFontWeight = (value: number | undefined): number => {
   const raw = value ?? 700;
   const roundedToHundreds = Math.round(raw / 100) * 100;
   return clamp(roundedToHundreds, 100, 900);
-};
-
-export const getPresetPositionFallback = (
-  preset: VersionTimeline["textOverlays"][number]["stylePreset"],
-  index: number,
-): { x: number; y: number } => {
-  if (preset === "impact-grid") {
-    return { x: index % 2 === 0 ? 46 : 54, y: index % 3 === 0 ? 46 : 50 };
-  }
-
-  if (preset === "grid-kinetic") {
-    return { x: index % 2 === 0 ? 48 : 52, y: index % 2 === 0 ? 48 : 51 };
-  }
-
-  if (preset === "hero-slam") {
-    return { x: 50, y: index % 2 === 0 ? 54 : 57 };
-  }
-
-  if (preset === "sticker-cutout") {
-    return { x: index % 2 === 0 ? 48 : 52, y: index % 3 === 0 ? 57 : 60 };
-  }
-
-  if (preset === "editorial-mono") {
-    return { x: index % 3 === 0 ? 44 : index % 3 === 1 ? 56 : 50, y: index % 2 === 0 ? 49 : 53 };
-  }
-
-  if (preset === "vox-explainer") {
-    return { x: index % 2 === 0 ? 45 : 47, y: index % 2 === 0 ? 42 : 46 };
-  }
-
-  if (
-    preset === "vox-timeline" ||
-    preset === "vox-timeline-ribbon" ||
-    preset === "vox-timeline-ledger"
-  ) {
-    return { x: 50, y: index % 2 === 0 ? 46 : 48 };
-  }
-
-  if (preset === "vox-typography") {
-    return { x: 50, y: index % 2 === 0 ? 46 : 48 };
-  }
-
-  if (preset === "world-map-focus") {
-    return { x: 50, y: index % 2 === 0 ? 48 : 50 };
-  }
-
-  if (preset === "regional-map-focus") {
-    return { x: 50, y: index % 2 === 0 ? 46 : 48 };
-  }
-
-  if (preset === "film-frame-gallery") {
-    return { x: 50, y: index % 2 === 0 ? 50 : 52 };
-  }
-
-  if (preset === "editorial-bar-chart") {
-    return { x: 50, y: index % 2 === 0 ? 42 : 44 };
-  }
-
-  if (preset === "editorial-stat-ring") {
-    return { x: 50, y: index % 2 === 0 ? 40 : 42 };
-  }
-
-  if (preset === "chart-card" || preset === "editorial-seat-arc") {
-    return { x: 50, y: index % 2 === 0 ? 38 : 40 };
-  }
-
-  if (preset === "news-clipping") {
-    return { x: 50, y: index % 2 === 0 ? 34 : 36 };
-  }
-
-  if (preset === "createdaley-opener") {
-    return { x: 50, y: index % 2 === 0 ? 46 : 48 };
-  }
-
-  return { x: 50, y: 70 };
 };
 
 export const getAdaptiveFontSize = (baseFontSize: number, text: string): number => {

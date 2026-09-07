@@ -1,7 +1,6 @@
 "use client";
 
 import type { TextOverlay } from "@/lib/editor/types";
-import { TEXT_OVERLAY_STYLE_PRESET_LABELS } from "@/lib/editor/types";
 import {
   formatSeconds,
   getTextBlockClassName,
@@ -51,9 +50,7 @@ export const TimelineTextTrack = ({
                     overlay.endFrame,
                     totalFrames,
                   )}
-                  title={`${overlay.text} • ${TEXT_OVERLAY_STYLE_PRESET_LABELS[
-                    overlay.stylePreset
-                  ]}`}
+                  title={overlay.text}
                 >
                   <div className="flex h-full items-center justify-between gap-3">
                     <div className="min-w-0">
@@ -61,7 +58,7 @@ export const TimelineTextTrack = ({
                         {truncateLabel(overlay.text.replace(/\s+/g, " ").trim() || "Text overlay")}
                       </p>
                       <p className="truncate text-[10px] tracking-[0.02em] text-fuchsia-100/75">
-                        {TEXT_OVERLAY_STYLE_PRESET_LABELS[overlay.stylePreset]}
+                        Text
                       </p>
                     </div>
 

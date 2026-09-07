@@ -61,8 +61,8 @@ import { flushSync } from "react-dom";
 import { applyAIEditorActions } from "./editor-session-ai";
 import {
   ALL_ASPECTS,
+  DEFAULT_TEXT_OVERLAY_STYLE,
   getAssetTooLargeMessage,
-  OVERLAY_DEFAULTS_BY_PRESET,
   sanitizeUploadFilename,
 } from "./editor-session-config";
 import type {
@@ -453,7 +453,7 @@ export const useEditorSession = () => {
       };
     }
 
-    const styleDefaults = OVERLAY_DEFAULTS_BY_PRESET[initialTemplate.stylePreset];
+    const styleDefaults = DEFAULT_TEXT_OVERLAY_STYLE;
     const templateDurationInFrames = Math.max(
       DEFAULT_CLIP_DURATION_FRAMES,
       starterAssets.length * DEFAULT_CLIP_DURATION_FRAMES,
@@ -496,11 +496,7 @@ export const useEditorSession = () => {
           fontFamily: styleDefaults.fontFamily,
           fontWeight: styleDefaults.fontWeight,
           fontStyle: styleDefaults.fontStyle,
-          stylePreset: initialTemplate.stylePreset,
-          createdaleyTexture:
-            initialTemplate.stylePreset === "editorial-seat-arc"
-              ? "warm-editorial"
-              : "plain",
+          stylePreset: "classic",
         },
       });
 

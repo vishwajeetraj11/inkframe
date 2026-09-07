@@ -30,7 +30,18 @@ import {
   validateEditorVersion,
 } from "./diagnostics";
 import {
-  TEXT_OVERLAY_STYLE_PRESET_LABELS,
+  inspectColorConsistency,
+  inspectColorConsistencyFromSources,
+  previewColorCorrections,
+  proposeColorCorrections,
+  proposeShotGradesFromSources,
+  selectColorChanges,
+  type ColorWorkflowChange,
+  type ColorWorkflowProposal,
+} from "./color-workflow";
+import type { SourceColorAsset } from "./color-consistency";
+import type { ColorComparisonEvidence } from "./color-evidence";
+import {
   TEXT_OVERLAY_ANIMATION_KINDS,
   type AspectPreset,
   type AssetRef,
@@ -53,16 +64,12 @@ const textFields = {
   y: z.number().min(0).max(100).optional(),
   fontSize: z.number().min(1).max(500).optional(),
   color: z.string().regex(/^#[0-9a-fA-F]{6}$/).optional(),
-  fontFamily: z.enum(["sans", "modern", "serif", "cursive", "mono"]).optional(),
+  fontFamily: z.enum(["sans", "modern", "serif", "cursive", "mono", "display", "editorial", "rounded"]).optional(),
   fontWeight: z.number().int().min(100).max(900).optional(),
   fontStyle: z.enum(["normal", "italic"]).optional(),
   textAlign: z.enum(["left", "center", "right"]).optional(),
   stylePreset: stylePresetSchema.optional(),
-  createdaleyTexture: z
-    .enum(["plain", "dots", "grid-dots", "newsprint-grain", "warm-editorial"])
-    .optional(),
   contrast: z.literal("outline").optional(),
-  syncMediaToTimelineEvents: z.boolean().optional(),
   animation: z
     .object({
       in: z.enum(TEXT_OVERLAY_ANIMATION_KINDS).optional(),
@@ -102,7 +109,7 @@ const updateAudioInput = z.object({
   muted: z.boolean().optional(),
 }).strict();
 const removeAudioInput = z.object({ aspect: aspectSchema.optional(), trackId: z.string().trim().min(1).max(128), confirmed: z.literal(true) }).strict();
-const projectInput = z.object({ aspect: aspectSchema.optional(), maxItems: z.number().int().min(1).max(25).optional() }).strict();
+const projectInput = z.object({ aspect: aspectSchema.optional(), maxItems: z.number().int().min(1).max(25).optional(), offset: z.number().int().min(0).max(100000).default(0) }).strict();
 const assetsInput = z.object({ maxItems: z.number().int().min(1).max(100).optional() }).strict();
 const selectInput = z.object({
   aspect: aspectSchema.optional(), itemType: z.enum(["clip", "textOverlay", "audioTrack"]),
@@ -216,6 +223,70 @@ const autoFixProjectInput = z.object({
   contrastFrame: frameSchema.optional(),
   confirmed: z.literal(true),
 }).strict();
+const colorInspectInput = z.object({
+  aspect: aspectSchema.optional(),
+  clipIds: z.array(z.string().trim().min(1).max(128)).max(100).optional(),
+}).strict();
+const colorProposeInput = z.object({
+  aspect: aspectSchema.optional(),
+  clipIds: z.array(z.string().trim().min(1).max(128)).max(100).optional(),
+  findingIds: z.array(z.string().trim().min(1).max(160)).max(400).optional(),
+  creativeIntent: z.string().trim().min(1).max(2000).optional(),
+  candidates: z.array(z.object({
+    clipId: z.string().trim().min(1).max(128),
+    rationale: z.string().trim().min(1).max(1000),
+    videoFilter: updateClipInput.shape.videoFilter.unwrap().extend({
+      exposure: z.number().min(-2).max(2).optional(),
+      temperature: z.number().min(-1).max(1).optional(),
+      tint: z.number().min(-1).max(1).optional(),
+      shadows: z.number().min(-1).max(1).optional(),
+      highlights: z.number().min(-1).max(1).optional(),
+      toneCurve: z.enum(["linear", "filmic"]).optional(),
+    }).strict(),
+  }).strict()).min(1).max(12).optional(),
+}).strict();
+const colorPreviewInput = z.object({
+  proposalId: z.string().trim().min(1).max(160),
+  targetIds: z.array(z.string().trim().min(1).max(128)).max(100).optional(),
+  changeIds: z.array(z.string().trim().min(1).max(160)).min(1).max(100).optional(),
+  includeImages: z.boolean().default(false),
+}).strict().refine(
+  (input) => !(input.targetIds?.length && input.changeIds?.length),
+  "Provide targetIds or changeIds, not both",
+);
+const colorVisualDecisionSchema = z.object({
+  changeId: z.string().trim().min(1).max(160),
+  decision: z.enum(["improves", "neutral", "worse"]),
+  reason: z.string().trim().min(1).max(500).optional(),
+}).strict();
+const colorApproveInput = z.object({
+  proposalId: z.string().trim().min(1).max(160),
+  previewId: z.string().trim().min(1).max(160),
+  decisions: z.array(colorVisualDecisionSchema).min(1).max(100),
+  /** @deprecated Decisions now determine the applicable change IDs. */
+  changeIds: z.array(z.string().trim().min(1).max(160)).min(1).max(100).optional(),
+  confirmed: z.literal(true),
+}).strict();
+const colorApplyInput = z.object({
+  proposalId: z.string().trim().min(1).max(160),
+  approvalId: z.string().trim().min(1).max(160),
+  expectedRevision: z.number().int().nonnegative(),
+  operationId: z.string().trim().min(1).max(128),
+}).strict();
+const colorUndoInput = z.object({
+  operationId: z.string().trim().min(1).max(128),
+  undoOperationId: z.string().trim().min(1).max(128),
+  expectedRevision: z.number().int().nonnegative(),
+}).strict();
+const colorStatusInput = z.object({
+  proposalId: z.string().trim().min(1).max(160).optional(),
+  previewId: z.string().trim().min(1).max(160).optional(),
+  approvalId: z.string().trim().min(1).max(160).optional(),
+  operationId: z.string().trim().min(1).max(128).optional(),
+}).strict().refine(
+  (input) => Boolean(input.proposalId || input.previewId || input.approvalId || input.operationId),
+  "Provide at least one color workflow ID",
+);
 const storyboardSceneSchema = z.object({
   text: z.string().trim().min(1).max(400),
   assetId: z.string().trim().min(1).max(128).optional(),
@@ -224,7 +295,7 @@ const storyboardSceneSchema = z.object({
   y: z.number().min(8).max(90).default(50),
   fontSize: z.number().int().min(24).max(180).default(64),
   color: z.string().regex(/^#[0-9a-fA-F]{6}$/).default("#f2ede3"),
-  fontFamily: z.enum(["sans", "modern", "serif", "mono"]).default("sans"),
+  fontFamily: z.enum(["sans", "modern", "serif", "cursive", "mono", "display", "editorial", "rounded"]).default("sans"),
   fontWeight: z.number().int().min(100).max(900).default(700),
   textAlign: z.enum(["left", "center", "right"]).default("center"),
   animationIn: z.enum(TEXT_OVERLAY_ANIMATION_KINDS).default("rise"),
@@ -301,6 +372,8 @@ export interface EditorWebMcpToolContext {
   getExportState?: () => EditorExportState;
   cancelExport?: (signal: AbortSignal) => EditorWebMcpCallbackResult | Promise<EditorWebMcpCallbackResult>;
   captureFrame?: (frame: number, includeImage: boolean, signal: AbortSignal) => EditorFrameCapture | Promise<EditorFrameCapture>;
+  /** Render paired source-only samples with the native grading renderer, without mutating the timeline. */
+  captureColorComparison?: (aspect: AspectPreset, clipId: string, before: NonNullable<Clip["videoFilter"]>, after: NonNullable<Clip["videoFilter"]>, signal: AbortSignal) => Promise<ColorComparisonEvidence>;
   publishVisualReview?: (review: EditorVisualReview) => void;
   getRenderDiagnostics?: (aspect: AspectPreset) => unknown;
 }
@@ -310,12 +383,23 @@ export type LicensedAudioImportInput = Omit<z.infer<typeof importLicensedAudioIn
 const MAX_SUMMARY_CHARS = 1500;
 const MAX_PROJECT_CHARS = 12000;
 const MAX_CONTACT_SHEET_CHARS = 1_500_000;
+const MAX_COLOR_CHARS = 100_000;
+const colorResult = (value: unknown, maxChars = MAX_COLOR_CHARS): string => {
+  const serialized = JSON.stringify(value);
+  if (serialized.length > maxChars) throw new Error("COLOR_RESPONSE_LIMIT: Preview fewer changeIds or reduce capture JPEG dimensions/quality; no review record was created");
+  return serialized;
+};
 const json = (value: unknown, maxChars = MAX_SUMMARY_CHARS): string => {
   const serialized = JSON.stringify(value);
   return serialized.length <= maxChars ? serialized : JSON.stringify({ ok: false, error: "Response too large" });
 };
 const result = (message: string, extra: Record<string, unknown> = {}) => json({ ok: true, message, ...extra });
 const projectResult = (value: unknown) => json(value, MAX_PROJECT_CHARS);
+const stableStringify = (value: unknown): string => JSON.stringify(value, (_key, item) =>
+  item && typeof item === "object" && !Array.isArray(item)
+    ? Object.fromEntries(Object.entries(item).sort(([left], [right]) => left.localeCompare(right)))
+    : item,
+);
 const throwIfAborted = (signal: AbortSignal): void => {
   if (signal.aborted) throw signal.reason ?? new DOMException("Tool call aborted", "AbortError");
 };
@@ -399,20 +483,48 @@ const sanitizePhotoSearch = (response: PexelsPhotoSearchResult) => ({
   omitted: Math.max(0, response.photos.length - 12),
   attribution: response.attribution,
 });
-const sanitizeTimeline = (version: ReturnType<typeof activeVersion>, maxItems: number) => ({
+const sanitizeTimeline = (version: ReturnType<typeof activeVersion>, maxItems: number, offset = 0) => ({
   aspect: version.aspect,
-  tracks: bounded(ensureEditorTracks(version), maxItems, (track) => ({ ...track, name: scrub(track.name, 128) })),
-  clips: bounded(version.clips, maxItems, sanitizeClip),
-  textOverlays: bounded(version.textOverlays, maxItems, sanitizeText),
-  audioTracks: bounded(version.audioTracks, maxItems, sanitizeAudio),
-  transitions: bounded(version.transitions, maxItems, sanitizeTransition),
-  captionCues: bounded(version.captionCues ?? [], maxItems, (cue) => ({ ...cue, text: scrub(cue.text) })),
-  duckingRules: bounded(version.duckingRules ?? [], maxItems, (rule) => ({ ...rule, triggers: rule.triggers.slice(0,25), omittedTriggers: Math.max(0,rule.triggers.length-25) })),
+  tracks: bounded(ensureEditorTracks(version).slice(offset), maxItems, (track) => ({ ...track, name: scrub(track.name, 128) })),
+  clips: bounded(version.clips.slice(offset), maxItems, sanitizeClip),
+  textOverlays: bounded(version.textOverlays.slice(offset), maxItems, sanitizeText),
+  audioTracks: bounded(version.audioTracks.slice(offset), maxItems, sanitizeAudio),
+  transitions: bounded(version.transitions.slice(offset), maxItems, sanitizeTransition),
+  captionCues: bounded((version.captionCues ?? []).slice(offset), maxItems, (cue) => ({ ...cue, text: scrub(cue.text) })),
+  duckingRules: bounded((version.duckingRules ?? []).slice(offset), maxItems, (rule) => ({ ...rule, triggers: rule.triggers.slice(0,25), omittedTriggers: Math.max(0,rule.triggers.length-25) })),
 });
 const callbackResponse = (value: void | EditorWebMcpCallbackResult, fallback: string) => {
   if (value && !value.ok) return json({ ...value, ok: false, error: value.message });
   return json({ ...(value ?? {}), ok: true, message: value?.message ?? fallback });
 };
+
+type BrowserColorAsset = AssetRef & {
+  file?: Blob;
+  objectUrl?: string;
+  colorSpace?: SourceColorAsset["colorSpace"];
+  dynamicRange?: SourceColorAsset["dynamicRange"];
+};
+
+const sourceColorAssets = (assets: readonly AssetRef[]): SourceColorAsset[] =>
+  assets
+    .filter((asset) => asset.kind === "video" || asset.kind === "image")
+    .map((asset) => {
+      const browserAsset = asset as BrowserColorAsset;
+      return {
+        assetId: asset.assetId,
+        kind: asset.kind,
+        mimeType: asset.mimeType,
+        ...(browserAsset.file ? { file: browserAsset.file } : {}),
+        ...(browserAsset.objectUrl ? { objectUrl: browserAsset.objectUrl } : {}),
+        ...(asset.externalUrl ? { externalUrl: asset.externalUrl } : {}),
+        ...(asset.mediaMetadata ? { mediaMetadata: asset.mediaMetadata } : {}),
+        colorSpace: browserAsset.colorSpace ?? "unknown",
+        dynamicRange: browserAsset.dynamicRange ?? "unknown",
+      };
+    });
+
+const hasReadableColorSource = (assets: readonly SourceColorAsset[]): boolean =>
+  assets.some((asset) => Boolean(asset.file || asset.objectUrl || asset.externalUrl));
 
 const storyboardBaseline = (
   version: ReturnType<typeof activeVersion>,
@@ -494,7 +606,6 @@ const createStoryboardVersion = ({
       fontWeight: scene.fontWeight,
       textAlign: scene.textAlign,
       stylePreset: "classic",
-      createdaleyTexture: "plain",
       animation: {
         in: scene.animationIn,
         out: scene.animationOut,
@@ -641,6 +752,77 @@ const defineTool = <T extends z.ZodType>({ name, title, description, schema, rea
 
 export const createEditorWebMcpTools = (context: EditorWebMcpToolContext): WebMcpTool[] => {
   const approvals = new Map<string, { fingerprint: string; expiresAt: number }>();
+  const colorProposals = new Map<string, {
+    aspect: AspectPreset;
+    revision: number;
+    createdAt: number;
+    expiresAt: number;
+    result: ColorWorkflowProposal;
+    appliedOperationId?: string;
+  }>();
+  const colorPreviews = new Map<string, {
+    proposalId: string;
+    revision: number;
+    changeIds: string[];
+    includesImages: boolean;
+    createdAt: number;
+    expiresAt: number;
+  }>();
+  const colorApprovals = new Map<string, {
+    proposalId: string;
+    previewId: string;
+    aspect: AspectPreset;
+    revision: number;
+    changeIds: string[];
+    decisions: Array<{
+      changeId: string;
+      decision: "improves" | "neutral" | "worse";
+      reason?: string;
+    }>;
+    createdAt: number;
+    expiresAt: number;
+    consumedBy?: string;
+  }>();
+  const colorOperations = new Map<string, {
+    operationId: string;
+    proposalId: string;
+    approvalId: string;
+    aspect: AspectPreset;
+    appliedRevision: number;
+    changes: ColorWorkflowChange[];
+    status: "applied" | "undone";
+    undoOperationId?: string;
+    undoneRevision?: number;
+  }>();
+  let colorProposalSequence = 0;
+  let colorPreviewSequence = 0;
+  let colorApprovalSequence = 0;
+  const COLOR_PROPOSAL_TTL_MS = 30 * 60 * 1000;
+  const COLOR_APPROVAL_TTL_MS = 10 * 60 * 1000;
+  const COLOR_PREVIEW_TTL_MS = 10 * 60 * 1000;
+  const requireColorProposal = (proposalId: string, revision: number) => {
+    const proposal = colorProposals.get(proposalId);
+    if (!proposal) throw new Error("PROPOSAL_NOT_FOUND: Color proposal not found");
+    if (Date.now() >= proposal.expiresAt) throw new Error("PROPOSAL_EXPIRED: Color proposal expired; inspect and propose again");
+    if (proposal.revision !== revision) throw new Error("STALE_PROPOSAL: Project changed; inspect and propose again");
+    if (proposal.appliedOperationId) throw new Error("PROPOSAL_APPLIED: Color proposal was already applied");
+    return proposal;
+  };
+  const sameChangeIds = (left: readonly string[], right: readonly string[]) => {
+    if (left.length !== right.length) return false;
+    const rightIds = new Set(right);
+    return rightIds.size === right.length && left.every((changeId) => rightIds.has(changeId));
+  };
+  const requireColorPreview = (previewId: string, proposalId: string, revision: number) => {
+    const preview = colorPreviews.get(previewId);
+    if (!preview || preview.proposalId !== proposalId) {
+      throw new Error("PREVIEW_NOT_FOUND: Preview does not authorize this proposal");
+    }
+    if (Date.now() >= preview.expiresAt) throw new Error("PREVIEW_EXPIRED: Preview expired; preview the candidates again");
+    if (preview.revision !== revision) throw new Error("STALE_PREVIEW: Project changed; preview the candidates again");
+    if (!preview.includesImages) throw new Error("VISUAL_EVIDENCE_REQUIRED: Capture successful before/after images before approval");
+    return preview;
+  };
   const variants = new Map<string, {
     id: string;
     name: string;
@@ -674,7 +856,7 @@ export const createEditorWebMcpTools = (context: EditorWebMcpToolContext): WebMc
     if (!context.dispatchCommand) return projectResult({ ok: false, code: "COMMANDS_UNAVAILABLE", message: "Transactional editor commands are unavailable" });
     const { expectedRevision: _revision, ...identity } = input;
     void _revision;
-    const requestFingerprint = JSON.stringify(identity, (_key, value) => value && typeof value === "object" && !Array.isArray(value) ? Object.fromEntries(Object.entries(value).sort(([a], [b]) => a.localeCompare(b))) : value);
+    const requestFingerprint = stableStringify(identity);
     // Resolve state-dependent actions only for new commands. A freeze retry may
     // reference a source clip that the original successful operation removed.
     let actions: EditorAction[] = [];
@@ -809,6 +991,7 @@ export const createEditorWebMcpTools = (context: EditorWebMcpToolContext): WebMc
           compose: ["editor_plan_storyboard", "editor_compose_storyboard", "editor_create_variant", "editor_apply_variant"],
           inspect: ["editor_validate_project", "editor_get_render_diagnostics", "editor_capture_frame", "editor_capture_contact_sheet", "editor_get_attribution_report"],
           correct: ["editor_auto_fix_project", "editor_update_text_overlay", "editor_update_clip", "editor_update_audio_track"],
+          color: ["editor_color_inspect", "editor_color_propose", "editor_color_preview", "editor_color_approve", "editor_color_apply", "editor_color_undo", "editor_color_status"],
           deliver: ["editor_request_export", "editor_get_export_status", "editor_get_export_artifact", "editor_cancel_export"],
         },
         safeguards: {
@@ -826,9 +1009,280 @@ export const createEditorWebMcpTools = (context: EditorWebMcpToolContext): WebMc
       }),
     }),
     defineTool({ name: "editor_get_state_summary", title: "Get editor state", description: "Get a compact summary of the current editor canvas and timeline.", schema: emptyInput, readOnly: true, execute: (_input, signal) => { throwIfAborted(signal); const state = context.getState(); const version = activeVersion(state); const visibleOverlays = version.textOverlays.slice(0, 10); return json({ ok: true, revision: state.revision ?? 0, activeVersion: state.present.activeVersion, counts: { clips: version.clips.length, textOverlays: version.textOverlays.length, audioTracks: version.audioTracks.length, transitions: version.transitions.length }, textOverlays: visibleOverlays.map(({ id, text, startFrame, endFrame, stylePreset }) => ({ id, text: scrub(text, 120), startFrame, endFrame, stylePreset })), omittedTextOverlays: Math.max(0, version.textOverlays.length - visibleOverlays.length) }); } }),
-    defineTool({ name: "editor_get_project", title: "Inspect editor project", description: "Inspect bounded, sanitized project timelines without exposing files, object URLs, data URLs, or secrets.", schema: projectInput, readOnly: true, execute: (input) => { const state = context.getState(); const maxItems = input.maxItems ?? 10; const aspects = input.aspect ? [input.aspect] : (["reel_9_16", "widescreen_16_9"] as const); const versions = Object.fromEntries(aspects.map((aspect) => [aspect, sanitizeTimeline(state.present.versions[aspect], maxItems)])); return projectResult({ ok: true, revision: state.revision ?? 0, activeVersion: state.present.activeVersion, versions, assets: bounded(context.getAssets?.() ?? [], Math.min(maxItems, 25), sanitizeAsset) }); } }),
+    defineTool({ name: "editor_get_project", title: "Inspect editor project", description: "Inspect bounded, sanitized project timelines. Follow nextOffset to read every item; maxItems may shrink to fit the response. Keep aspect and revision fixed across pages.", schema: projectInput, readOnly: true, execute: (input) => {
+      const state = context.getState();
+      let maxItems = input.maxItems ?? 10;
+      const aspects = input.aspect ? [input.aspect] : (["reel_9_16", "widescreen_16_9"] as const);
+      const assets = context.getAssets?.() ?? [];
+      const totalItems = Math.max(assets.length, ...aspects.flatMap((aspect) => {
+        const version = state.present.versions[aspect];
+        return [ensureEditorTracks(version).length, version.clips.length, version.textOverlays.length, version.audioTracks.length, version.transitions.length, version.captionCues?.length ?? 0, version.duckingRules?.length ?? 0];
+      }));
+      for (;;) {
+        const versions = Object.fromEntries(aspects.map((aspect) => [aspect, sanitizeTimeline(state.present.versions[aspect], maxItems, input.offset)]));
+        const response = JSON.stringify({ ok: true, revision: state.revision ?? 0, activeVersion: state.present.activeVersion, offset: input.offset, maxItems, nextOffset: input.offset + maxItems < totalItems ? input.offset + maxItems : null, versions, assets: bounded(assets.slice(input.offset), maxItems, sanitizeAsset) });
+        if (response.length <= MAX_PROJECT_CHARS) return response;
+        if (maxItems === 1) return projectResult({ ok: false, code: "PROJECT_ITEM_TOO_LARGE", message: "Request a single aspect to reduce the page size", offset: input.offset });
+        maxItems = Math.max(1, Math.floor(maxItems / 2));
+      }
+    } }),
     defineTool({ name: "editor_validate_project", title: "Validate editor project", description: "Check export readiness, missing media, unsafe text, timeline gaps, overflow risk, and transition integrity.", schema: validateProjectInput, readOnly: true, execute: (input) => { const aspect = input.aspect ?? context.getState().present.activeVersion; const report = validateEditorVersion(activeVersion(context.getState(), aspect), context.getAssets?.() ?? []); return projectResult({ ok: true, report }); } }),
     defineTool({ name: "editor_get_render_diagnostics", title: "Get render diagnostics", description: "Inspect Elah adapter diagnostics and browser encoding capability alongside project validation.", schema: renderDiagnosticsInput, readOnly: true, execute: (input) => { const aspect = input.aspect ?? context.getState().present.activeVersion; const validation = validateEditorVersion(activeVersion(context.getState(), aspect), context.getAssets?.() ?? []); const runtime = context.getRenderDiagnostics?.(aspect) ?? null; return projectResult({ ok: true, aspect, validation, runtime }); } }),
+    defineTool({
+      name: "editor_color_inspect",
+      title: "Inspect color consistency",
+      description: "Sample browser-readable source frames for exposure, white-balance, saturation, palette, and lighting drift. Falls back deterministically to clip filter metadata when source pixels are unavailable.",
+      schema: colorInspectInput,
+      readOnly: true,
+      execute: async (input, signal) => {
+        const state = context.getState();
+        const revision = state.revision ?? 0;
+        const aspect = input.aspect ?? state.present.activeVersion;
+        const version = activeVersion(state, aspect);
+        const assets = sourceColorAssets(context.getAssets?.() ?? []);
+        const inspection = hasReadableColorSource(assets)
+          ? await inspectColorConsistencyFromSources({ version, assets, clipIds: input.clipIds, signal })
+          : inspectColorConsistency(version, input.clipIds);
+        const currentRevision = context.getState().revision ?? 0;
+        if (currentRevision !== revision) throw new Error("REVISION_CONFLICT: Project changed during color analysis; inspect again");
+        return projectResult({ ok: true, revision, inspection });
+      },
+    }),
+    defineTool({
+      name: "editor_color_propose",
+      title: "Propose color corrections",
+      description: "Propose up to 12 explicit per-shot videoFilter candidates with rationale and optional creativeIntent, or derive source-frame candidates. No changes are applied. Preview with includeImages:true, then record a decision for every change before approval.",
+      schema: colorProposeInput,
+      readOnly: true,
+      execute: async (input, signal) => {
+        const state = context.getState();
+        const revision = state.revision ?? 0;
+        const aspect = input.aspect ?? state.present.activeVersion;
+        const version = activeVersion(state, aspect);
+        const assets = sourceColorAssets(context.getAssets?.() ?? []);
+        const result: ColorWorkflowProposal = input.candidates
+          ? { candidateOnly: true, requiresVisualReview: true, inspection: inspectColorConsistency(version, input.candidates.map((candidate) => candidate.clipId)), changes: [] }
+          : hasReadableColorSource(assets)
+          ? await proposeShotGradesFromSources({ version, assets, clipIds: input.clipIds, signal, creativeIntent: input.creativeIntent === "filmic" ? "filmic" : "natural" })
+          : proposeColorCorrections(version, input.findingIds, input.clipIds);
+        if (input.candidates) {
+          if (input.findingIds?.length) throw new Error("AMBIGUOUS_CANDIDATES: findingIds cannot be combined with explicit candidates");
+          if (new Set(input.candidates.map((candidate) => candidate.clipId)).size !== input.candidates.length) throw new Error("DUPLICATE_CANDIDATE: Supply one candidate per clip");
+          result.changes = input.candidates.map((candidate): ColorWorkflowChange => {
+            const clip = version.clips.find((item) => item.id === candidate.clipId);
+            if (!clip || (clip.kind !== "video" && clip.kind !== "image")) throw new Error("CLIP_NOT_FOUND: Candidate must reference a visual clip in the proposal aspect");
+            if (input.clipIds?.length && !input.clipIds.includes(clip.id)) throw new Error("CANDIDATE_SCOPE_MISMATCH: Candidate is outside clipIds");
+            return {
+              changeId: `color-change-${clip.id}`, candidate: true, targetType: "clip", targetId: clip.id,
+              reason: candidate.rationale,
+              before: { videoFilter: { preset: "none", brightness: 1, contrast: 1, saturation: 1, sepia: 0, grayscale: 0, hueRotate: 0, ...clip.videoFilter } },
+              after: { videoFilter: candidate.videoFilter }, reversible: true, risk: "medium",
+            };
+          });
+        }
+        const omittedChanges = Math.max(0, result.changes.length - 12);
+        result.changes = result.changes.slice(0, 12);
+        throwIfAborted(signal);
+        const currentRevision = context.getState().revision ?? 0;
+        if (currentRevision !== revision) throw new Error("REVISION_CONFLICT: Project changed during color analysis; propose again");
+        const proposalId = `color-proposal-${Date.now().toString(36)}-${++colorProposalSequence}`;
+        const createdAt = Date.now();
+        const response = colorResult({ ok: true, proposalId, revision, aspect, creativeIntent: input.creativeIntent, omittedChanges, expiresAt: new Date(createdAt + COLOR_PROPOSAL_TTL_MS).toISOString(), candidateOnly: true, requiresPreview: true, requiresApproval: true, proposal: {
+          ...result, inspection: { ...result.inspection,
+            findings: result.inspection.findings.slice(0, 24).map((finding) => ({ ...finding, message: scrub(finding.message, 500) })),
+            omittedFindings: Math.max(0, result.inspection.findings.length - 24),
+            warnings: [...new Set(result.inspection.warnings)].slice(0, 8).map((warning) => scrub(warning, 500)),
+          },
+        } });
+        colorProposals.set(proposalId, { aspect, revision, createdAt, expiresAt: createdAt + COLOR_PROPOSAL_TTL_MS, result });
+        return response;
+      },
+    }),
+    defineTool({
+      name: "editor_color_preview",
+      title: "Preview color corrections",
+      description: "Preview up to four candidates per image batch using includeImages:true. Returns paired before/after source-only frames rendered with native grading, not the whole composition. Metadata-only previews cannot authorize approval. Classify every evidenced candidate as improves, neutral, or worse.",
+      schema: colorPreviewInput,
+      readOnly: true,
+      execute: async (input, signal) => {
+        const state = context.getState();
+        const revision = state.revision ?? 0;
+        const proposal = requireColorProposal(input.proposalId, revision);
+        const version = activeVersion(state, proposal.aspect);
+        const preview = previewColorCorrections(version, proposal.result, input.targetIds, input.changeIds);
+        if (!preview.changes.length) throw new Error("EMPTY_PREVIEW: The proposal has no candidates in this preview scope");
+        if (input.includeImages && preview.changes.length > 4) throw new Error("PREVIEW_BATCH_LIMIT: Request at most four changeIds with includeImages:true");
+        if (input.includeImages && !context.captureColorComparison) throw new Error("PREVIEW_UNAVAILABLE: Paired source-frame color capture is unavailable");
+        const evidence: ColorComparisonEvidence[] = [];
+        if (input.includeImages && context.captureColorComparison) {
+          for (const change of preview.changes) {
+            throwIfAborted(signal);
+            const clip = version.clips.find((item) => item.id === change.targetId)!;
+            const comparison = await context.captureColorComparison(proposal.aspect, change.targetId, change.before.videoFilter, change.after.videoFilter, signal);
+            throwIfAborted(signal);
+            const required = Math.min(3, clip.endFrame - clip.startFrame);
+            const validCapture = (capture: EditorFrameCapture, frame: number) =>
+              capture && capture.frame === frame && Number.isFinite(capture.width) && capture.width > 0 && Number.isFinite(capture.height) && capture.height > 0 && !capture.imageError && capture.mimeType === "image/jpeg" && /^data:image\/jpeg;base64,[A-Za-z0-9+/]+={0,2}$/.test(capture.dataUrl ?? "");
+            const samples = comparison.samples.filter((sample) =>
+              Number.isInteger(sample.frame) && sample.frame >= clip.startFrame && sample.frame < clip.endFrame && Number.isFinite(sample.sourceTimeSeconds) && sample.sourceTimeSeconds >= 0 &&
+              validCapture(sample.before, sample.frame) && validCapture(sample.after, sample.frame) && sample.before.width === sample.after.width && sample.before.height === sample.after.height,
+            ).filter((sample, index, samples) => samples.findIndex((other) => other.frame === sample.frame) === index).slice(0, required);
+            if (comparison.clipId !== clip.id || required < 1 || samples.length < required) throw new Error("VISUAL_EVIDENCE_FAILED: Every candidate needs three successful distinct paired frames (or every frame of a shorter clip)");
+            evidence.push({ ...comparison, samples });
+          }
+        }
+        throwIfAborted(signal);
+        requireColorProposal(input.proposalId, context.getState().revision ?? 0);
+        const previewId = `color-preview-${Date.now().toString(36)}-${++colorPreviewSequence}`;
+        const createdAt = Date.now();
+        const response = colorResult({ ok: true, previewId, proposalId: input.proposalId, revision, aspect: proposal.aspect, reviewedChangeIds: preview.changeIds, requiresPerChangeDecision: true, visualEvidenceAvailable: input.includeImages, evidenceScope: "source-only", expiresAt: new Date(createdAt + COLOR_PREVIEW_TTL_MS).toISOString(), preview: { ...preview, representativeFrames: evidence.flatMap((comparison) => comparison.samples.map((sample) => ({ clipId: comparison.clipId, frame: sample.frame }))), warnings: ["Compare each paired source-only sample; composition, overlays, and transitions are not included.", "Only successful image previews can authorize per-change approval."] }, evidence }, input.includeImages ? MAX_CONTACT_SHEET_CHARS : MAX_COLOR_CHARS);
+        colorPreviews.set(previewId, {
+          proposalId: input.proposalId,
+          revision,
+          changeIds: preview.changeIds,
+          includesImages: input.includeImages,
+          createdAt,
+          expiresAt: createdAt + COLOR_PREVIEW_TTL_MS,
+        });
+        return response;
+      },
+    }),
+    defineTool({
+      name: "editor_color_approve",
+      title: "Approve color corrections",
+      description: "Record a visual decision for every candidate in an exact preview. Only candidates judged improves receive one-use, revision-bound approval; neutral and worse candidates cannot be applied.",
+      schema: colorApproveInput,
+      readOnly: true,
+      execute: (input) => {
+        const state = context.getState();
+        const revision = state.revision ?? 0;
+        const proposal = requireColorProposal(input.proposalId, revision);
+        const preview = requireColorPreview(input.previewId, input.proposalId, revision);
+        const decisionIds = input.decisions.map((decision) => decision.changeId);
+        if (new Set(decisionIds).size !== decisionIds.length) {
+          throw new Error("DUPLICATE_VISUAL_DECISION: Each previewed candidate must have exactly one visual decision");
+        }
+        if (!sameChangeIds(preview.changeIds, decisionIds)) {
+          throw new Error("VISUAL_DECISIONS_INCOMPLETE: Decisions must exactly match every change ID in the preview");
+        }
+        const changeIds = input.decisions
+          .filter((decision) => decision.decision === "improves")
+          .map((decision) => decision.changeId);
+        if (!changeIds.length) {
+          throw new Error("EMPTY_APPROVAL: No previewed candidates were judged to improve the footage");
+        }
+        if (input.changeIds && !sameChangeIds(input.changeIds, changeIds)) {
+          throw new Error("APPROVAL_SCOPE_MISMATCH: changeIds must exactly match candidates judged improves");
+        }
+        const changes = selectColorChanges(proposal.result, changeIds);
+        const approvalId = `color-approval-${Date.now().toString(36)}-${++colorApprovalSequence}`;
+        const createdAt = Date.now();
+        const decisions = input.decisions.map((decision) => ({
+          changeId: decision.changeId,
+          decision: decision.decision,
+          ...(decision.reason === undefined ? {} : { reason: decision.reason }),
+        }));
+        colorApprovals.set(approvalId, { proposalId: input.proposalId, previewId: input.previewId, aspect: proposal.aspect, revision, changeIds, decisions, createdAt, expiresAt: createdAt + COLOR_APPROVAL_TTL_MS });
+        return projectResult({ ok: true, approvalId, proposalId: input.proposalId, previewId: input.previewId, revision, aspect: proposal.aspect, approvedChangeIds: changeIds, rejectedChangeIds: decisions.filter((decision) => decision.decision !== "improves").map((decision) => decision.changeId), visualDecisions: decisions, expiresAt: new Date(createdAt + COLOR_APPROVAL_TTL_MS).toISOString(), oneUse: true });
+      },
+    }),
+    defineTool({
+      name: "editor_color_apply",
+      title: "Apply approved color corrections",
+      description: "Atomically apply only exact, previewed, revision-bound color changes explicitly judged improves and authorized by a one-use approval.",
+      schema: colorApplyInput,
+      readOnly: false,
+      execute: (input) => {
+        const existing = colorOperations.get(input.operationId);
+        if (existing) {
+          if (existing.proposalId !== input.proposalId || existing.approvalId !== input.approvalId) throw new Error("OPERATION_ID_CONFLICT: Operation ID was already used for another color application");
+          return projectResult({ ok: true, operationId: existing.operationId, proposalId: existing.proposalId, approvalId: existing.approvalId, aspect: existing.aspect, appliedChangeIds: existing.changes.map((change) => change.changeId), revision: existing.appliedRevision, undoAvailable: existing.status === "applied", idempotent: true });
+        }
+        if (!context.dispatchCommand) return projectResult({ ok: false, code: "COMMANDS_UNAVAILABLE", message: "Transactional editor commands are unavailable" });
+        const state = context.getState();
+        const revision = state.revision ?? 0;
+        if (input.expectedRevision !== revision) return projectResult({ ok: false, code: "REVISION_CONFLICT", message: "Project changed; inspect and propose again", currentRevision: revision });
+        const proposal = requireColorProposal(input.proposalId, revision);
+        const approval = colorApprovals.get(input.approvalId);
+        if (!approval || approval.proposalId !== input.proposalId) throw new Error("APPROVAL_NOT_FOUND: Approval does not authorize this proposal");
+        if (approval.consumedBy) throw new Error("APPROVAL_CONSUMED: Approval was already used");
+        if (Date.now() >= approval.expiresAt) throw new Error("APPROVAL_EXPIRED: Approval expired; approve the proposal again");
+        if (approval.revision !== revision || approval.aspect !== proposal.aspect) throw new Error("APPROVAL_INVALIDATED: Project changed after approval");
+        const preview = requireColorPreview(approval.previewId, input.proposalId, revision);
+        if (!sameChangeIds(preview.changeIds, approval.decisions.map((decision) => decision.changeId))) {
+          throw new Error("PREVIEW_SCOPE_MISMATCH: Approval decisions no longer match the exact preview record");
+        }
+        const visuallyImprovedIds = approval.decisions
+          .filter((decision) => decision.decision === "improves")
+          .map((decision) => decision.changeId);
+        if (!sameChangeIds(approval.changeIds, visuallyImprovedIds)) {
+          throw new Error("VISUAL_APPROVAL_INVALID: Neutral or worse candidates cannot be applied");
+        }
+        const changes = selectColorChanges(proposal.result, approval.changeIds);
+        const actions: EditorAction[] = changes.map((change) => ({ type: "update-clip", aspect: proposal.aspect, clipId: change.targetId, patch: { videoFilter: change.after.videoFilter } }));
+        context.dispatchCommand({ type: "history/command", operationId: input.operationId, expectedRevision: revision, requestFingerprint: stableStringify({ kind: "color-apply", proposalId: input.proposalId, approvalId: input.approvalId, changeIds: approval.changeIds }), actions });
+        const next = context.getState();
+        const receipt = next.lastCommandReceipt;
+        if (!receipt || receipt.operationId !== input.operationId) return projectResult({ ok: false, code: "COMMAND_RECEIPT_MISSING", message: "Color application did not return a command receipt" });
+        if (!receipt.ok) return projectResult({ ok: false, code: receipt.code ?? "COLOR_APPLY_FAILED", message: receipt.message, currentRevision: next.revision ?? revision });
+        const operation = { operationId: input.operationId, proposalId: input.proposalId, approvalId: input.approvalId, aspect: proposal.aspect, appliedRevision: next.revision ?? receipt.revision, changes, status: "applied" as const };
+        colorOperations.set(input.operationId, operation);
+        approval.consumedBy = input.operationId;
+        proposal.appliedOperationId = input.operationId;
+        return projectResult({ ok: true, operationId: input.operationId, proposalId: input.proposalId, approvalId: input.approvalId, aspect: proposal.aspect, appliedChangeIds: changes.map((change) => change.changeId), skippedChangeIds: [], revision: operation.appliedRevision, undoAvailable: true, inverseData: changes.map((change) => ({ changeId: change.changeId, targetId: change.targetId, restore: change.before })) });
+      },
+    }),
+    defineTool({
+      name: "editor_color_undo",
+      title: "Undo color operation",
+      description: "Atomically restore the filters captured by a color operation. Only the latest unchanged color operation can be undone.",
+      schema: colorUndoInput,
+      readOnly: false,
+      execute: (input) => {
+        const operation = colorOperations.get(input.operationId);
+        if (!operation) throw new Error("OPERATION_NOT_FOUND: Color operation not found");
+        if (operation.status === "undone") {
+          if (operation.undoOperationId !== input.undoOperationId) throw new Error("UNDO_OPERATION_CONFLICT: Color operation was undone with another operation ID");
+          return projectResult({ ok: true, operationId: input.undoOperationId, undoneOperationId: input.operationId, restoredChangeIds: operation.changes.map((change) => change.changeId), revision: operation.undoneRevision, idempotent: true });
+        }
+        if (!context.dispatchCommand) return projectResult({ ok: false, code: "COMMANDS_UNAVAILABLE", message: "Transactional editor commands are unavailable" });
+        const revision = context.getState().revision ?? 0;
+        if (input.expectedRevision !== revision || operation.appliedRevision !== revision) return projectResult({ ok: false, code: "REVISION_CONFLICT", message: "The project changed after this color operation; automatic color undo is no longer safe", currentRevision: revision });
+        const actions: EditorAction[] = operation.changes.map((change) => ({ type: "update-clip", aspect: operation.aspect, clipId: change.targetId, patch: { videoFilter: change.before.videoFilter } }));
+        context.dispatchCommand({ type: "history/command", operationId: input.undoOperationId, expectedRevision: revision, requestFingerprint: stableStringify({ kind: "color-undo", operationId: input.operationId, changeIds: operation.changes.map((change) => change.changeId) }), actions });
+        const next = context.getState();
+        const receipt = next.lastCommandReceipt;
+        if (!receipt || receipt.operationId !== input.undoOperationId) return projectResult({ ok: false, code: "COMMAND_RECEIPT_MISSING", message: "Color undo did not return a command receipt" });
+        if (!receipt.ok) return projectResult({ ok: false, code: receipt.code ?? "COLOR_UNDO_FAILED", message: receipt.message, currentRevision: next.revision ?? revision });
+        operation.status = "undone";
+        operation.undoOperationId = input.undoOperationId;
+        operation.undoneRevision = next.revision ?? receipt.revision;
+        return projectResult({ ok: true, operationId: input.undoOperationId, undoneOperationId: input.operationId, restoredChangeIds: operation.changes.map((change) => change.changeId), revision: operation.undoneRevision });
+      },
+    }),
+    defineTool({
+      name: "editor_color_status",
+      title: "Get color workflow status",
+      description: "Check whether color proposals, previews, approvals, and operations remain valid at the current project revision.",
+      schema: colorStatusInput,
+      readOnly: true,
+      execute: (input) => {
+        const revision = context.getState().revision ?? 0;
+        const now = Date.now();
+        const proposal = input.proposalId ? colorProposals.get(input.proposalId) : undefined;
+        const preview = input.previewId ? colorPreviews.get(input.previewId) : undefined;
+        const approval = input.approvalId ? colorApprovals.get(input.approvalId) : undefined;
+        const operation = input.operationId ? colorOperations.get(input.operationId) : undefined;
+        return projectResult({
+          ok: true,
+          projectRevision: revision,
+          ...(input.proposalId ? { proposal: !proposal ? { status: "not-found" } : { status: proposal.appliedOperationId ? "applied" : now >= proposal.expiresAt ? "expired" : proposal.revision !== revision ? "stale" : "valid", proposalId: input.proposalId, revision: proposal.revision, appliedOperationId: proposal.appliedOperationId } } : {}),
+          ...(input.previewId ? { preview: !preview ? { status: "not-found" } : { status: now >= preview.expiresAt ? "expired" : preview.revision !== revision ? "stale" : "ready", previewId: input.previewId, proposalId: preview.proposalId, reviewedChangeIds: preview.changeIds, includesImages: preview.includesImages, requiresPerChangeDecision: true } } : {}),
+          ...(input.approvalId ? { approval: !approval ? { status: "not-found" } : { status: approval.consumedBy ? "consumed" : now >= approval.expiresAt ? "expired" : approval.revision !== revision ? "invalidated" : "valid", approvalId: input.approvalId, proposalId: approval.proposalId, previewId: approval.previewId, approvedChangeIds: approval.changeIds, visualDecisions: approval.decisions, consumedBy: approval.consumedBy } } : {}),
+          ...(input.operationId ? { operation: !operation ? { status: "not-found", undoAvailable: false } : { status: operation.status, operationId: operation.operationId, proposalId: operation.proposalId, revision: operation.status === "applied" ? operation.appliedRevision : operation.undoneRevision, undoAvailable: operation.status === "applied" && operation.appliedRevision === revision } } : {}),
+        });
+      },
+    }),
     defineTool({ name: "editor_capture_frame", title: "Capture preview frame", description: "Seek the active Elah preview, report active timeline items, and optionally return a reduced JPEG data URL without changing project state.", schema: captureFrameInput, readOnly: true, execute: async (input, signal) => { const activeAspect = context.getState().present.activeVersion; const aspect = input.aspect ?? activeAspect; if (aspect !== activeAspect) throw new Error(`Frame capture is read-only. Switch to ${aspect} with editor_switch_canvas first.`); const version = activeVersion(context.getState(), aspect); const duration = Math.max(1, getVersionRenderDurationInFrames(version)); if (input.frame >= duration) throw new Error(`Frame must be below the ${duration} frame timeline duration`); if (!context.captureFrame) throw new Error("Frame capture is unavailable"); const capture = await context.captureFrame(input.frame, input.includeImage, signal); return json({ ok: true, inspection: inspectEditorFrame(version, input.frame), capture }, input.includeImage ? 450000 : MAX_PROJECT_CHARS); } }),
     defineTool({
       name: "editor_capture_contact_sheet",
@@ -882,7 +1336,7 @@ export const createEditorWebMcpTools = (context: EditorWebMcpToolContext): WebMc
     }),
     defineTool({ name: "editor_get_export_status", title: "Get export status", description: "Read browser render progress, recovery guidance, and metadata for the latest exported MP4.", schema: emptyInput, readOnly: true, execute: () => { const exportState = context.getExportState?.() ?? { status: "idle", progress: 0, artifact: null }; return projectResult({ ok: true, export: exportState, nextAction: exportState.status === "rendering" ? "Poll editor_get_export_status until completed or failed." : exportState.status === "completed" ? "Verify artifact bytes, duration, codecs, and play the downloaded MP4." : exportState.status === "failed" ? "Read export.message, run editor_get_render_diagnostics, resolve the failure, then request export again." : "Validate and inspect the project before requesting export." }); } }),
     defineTool({ name: "editor_get_export_artifact", title: "Get playable export artifact", description: "Return the retained page-scoped MP4 Blob URL, integrity metadata, and browser playback verification for the latest completed export.", schema: emptyInput, readOnly: true, execute: () => { const state = context.getExportState?.(); const artifact = state?.artifact; if (!artifact || state.status !== "completed") throw new Error("No completed export artifact is retained in this editor session."); return projectResult({ ok: true, artifact, nextAction: artifact.verification.playable ? "Open artifact.objectUrl to play the MP4, or download it with artifact.filename." : "Review artifact.verification.error and run editor_get_render_diagnostics before exporting again." }); } }),
-    defineTool({ name: "editor_list_style_presets", title: "List text styles", description: "List text styles with native Elah preview and export parity.", schema: emptyInput, readOnly: true, execute: () => json({ ok: true, presets: [{ id: "classic", label: TEXT_OVERLAY_STYLE_PRESET_LABELS.classic }] }) }),
+    defineTool({ name: "editor_list_style_presets", title: "List text styles", description: "List text styles with native Elah preview and export parity.", schema: emptyInput, readOnly: true, execute: () => json({ ok: true, presets: [{ id: "classic", label: "Classic" }] }) }),
     defineTool({ name: "editor_list_assets", title: "List editor assets", description: "List safe asset metadata without exposing File objects, object URLs, data URLs, or secrets.", schema: assetsInput, readOnly: true, execute: (input) => json({ ok: true, ...bounded(context.getAssets?.() ?? [], input.maxItems ?? 50, sanitizeAsset) }) }),
     defineTool({
       name: "editor_get_attribution_report",

@@ -111,9 +111,6 @@ export const autoFixEditorVersion = (
       Math.max(minimumReadableSize, next.fontSize),
       "Raise text to the minimum readable size for this canvas.",
     );
-    if (next.stylePreset !== "classic") {
-      set("stylePreset", "classic", "Use the text style with complete Elah preview/export parity.");
-    }
     if (
       visualEndFrame > 0 &&
       next.endFrame > visualEndFrame &&
@@ -199,16 +196,6 @@ export const validateEditorVersion = (
           entityId: overlay.id,
           frame: overlay.startFrame,
         }),
-      );
-    }
-    if (overlay.stylePreset !== "classic") {
-      issues.push(
-        issue(
-          "legacy-text-preset",
-          "warning",
-          `Text overlay ${overlay.id} uses ${overlay.stylePreset}; only classic has complete Elah parity.`,
-          { entityId: overlay.id, frame: overlay.startFrame },
-        ),
       );
     }
     if (overlay.x < 6 || overlay.x > 94 || overlay.y < 8 || overlay.y > 90) {

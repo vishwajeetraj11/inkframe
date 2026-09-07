@@ -61,8 +61,6 @@ export const createDefaultTextOverlay = (id: string): TextOverlay => ({
   fontStyle: "normal",
   textAlign: "center",
   stylePreset: "classic",
-  createdaleyTexture: "plain",
-  syncMediaToTimelineEvents: false,
 });
 
 export const createDefaultAudioTrack = (

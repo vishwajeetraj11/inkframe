@@ -1,5 +1,5 @@
 import { createInitialProjectSession } from "./defaults";
-import { editorReducer, type EditorAction } from "./reducer";
+import { editorReducer, validateVideoFilterGrades, type EditorAction } from "./reducer";
 import { validateVersionPlacement } from "./timeline";
 import { sourceTimeAtFrame } from "./time-mapping";
 import { FPS } from "./constants";
@@ -121,7 +121,7 @@ export const validateEditorCommandAction = (state: ProjectSession, action: Edito
     }
     default: return [];
   }
-  return validateVersionPlacement(candidate);
+  return [...validateVideoFilterGrades(candidate), ...validateVersionPlacement(candidate)];
 };
 
 export const editorHistoryReducer = (

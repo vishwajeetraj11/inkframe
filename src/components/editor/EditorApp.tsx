@@ -21,7 +21,7 @@ import {
   createEditorTrack,
   ensureEditorTracks,
 } from "@/lib/editor/tracks";
-import type { EditorTrackKind } from "@/lib/editor/types";
+import type { EditorTrackKind, VideoFilter } from "@/lib/editor/types";
 import type { EditorFrameCapture, EditorVisualReview } from "@/lib/editor/export-state";
 import { analyzeFrameContrast } from "@/lib/editor/webmcp/contrast";
 import { usePlaybackStore, type PreviewHandle } from "@elah/editor";
@@ -32,6 +32,7 @@ import { toast } from "sonner";
 import { useEffect, useRef, useState, type CSSProperties } from "react";
 import { useEditorWebMcp } from "./hooks/use-editor-webmcp";
 import { useEditorSession } from "./hooks/use-editor-session";
+import { flushSync } from "react-dom";
 
 const DEFAULT_TIMELINE_HEIGHT = 188;
 const MIN_TIMELINE_HEIGHT = 140;
@@ -43,6 +44,7 @@ export const EditorApp = () => {
   const [mobilePanel, setMobilePanel] = useState<MobileWorkspacePanel>("canvas");
   const [selectedCaptionId, setSelectedCaptionId] = useState<string | null>(null);
   const [visualReview, setVisualReview] = useState<EditorVisualReview | null>(null);
+  const [colorPreview, setColorPreview] = useState<Record<string, VideoFilter> | null>(null);
   const previewRef = useRef<PreviewHandle | null>(null);
   const applyInspectorEdit = (action: EditorAction) => {
     const issues = validateEditorCommandAction(session.history.present, action);
@@ -77,6 +79,9 @@ export const EditorApp = () => {
   }, [session.statusMessage]);
 
   const capturePreviewFrame = async (frame: number, includeImage: boolean) => {
+    // Mobile panels unmount/size the canvas to zero when the inspector is visible.
+    flushSync(() => setMobilePanel("canvas"));
+    await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
     const playback = usePlaybackStore.getState();
     playback.pause();
     playback.setCurrentFrame(frame);
@@ -107,7 +112,7 @@ export const EditorApp = () => {
     }
 
     const canvas = previewRef.current?.getCanvas();
-    if (!canvas) throw new Error("The preview canvas is not ready.");
+    if (!canvas || canvas.width === 0 || canvas.height === 0) throw new Error("The preview canvas is not ready. Open the Canvas panel and retry.");
     const capture: EditorFrameCapture = {
       frame,
       width: canvas.width,
@@ -170,6 +175,7 @@ export const EditorApp = () => {
     redo: session.redo,
     assets: session.assetList,
     selectClip: (clipId) => selectClip(clipId),
+    assetSources: session.previewAssetSources,
     selectText: (overlayId) => selectText(overlayId),
     selectAudio: (trackId) => selectAudio(trackId),
     applyAIEditorActions: session.onApplyEditorActions,
@@ -270,6 +276,7 @@ export const EditorApp = () => {
 
       <ElahEditorWorkspace
         version={session.activeVersion}
+        colorPreview={colorPreview}
         assets={session.assetList}
         assetSources={session.previewAssetSources}
         onVersionChange={(version) => {
@@ -318,6 +325,7 @@ export const EditorApp = () => {
             onUndo={session.undo}
             onRedo={session.redo}
             visualReview={visualReview}
+            colorPreview={colorPreview}
             onDismissVisualReview={() => setVisualReview(null)}
           />
         </div>
@@ -330,6 +338,7 @@ export const EditorApp = () => {
             version={session.activeVersion}
             selectedCaptionId={selectedCaptionId}
             assets={session.assetList}
+            assetSources={session.previewAssetSources}
             onEdit={applyInspectorEdit}
             tracks={ensureEditorTracks(session.activeVersion)}
             onPlaceClip={(clipId, trackId, startFrame) => applyInspectorEdit({ type: "place-clip", aspect: session.activeAspect, clipId, trackId, startFrame })}
@@ -339,6 +348,22 @@ export const EditorApp = () => {
             selectedAudioTrack={session.selectedAudioTrack}
             assetNames={session.assetNames}
             isExporting={session.isExporting}
+            revision={session.history.revision ?? 0}
+            onPreviewFilters={setColorPreview}
+            onApplyColorCorrections={(changes) => {
+              session.dispatch({
+                type: "history/command",
+                operationId: `color-pass-${nanoid(10)}`,
+                expectedRevision: session.history.revision ?? 0,
+                actions: changes.map((change) => ({
+                  type: "update-clip" as const,
+                  aspect: session.activeAspect,
+                  clipId: change.clipId,
+                  patch: { videoFilter: change.after },
+                })),
+              });
+            }}
+            onUndoColorPass={session.undo}
             onDetachAudio={session.onDetachAudio}
             onUpdateClip={(clipId, patch) => {
               applyInspectorEdit({ type: "update-clip", aspect: session.activeAspect, clipId, patch });
