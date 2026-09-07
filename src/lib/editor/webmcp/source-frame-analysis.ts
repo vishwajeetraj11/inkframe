@@ -112,12 +112,11 @@ const waitForMediaEvent = (
   timeoutMs = 10_000,
 ): Promise<void> => new Promise((resolve, reject) => {
   throwIfAborted(signal);
-  let timer: ReturnType<typeof setTimeout> | undefined;
   const cleanup = () => {
     target.removeEventListener(successEvent, onSuccess);
     target.removeEventListener("error", onError);
     signal?.removeEventListener("abort", onAbort);
-    if (timer !== undefined) clearTimeout(timer);
+    clearTimeout(timer);
   };
   const onSuccess = () => {
     cleanup();
@@ -134,7 +133,7 @@ const waitForMediaEvent = (
   target.addEventListener(successEvent, onSuccess, { once: true });
   target.addEventListener("error", onError, { once: true });
   signal?.addEventListener("abort", onAbort, { once: true });
-  timer = setTimeout(() => {
+  const timer = setTimeout(() => {
     cleanup();
     reject(new SourceFrameError("timeout", "Timed out while decoding the media source."));
   }, timeoutMs);

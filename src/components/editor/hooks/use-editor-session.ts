@@ -19,6 +19,14 @@ import {
   exportElahProjectInBrowser,
 } from "@/lib/export/elah-browser";
 import { verifyBrowserVideo } from "@/lib/export/verify-browser-video";
+import { triggerBrowserBlobDownload, triggerBrowserTextDownload } from "@/lib/export/download";
+import { generateEdl } from "@/lib/export/edl";
+import { generateFcpxml } from "@/lib/export/fcpxml";
+import { buildInterchangeTimeline } from "@/lib/export/timeline-interchange";
+import {
+  createFcpxmlMediaBundle,
+  planFcpxmlMediaBundle,
+} from "@/lib/export/timeline-bundle";
 import { toElahProject } from "@/lib/editor/elah-adapter";
 import { detectElahBrowserCapabilities } from "@/lib/editor/elah-browser-capabilities";
 import {
@@ -800,6 +808,7 @@ export const useEditorSession = () => {
           size: imported.bytes,
           file: imported.file,
           objectUrl,
+          externalUrl: rendition.url,
           attribution: {
             provider: "pexels",
             sourceUrl: video.pexelsUrl,
@@ -946,6 +955,7 @@ export const useEditorSession = () => {
           size: file.size,
           file,
           objectUrl,
+          externalUrl: photo.imageUrl,
           attribution: {
             provider: "pexels",
             sourceUrl: photo.pexelsUrl,
@@ -1055,6 +1065,7 @@ export const useEditorSession = () => {
           size: file.size,
           file,
           objectUrl,
+          externalUrl: input.url,
         ...(input.sourceUrl
             ? {
                 attribution: {
@@ -1378,6 +1389,79 @@ export const useEditorSession = () => {
     }
   };
 
+  const onExportTimeline = async (
+    format: "fcpxml" | "edl" | "fcpxml-bundle",
+  ): Promise<ExportActionResult> => {
+    const currentProject = projectRef.current;
+    const currentVersion = getActiveTimeline(currentProject);
+    const currentAssets = Object.values(assetsRef.current);
+    if (format === "fcpxml-bundle") {
+      const plan = planFcpxmlMediaBundle({
+        version: currentVersion,
+        assets: currentAssets,
+        name: `Inkframe ${currentProject.activeVersion.replaceAll("_", "-")}`,
+      });
+      const errors = plan.diagnostics.filter((diagnostic) => diagnostic.severity === "error");
+      if (errors.length > 0) {
+        const message = errors[0]?.message ?? "The editable timeline bundle could not be exported.";
+        setStatusMessage(message);
+        return { ok: false, message };
+      }
+      try {
+        setStatusMessage("Packaging editable timeline and source media…");
+        const bundle = await createFcpxmlMediaBundle(plan);
+        const filename = `inkframe-${currentProject.activeVersion}-${Date.now()}-media.zip`;
+        triggerBrowserBlobDownload({ blob: bundle.blob, filename });
+        const warningCount = bundle.diagnostics.filter(
+          (diagnostic) => diagnostic.severity === "warning",
+        ).length;
+        const message = `FCPXML media bundle downloaded with ${bundle.includedMedia} packaged ${bundle.includedMedia === 1 ? "asset" : "assets"}${bundle.includedLooks > 0 ? `, ${bundle.includedLooks} approximate color ${bundle.includedLooks === 1 ? "look" : "looks"}` : ""}${warningCount > 0 ? `, and ${warningCount} compatibility ${warningCount === 1 ? "note" : "notes"}` : ""}.`;
+        setStatusMessage(message);
+        return {
+          ok: true,
+          message,
+          timelineExport: { format, filename, diagnostics: bundle.diagnostics },
+        };
+      } catch (error) {
+        const message = error instanceof Error ? error.message : "Failed to create the media bundle.";
+        setStatusMessage(message);
+        return { ok: false, message };
+      }
+    }
+    const timeline = buildInterchangeTimeline({
+      version: currentVersion,
+      assets: currentAssets,
+      name: `Inkframe ${currentProject.activeVersion.replaceAll("_", "-")}`,
+    });
+    const result = format === "fcpxml" ? generateFcpxml(timeline) : generateEdl(timeline);
+    const errors = result.diagnostics.filter((diagnostic) => diagnostic.severity === "error");
+    if (errors.length > 0) {
+      const message = errors[0]?.message ?? "The editable timeline could not be exported.";
+      setStatusMessage(message);
+      return { ok: false, message };
+    }
+
+    const filename = `inkframe-${currentProject.activeVersion}-${Date.now()}.${format}`;
+    triggerBrowserTextDownload({
+      contents: result.content,
+      filename,
+      mimeType: format === "fcpxml" ? "application/xml;charset=utf-8" : "text/plain;charset=utf-8",
+    });
+    const warningCount = result.diagnostics.filter(
+      (diagnostic) => diagnostic.severity === "warning",
+    ).length;
+    const label = format === "fcpxml" ? "FCPXML" : "EDL";
+    const message = warningCount > 0
+      ? `${label} downloaded with ${warningCount} compatibility ${warningCount === 1 ? "note" : "notes"}.`
+      : `${label} downloaded.`;
+    setStatusMessage(message);
+    return {
+      ok: true,
+      message,
+      timelineExport: { format, filename, diagnostics: result.diagnostics },
+    };
+  };
+
   const onRequestExport = (): { ok: boolean; message: string; jobId?: string } => {
     if (exportInFlightRef.current) {
       return {
@@ -1599,6 +1683,7 @@ export const useEditorSession = () => {
     onImportLicensedMusic,
     onImportLicensedSoundEffect,
     onExport,
+    onExportTimeline,
     onRequestExport,
     onCancelExport,
     onFilesSelected,

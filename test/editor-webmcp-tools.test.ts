@@ -23,6 +23,12 @@ const setup = () => {
   const callbacks = {
     applyAIEditorActions: async () => ({ ok: true, message: "Applied" }),
     requestExport: vi.fn(() => ({ ok: true, message: "Export started", jobId: "export-1" })),
+    requestTimelineExport: vi.fn((format: "fcpxml" | "edl" | "fcpxml-bundle") => ({
+      ok: true,
+      message: `${format.toUpperCase()} downloaded`,
+      filename: `inkframe.${format}`,
+      diagnostics: { warnings: 1, errors: 0 },
+    })),
     getExportState: () => ({
       jobId: "export-1",
       status: "completed" as const,
@@ -184,6 +190,9 @@ describe("editor WebMCP tools", () => {
       "editor_update_audio_track",
       "editor_remove_audio_track",
       "editor_apply_ai_editor_actions",
+      "editor_export_fcpxml",
+      "editor_export_edl",
+      "editor_export_fcpxml_bundle",
       "editor_request_export",
       "editor_cancel_export",
       "editor_remove_asset",
@@ -243,6 +252,9 @@ describe("editor WebMCP tools", () => {
         "editor_plan_storyboard",
         "editor_capture_contact_sheet",
         "editor_get_attribution_report",
+        "editor_export_fcpxml",
+        "editor_export_edl",
+        "editor_export_fcpxml_bundle",
         "editor_request_export",
       ]),
     );
@@ -646,12 +658,19 @@ describe("editor WebMCP tools", () => {
   it("requires confirmation for destructive and external callbacks", async () => {
     const { tools, callbacks } = setup();
     await expect(tools.find((tool) => tool.name === "editor_request_export")!.execute({}, executeOptions)).rejects.toThrow();
+    await expect(tools.find((tool) => tool.name === "editor_export_fcpxml")!.execute({}, executeOptions)).rejects.toThrow();
     await expect(tools.find((tool) => tool.name === "editor_remove_asset")!.execute({ assetId: "video-1" }, executeOptions)).rejects.toThrow();
     await tools.find((tool) => tool.name === "editor_add_text_overlay")!.execute(
       { text: "Exportable project" },
       executeOptions,
     );
     expect(JSON.parse(await tools.find((tool) => tool.name === "editor_request_export")!.execute({ confirmed: true }, executeOptions))).toMatchObject({ ok: true, message: "Export started", jobId: "export-1" });
+    expect(JSON.parse(await tools.find((tool) => tool.name === "editor_export_fcpxml")!.execute({ confirmed: true }, executeOptions))).toMatchObject({ ok: true, filename: "inkframe.fcpxml" });
+    expect(JSON.parse(await tools.find((tool) => tool.name === "editor_export_edl")!.execute({ confirmed: true }, executeOptions))).toMatchObject({ ok: true, filename: "inkframe.edl" });
+    expect(JSON.parse(await tools.find((tool) => tool.name === "editor_export_fcpxml_bundle")!.execute({ confirmed: true }, executeOptions))).toMatchObject({ ok: true, filename: "inkframe.fcpxml-bundle" });
+    expect(callbacks.requestTimelineExport).toHaveBeenNthCalledWith(1, "fcpxml", expect.any(AbortSignal));
+    expect(callbacks.requestTimelineExport).toHaveBeenNthCalledWith(2, "edl", expect.any(AbortSignal));
+    expect(callbacks.requestTimelineExport).toHaveBeenNthCalledWith(3, "fcpxml-bundle", expect.any(AbortSignal));
     expect(JSON.parse(await tools.find((tool) => tool.name === "editor_remove_asset")!.execute({ assetId: "video-1", confirmed: true }, executeOptions))).toMatchObject({ ok: true, message: "Removed" });
     const importAudio = tools.find((tool) => tool.name === "editor_import_audio_url")!;
     await expect(importAudio.execute({ url: "https://assets.example.com/track.mp3" }, executeOptions)).rejects.toThrow();
@@ -676,5 +695,30 @@ describe("editor WebMCP tools", () => {
 
     expect(callbacks.requestExport).toHaveBeenCalledWith(expect.any(AbortSignal));
     expect(JSON.parse(response)).toMatchObject({ ok: true, message: "Export started", jobId: "export-1" });
+  });
+
+  it("validates the selected cutdown timeline before requesting an MP4 export", async () => {
+    const state = createInitialEditorHistory();
+    const requestExport = vi.fn(() => ({ ok: true, message: "Cutdown export started" }));
+    const cutdown = {
+      ...state.present.versions.reel_9_16,
+      textOverlays: [createDefaultTextOverlay("cutdown-title")],
+    };
+    const tools = createEditorWebMcpTools({
+      getState: () => state,
+      getActiveVersion: () => cutdown,
+      getAssets: () => [],
+      requestExport,
+    });
+
+    const response = await tools
+      .find((tool) => tool.name === "editor_request_export")!
+      .execute({ confirmed: true }, executeOptions);
+
+    expect(JSON.parse(response)).toMatchObject({
+      ok: true,
+      message: "Cutdown export started",
+    });
+    expect(requestExport).toHaveBeenCalledOnce();
   });
 });

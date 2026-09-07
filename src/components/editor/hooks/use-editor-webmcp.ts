@@ -23,6 +23,7 @@ import type {
 import { nanoid } from "nanoid";
 import { flushSync } from "react-dom";
 import { captureColorComparison } from "@/lib/editor/webmcp/color-evidence";
+import { getActiveTimeline } from "@/lib/editor/cutdowns";
 
 export interface EditorWebMcpBridge {
   history: EditorHistoryState;
@@ -36,6 +37,9 @@ export interface EditorWebMcpBridge {
   selectAudio: (trackId: string) => void;
   applyAIEditorActions: (actions: AIEditorActions) => Promise<{ ok: boolean; message: string }>;
   requestExport: () => EditorWebMcpCallbackResult;
+  requestTimelineExport: (
+    format: "fcpxml" | "edl" | "fcpxml-bundle",
+  ) => EditorWebMcpCallbackResult | Promise<EditorWebMcpCallbackResult>;
   getExportState: () => EditorExportState;
   cancelExport: () => EditorWebMcpCallbackResult;
   captureFrame: (frame: number, includeImage: boolean) => Promise<EditorFrameCapture>;
@@ -94,6 +98,7 @@ export const startEditorWebMcpExport = (
 const createTools: WebMcpToolFactory<EditorWebMcpBridge> = (getCurrent) =>
   createEditorWebMcpTools({
     getState: () => getCurrent().history,
+    getActiveVersion: () => getActiveTimeline(getCurrent().history.present),
     getAssets: () => getCurrent().assets,
     dispatch: (action) => flushSync(() => getCurrent().dispatch(action)),
     dispatchCommand: (action) => flushSync(() => getCurrent().dispatch(action)),
@@ -112,6 +117,10 @@ const createTools: WebMcpToolFactory<EditorWebMcpBridge> = (getCurrent) =>
     requestExport: (signal) => {
       if (signal.aborted) throw signal.reason;
       return startEditorWebMcpExport(() => getCurrent().requestExport());
+    },
+    requestTimelineExport: (format, signal) => {
+      if (signal.aborted) throw signal.reason;
+      return getCurrent().requestTimelineExport(format);
     },
     getExportState: () => getCurrent().getExportState(),
     cancelExport: (signal) => {

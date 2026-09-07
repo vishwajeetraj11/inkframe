@@ -2,9 +2,14 @@
 
 import Link from "next/link";
 import { AspectSwitcher } from "@/components/editor/AspectSwitcher";
+import {
+  EditorExportMenu,
+  type TimelineExportFormat,
+  type TimelineExportPreflight,
+} from "@/components/editor/EditorExportMenu";
 import type { EditorStorageStatus } from "@/components/editor/hooks/editor-session-types";
 import type { AspectPreset, ProjectCutdown } from "@/lib/editor/types";
-import { CloudAlert, CloudCheck, Download, LoaderCircle } from "lucide-react";
+import { CloudAlert, CloudCheck, LoaderCircle } from "lucide-react";
 
 interface WorkspaceStat {
   label: string;
@@ -15,13 +20,16 @@ interface EditorHeaderProps {
   activeAspect: AspectPreset;
   isExporting: boolean;
   workspaceStats: WorkspaceStat[];
-  canExport: boolean;
+  canExportMp4: boolean;
+  canExportTimeline: boolean;
   onSwitchAspect: (aspect: AspectPreset) => void;
   cutdowns: ProjectCutdown[];
   activeCutdownId?: string;
   onCreateCutdown: () => void;
   onSwitchCutdown: (id: string) => void;
-  onExport: () => void;
+  onExportMp4: () => void;
+  onExportTimeline: (format: TimelineExportFormat) => void;
+  timelineExportPreflight: Record<TimelineExportFormat, TimelineExportPreflight>;
   storageStatus: EditorStorageStatus;
   onRetrySave: () => void;
 }
@@ -30,13 +38,16 @@ export const EditorHeader = ({
   activeAspect,
   isExporting,
   workspaceStats,
-  canExport,
+  canExportMp4,
+  canExportTimeline,
   onSwitchAspect,
   cutdowns,
   activeCutdownId,
   onCreateCutdown,
   onSwitchCutdown,
-  onExport,
+  onExportMp4,
+  onExportTimeline,
+  timelineExportPreflight,
   storageStatus,
   onRetrySave,
 }: EditorHeaderProps) => {
@@ -116,26 +127,14 @@ export const EditorHeader = ({
             </span>
           )}
 
-          <button
-            type="button"
-            disabled={isExporting || !canExport}
-            onClick={onExport}
-            aria-label={isExporting ? "Rendering export" : "Export MP4"}
-            title={isExporting ? "Rendering export" : "Export MP4"}
-            className="group relative inline-flex h-[44px] w-[44px] items-center justify-center bg-cyan-300 text-neutral-950 outline-none transition hover:bg-cyan-200 focus-visible:ring-2 focus-visible:ring-cyan-200 focus-visible:ring-offset-2 focus-visible:ring-offset-[#0f0d0a] disabled:cursor-not-allowed disabled:opacity-45 xl:h-10 xl:w-10"
-          >
-            {isExporting ? (
-              <LoaderCircle aria-hidden="true" size={17} className="animate-spin" />
-            ) : (
-              <Download aria-hidden="true" size={17} strokeWidth={1.8} />
-            )}
-            <span
-              role="tooltip"
-              className="pointer-events-none absolute right-0 top-[calc(100%+8px)] z-50 w-max translate-y-[-2px] border border-white/15 bg-[#17140f] px-2.5 py-1.5 text-[10px] font-medium text-neutral-100 opacity-0 shadow-xl transition duration-150 group-hover:translate-y-0 group-hover:opacity-100 group-focus-visible:translate-y-0 group-focus-visible:opacity-100"
-            >
-              {isExporting ? "Rendering export" : "Export MP4"}
-            </span>
-          </button>
+          <EditorExportMenu
+            canExportMp4={canExportMp4}
+            canExportTimeline={canExportTimeline}
+            isExporting={isExporting}
+            timelinePreflight={timelineExportPreflight}
+            onExportMp4={onExportMp4}
+            onExportTimeline={onExportTimeline}
+          />
         </div>
       </div>
 

@@ -3,6 +3,17 @@ export interface ExportDownloadPayload {
   filename: string;
 }
 
+export interface BrowserBlobDownload {
+  blob: Blob;
+  filename: string;
+}
+
+export interface BrowserTextDownload {
+  contents: string;
+  filename: string;
+  mimeType: string;
+}
+
 export const getFilenameFromContentDisposition = (
   contentDisposition: string | null,
 ): string | null => {
@@ -57,4 +68,28 @@ export const triggerBrowserDownload = ({
   document.body.append(anchor);
   anchor.click();
   anchor.remove();
+};
+
+/** Download generated browser content without leaking its temporary object URL. */
+export const triggerBrowserBlobDownload = ({
+  blob,
+  filename,
+}: BrowserBlobDownload): void => {
+  const url = URL.createObjectURL(blob);
+  triggerBrowserDownload({ url, filename });
+  // Let the browser consume the click before releasing the object URL. Immediate
+  // revocation can cancel downloads in Safari and Firefox.
+  window.setTimeout(() => URL.revokeObjectURL(url), 1_000);
+};
+
+/** Download a generated text interchange file such as FCPXML or CMX 3600 EDL. */
+export const triggerBrowserTextDownload = ({
+  contents,
+  filename,
+  mimeType,
+}: BrowserTextDownload): void => {
+  triggerBrowserBlobDownload({
+    blob: new Blob([contents], { type: mimeType }),
+    filename,
+  });
 };

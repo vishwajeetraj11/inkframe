@@ -27,12 +27,20 @@ import { analyzeFrameContrast } from "@/lib/editor/webmcp/contrast";
 import { usePlaybackStore, type PreviewHandle } from "@elah/editor";
 import { resolveTimeline } from "@elah/core";
 import { toElahProject } from "@/lib/editor/elah-adapter";
+import { generateEdl } from "@/lib/export/edl";
+import { generateFcpxml } from "@/lib/export/fcpxml";
+import { buildInterchangeTimeline } from "@/lib/export/timeline-interchange";
+import { planFcpxmlMediaBundle } from "@/lib/export/timeline-bundle";
 import { nanoid } from "nanoid";
 import { toast } from "sonner";
-import { useEffect, useRef, useState, type CSSProperties } from "react";
+import { useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
 import { useEditorWebMcp } from "./hooks/use-editor-webmcp";
 import { useEditorSession } from "./hooks/use-editor-session";
 import { flushSync } from "react-dom";
+import type {
+  TimelineExportFormat,
+  TimelineExportPreflight,
+} from "./EditorExportMenu";
 
 const DEFAULT_TIMELINE_HEIGHT = 188;
 const MIN_TIMELINE_HEIGHT = 140;
@@ -180,6 +188,35 @@ export const EditorApp = () => {
     selectAudio: (trackId) => selectAudio(trackId),
     applyAIEditorActions: session.onApplyEditorActions,
     requestExport: () => session.onRequestExport(),
+    requestTimelineExport: async (format) => {
+      const result = await session.onExportTimeline(format);
+      const diagnostics = result.timelineExport?.diagnostics ?? [];
+      const warnings = diagnostics.filter((item) => item.severity === "warning");
+      const errors = diagnostics.filter((item) => item.severity === "error");
+      return {
+        ok: result.ok,
+        message: result.message,
+        ...(result.timelineExport?.filename
+          ? { filename: result.timelineExport.filename }
+          : {}),
+        diagnostics: {
+          warningCount: warnings.length,
+          errorCount: errors.length,
+          warnings: warnings.slice(0, 2).map((item) => ({
+            code: item.code,
+            message: item.message.slice(0, 180),
+          })),
+          errors: errors.slice(0, 2).map((item) => ({
+            code: item.code,
+            message: item.message.slice(0, 180),
+          })),
+          omitted:
+            diagnostics.length -
+            Math.min(warnings.length, 2) -
+            Math.min(errors.length, 2),
+        },
+      };
+    },
     getExportState: () => session.exportState,
     cancelExport: session.onCancelExport,
     captureFrame: capturePreviewFrame,
@@ -219,10 +256,82 @@ export const EditorApp = () => {
     },
   ];
 
-  const canExport =
+  const canExportMp4 =
     session.activeVersion.clips.length > 0 ||
     session.activeVersion.textOverlays.length > 0 ||
     (session.activeVersion.captionCues?.length ?? 0) > 0;
+  const canExportTimeline =
+    session.activeVersion.clips.length > 0 ||
+    session.activeVersion.textOverlays.length > 0 ||
+    session.activeVersion.audioTracks.length > 0;
+  const interchangeTimeline = useMemo(
+    () =>
+      buildInterchangeTimeline({
+        version: session.activeVersion,
+        assets: session.assetList,
+        name: `Inkframe ${session.activeAspect.replaceAll("_", "-")}`,
+      }),
+    [session.activeAspect, session.activeVersion, session.assetList],
+  );
+  const timelineExportPreflight = useMemo(() => {
+    const fcpxml = generateFcpxml(interchangeTimeline);
+    const edl = generateEdl(interchangeTimeline);
+    const bundle = planFcpxmlMediaBundle({
+      version: session.activeVersion,
+      assets: session.assetList,
+      name: interchangeTimeline.name,
+    });
+    const bundleRemoteCount = bundle.manifest.assets.filter(
+      (asset) => asset.externalUrl,
+    ).length;
+    const allItems = interchangeTimeline.lanes.flatMap((lane) => lane.items);
+    const pictureLanes = interchangeTimeline.lanes.filter(
+      (lane) => lane.kind === "video" && lane.items.length > 0,
+    );
+    const audioCount = allItems.filter((item) => item.kind === "audio").length;
+    const titleCount = allItems.filter((item) => item.kind === "title").length;
+    const pictureCount = allItems.filter(
+      (item) => item.kind === "video" || item.kind === "image",
+    ).length;
+    const primaryPictureCount = pictureLanes[0]?.items.length ?? 0;
+    const toPreflight = (
+      diagnostics: typeof fcpxml.diagnostics,
+      transferred: string[],
+    ): TimelineExportPreflight => ({
+      transferred,
+      simplifiedOrOmitted: diagnostics
+        .filter((diagnostic) => diagnostic.severity === "warning")
+        .map((diagnostic) => diagnostic.message),
+      errors: diagnostics
+        .filter((diagnostic) => diagnostic.severity === "error")
+        .map((diagnostic) => diagnostic.message),
+    });
+
+    return {
+      fcpxml: toPreflight(fcpxml.diagnostics, [
+        `${pictureCount} picture ${pictureCount === 1 ? "clip" : "clips"}`,
+        `${audioCount} audio ${audioCount === 1 ? "clip" : "clips"}`,
+        `${titleCount} ${titleCount === 1 ? "title" : "titles"}`,
+      ]),
+      edl: toPreflight(edl.diagnostics, [
+        `${primaryPictureCount} primary-track picture ${primaryPictureCount === 1 ? "clip" : "clips"}`,
+        `${audioCount} audio ${audioCount === 1 ? "event" : "events"}`,
+        "Clip names and non-drop-frame timecode",
+      ]),
+      "fcpxml-bundle": toPreflight(bundle.diagnostics, [
+        `${bundle.media.length} packaged ${bundle.media.length === 1 ? "source file" : "source files"}`,
+        `${bundleRemoteCount} remotely linked ${bundleRemoteCount === 1 ? "asset" : "assets"}`,
+        ...(bundle.looks.length > 0
+          ? [`${bundle.looks.length} approximate color ${bundle.looks.length === 1 ? "look" : "looks"} included as .cube LUTs`]
+          : []),
+        "Relinking manifest and import instructions",
+      ]),
+    } satisfies Record<TimelineExportFormat, TimelineExportPreflight>;
+  }, [interchangeTimeline, session.activeVersion, session.assetList]);
+
+  const handleTimelineExport = (format: TimelineExportFormat) => {
+    void session.onExportTimeline(format);
+  };
 
   const handleAddText = (trackId?: string) => {
     const overlayId = nanoid(10);
@@ -259,15 +368,18 @@ export const EditorApp = () => {
         activeAspect={session.activeAspect}
         isExporting={session.isExporting}
         workspaceStats={workspaceStats}
-        canExport={canExport}
+        canExportMp4={canExportMp4}
+        canExportTimeline={canExportTimeline}
         onSwitchAspect={session.switchAspect}
         cutdowns={session.cutdowns}
         activeCutdownId={session.activeCutdownId}
         onCreateCutdown={() => session.createShortCutdown()}
         onSwitchCutdown={session.switchCutdown}
-        onExport={() => {
+        onExportMp4={() => {
           void session.onExport();
         }}
+        onExportTimeline={handleTimelineExport}
+        timelineExportPreflight={timelineExportPreflight}
         storageStatus={session.storageStatus}
         onRetrySave={() => {
           void session.retryProjectSave();
