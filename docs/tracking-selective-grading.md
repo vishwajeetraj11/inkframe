@@ -15,3 +15,5 @@ WebMCP exposes `editor_track_object`, `editor_correct_object_track`, and confirm
 Select a video or image clip and add up to eight ellipse or rectangle regions. Set position, size, feather, inversion, exposure, temperature, tint, and saturation. Regions are static source-space masks, independent of tracking, and apply after the global grade. Preview and browser export share pixel grading, including image sources and preview orientation correction.
 
 WebMCP exposes confirmed `editor_set_selective_grade`. It replaces the clip's regions while preserving its global grade. An empty region list removes selective adjustments. Region edits are persisted with the project and participate in normal undo/redo.
+
+FCPXML bundle export warns that spatial regions cannot transfer through its color-only LUTs. Global grades remain in the approximate LUT; recreate selective regions manually in the target editor or use rendered MP4.
