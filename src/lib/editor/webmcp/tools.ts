@@ -1,4 +1,8 @@
 import { z } from "zod";
+import { selectiveColorRegionSchema } from "../schema";
+import { correctTrackingPoint, trackingToKeyframes } from "../object-tracking";
+import type { trackVideoObject } from "@/lib/export/object-tracking-browser";
+import { ASPECT_PRESETS } from "../constants";
 import { GRADING_REVIEW_PROTOCOL, gradingReviewSchema, requireThreeReviews, type GradingReview } from "./grading-review";
 import type { RuntimeCapabilities } from "@/lib/webmcp/runtime-capabilities";
 import {
@@ -100,6 +104,7 @@ const updateClipInput = z.object({
     sepia: z.number().min(0).max(1),
     grayscale: z.number().min(0).max(1),
     hueRotate: z.number().min(-30).max(30),
+    selectiveRegions: z.array(selectiveColorRegionSchema).max(8).optional(),
   }).strict().optional(),
 }).strict();
 const removeClipInput = z.object({ aspect: aspectSchema.optional(), clipId: z.string().trim().min(1).max(128), confirmed: z.literal(true) }).strict();
@@ -133,6 +138,11 @@ const clipTransformInput = z.object({
 }).strict();
 const keyframePointSchema = z.object({ id: z.string().min(1).max(128), frame: frameSchema, value: z.number(), interpolation: z.enum(["linear", "hold"]) }).strict();
 const keyframesInput = z.object({ ...commandFields, clipId: z.string().min(1).max(128), keyframes: z.object({ x: z.array(keyframePointSchema).max(1000).optional(), y: z.array(keyframePointSchema).max(1000).optional(), scale: z.array(keyframePointSchema).max(1000).optional(), rotation: z.array(keyframePointSchema).max(1000).optional(), opacity: z.array(keyframePointSchema).max(1000).optional() }).strict() }).strict();
+const trackingBoxSchema = z.object({ x: z.number().min(0).max(1), y: z.number().min(0).max(1), width: z.number().positive().max(1), height: z.number().positive().max(1) }).strict();
+const trackingStartInput = z.object({ aspect: aspectSchema, clipId: z.string().min(1).max(128), box: trackingBoxSchema }).strict();
+const trackingCorrectionInput = z.object({ trackingId: z.string().min(1).max(160), frame: frameSchema, x: z.number().min(0).max(1), y: z.number().min(0).max(1) }).strict();
+const trackingApplyInput = z.object({ ...commandFields, trackingId: z.string().min(1).max(160), targetClipId: z.string().min(1).max(128), confirmed: z.literal(true) }).strict();
+const selectiveGradeInput = z.object({ ...commandFields, clipId: z.string().min(1).max(128), regions: z.array(selectiveColorRegionSchema).max(8), confirmed: z.literal(true) }).strict();
 const captionCueSchema = z.object({ id: z.string().min(1).max(128), trackId: z.string().min(1).max(128), startFrame: frameSchema, endFrame: frameSchema, text: z.string().trim().min(1).max(4000) }).strict();
 const captionCuesInput = z.object({ ...commandFields, cues: z.array(captionCueSchema).min(1).max(1000) }).strict();
 const captionsImportInput = z.object({ ...commandFields, trackId: z.string().min(1).max(128), format: z.enum(["srt", "vtt"]), content: z.string().min(1).max(200000), mode: z.enum(["append", "replace"]).default("append") }).strict();
@@ -359,6 +369,7 @@ export interface EditorWebMcpCallbackResult {
 }
 
 export interface EditorWebMcpToolContext {
+  trackObject?: (aspect: AspectPreset, clipId: string, box: z.infer<typeof trackingBoxSchema>, signal: AbortSignal) => ReturnType<typeof trackVideoObject>;
   getRuntimeCapabilities?: () => RuntimeCapabilities;
   /** Always return the current state; do not pass a render-time snapshot. */
   getState: () => EditorHistoryState;
@@ -769,6 +780,8 @@ const defineTool = <T extends z.ZodType>({ name, title, description, schema, rea
 });
 
 export const createEditorWebMcpTools = (context: EditorWebMcpToolContext): WebMcpTool[] => {
+  const objectTracks = new Map<string, { aspect: AspectPreset; revision: number; clipId: string; result: Awaited<ReturnType<typeof trackVideoObject>> }>();
+  let trackingSequence = 0;
   const approvals = new Map<string, { fingerprint: string; expiresAt: number }>();
   const colorProposals = new Map<string, {
     aspect: AspectPreset;
@@ -916,6 +929,42 @@ export const createEditorWebMcpTools = (context: EditorWebMcpToolContext): WebMc
     if (!exists) throw new Error(`${itemType} not found`);
   };
   return [
+    defineTool({ name: "editor_track_object", title: "Track an object in source video", description: "Analyze a top-left normalized source box using local pixel matching. Returns clip-local centers and confidence, without editing. Low confidence stops tracking; this is not semantic segmentation. Inspect the path, correct it, then attach to an image graphic.", schema: trackingStartInput, readOnly: true, execute: async (input, signal) => {
+      if (!context.trackObject) throw new Error("TRACKING_UNAVAILABLE: Browser tracking is not connected.");
+      const revision = context.getState().revision ?? 0;
+      const result = await context.trackObject(input.aspect, input.clipId, input.box, signal);
+      throwIfAborted(signal);
+      if ((context.getState().revision ?? 0) !== revision) throw new Error("REVISION_CONFLICT: Project changed while tracking. Track again.");
+      const trackingId = `object-track-${++trackingSequence}`;
+      if (objectTracks.size >= 12) objectTracks.delete(objectTracks.keys().next().value!);
+      objectTracks.set(trackingId, { aspect: input.aspect, revision, clipId: input.clipId, result });
+      return colorResult({ ok: true, trackingId, revision, result });
+    } }),
+    defineTool({ name: "editor_correct_object_track", title: "Correct a tracked center", description: "Correct a clip-local tracking point with a source-normalized center. Does not edit the timeline or certify recovery of a lost track.", schema: trackingCorrectionInput, readOnly: false, execute: (input) => {
+      const track = objectTracks.get(input.trackingId);
+      if (!track || track.revision !== (context.getState().revision ?? 0)) throw new Error("STALE_TRACK: Track again against the current project.");
+      const clip = activeVersion(context.getState(), track.aspect).clips.find((item) => item.id === track.clipId);
+      if (!clip || input.frame >= clip.endFrame - clip.startFrame) throw new Error("INVALID_FRAME: Correction must be inside the tracked clip.");
+      track.result.points = correctTrackingPoint(track.result.points, { frame: input.frame, x: input.x, y: input.y });
+      return colorResult({ ok: true, trackingId: input.trackingId, result: track.result });
+    } }),
+    defineTool({ name: "editor_attach_object_track", title: "Attach image graphic to object track", description: "Apply a reviewed complete track to an existing image graphic as x/y keyframes in one undo step. Replaces that graphic's position animation; other channels are preserved. Lost tracks cannot be applied.", schema: trackingApplyInput, readOnly: false, execute: (input) => command(input, () => {
+      const track = objectTracks.get(input.trackingId);
+      if (!track || track.revision !== input.expectedRevision || track.aspect !== input.aspect) throw new Error("STALE_TRACK: Track again against the current project.");
+      if (track.result.status !== "complete") throw new Error("TRACK_LOST: Use a shorter clip or a clearer box and track again.");
+      const version = activeVersion(context.getState(), input.aspect);
+      const sourceClip = version.clips.find((item) => item.id === track.clipId);
+      const targetClip = version.clips.find((item) => item.id === input.targetClipId);
+      if (!sourceClip || !targetClip) throw new Error("CLIP_NOT_FOUND: Source or graphic missing.");
+      const stage = ASPECT_PRESETS[input.aspect];
+      const keyframes = trackingToKeyframes({ points: track.result.points, sourceClip, targetClip, sourceWidth: track.result.sourceWidth, sourceHeight: track.result.sourceHeight, stageWidth: stage.width, stageHeight: stage.height, transitions: version.transitions });
+      return { type: "set-clip-keyframes", aspect: input.aspect, clipId: targetClip.id, keyframes };
+    }) }),
+    defineTool({ name: "editor_set_selective_grade", title: "Set selective color regions", description: "Replace up to eight independent feathered ellipse/rectangle regions on a clip. Center and size are source-normalized; inverted masks grade outside. Uses SDR pixels and the same preview/export renderer. Empty regions clears local grading; global settings stay unchanged.", schema: selectiveGradeInput, readOnly: false, execute: (input) => command(input, () => {
+      const clip = activeVersion(context.getState(), input.aspect).clips.find((item) => item.id === input.clipId);
+      if (!clip) throw new Error("CLIP_NOT_FOUND");
+      return { type: "update-clip", aspect: input.aspect, clipId: clip.id, patch: { videoFilter: { preset: "none", brightness: 1, contrast: 1, saturation: 1, sepia: 0, grayscale: 0, hueRotate: 0, ...clip.videoFilter, selectiveRegions: input.regions } } };
+    }) }),
     defineTool({ name: "editor_set_clip_keyframes", title: "Set clip keyframes", description: "Replace clip-local animation channels. Frame controls include the exclusive end boundary; interpolation is linear or hold.", schema: keyframesInput, readOnly: false, execute: (input) => command(input, { type: "set-clip-keyframes", aspect: input.aspect, clipId: input.clipId, keyframes: input.keyframes }) }),
     defineTool({ name: "editor_upsert_caption_cues", title: "Set caption cues", description: "Atomically add or update caption cues by ID on existing caption lanes. Same-lane overlap is invalid.", schema: captionCuesInput, readOnly: false, execute: (input) => command(input, { type: "upsert-caption-cues", aspect: input.aspect, cues: input.cues }) }),
     defineTool({ name: "editor_import_captions", title: "Import captions", description: "Import plain SRT/WebVTT atomically. Starts round down and ends round up to frames; unsupported styling and collisions are errors.", schema: captionsImportInput, readOnly: false, execute: (input) => command(input, () => {
@@ -960,6 +1009,8 @@ export const createEditorWebMcpTools = (context: EditorWebMcpToolContext): WebMc
       execute: () => projectResult({
         ok: true,
         product: "Inkframe browser-native video editor",
+        objectTracking: { tools: ["editor_track_object", "editor_correct_object_track", "editor_attach_object_track"], target: "existing image graphic", limitations: "Local patch matching, not object recognition; normal speed, fixed source transform; stops on lost confidence." },
+        selectiveGrading: { tool: "editor_set_selective_grade", regions: "Up to eight feathered source-space masks, independent of object tracking. SDR only." },
         singleVideoGrading: GRADING_REVIEW_PROTOCOL,
         runtime: context.getRuntimeCapabilities?.() ?? null,
         deterministicCommands: {

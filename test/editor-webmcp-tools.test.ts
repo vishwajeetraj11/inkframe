@@ -160,6 +160,10 @@ describe("editor WebMCP tools", () => {
   it("exposes the safe initial catalog", () => {
     const { tools } = setup();
     expect(tools.map((tool) => tool.name)).toEqual([
+      "editor_track_object",
+      "editor_correct_object_track",
+      "editor_attach_object_track",
+      "editor_set_selective_grade",
       "editor_set_clip_keyframes",
       "editor_upsert_caption_cues",
       "editor_import_captions",

@@ -46,6 +46,20 @@ function setup(initialFlip = true) {
 afterEach(() => vi.unstubAllGlobals());
 
 describe("graded video upload orientation", () => {
+  it("grades the same source row in pre-flipped preview and upright export", () => {
+    const { upload, gl, frame } = setup();
+    const filter = { ...cloneVideoFilterPreset("none"), selectiveRegions: [{
+      id: "top", shape: "rectangle" as const, x: 0.5, y: 0.25, width: 1, height: 0.5,
+      feather: 0, exposure: -1, temperature: 0, tint: 0, saturation: 1,
+    }] };
+    let preview = new Uint8ClampedArray();
+    upload({ upload: (_gl: unknown, source: Canvas) => { preview = source.pixels.slice(); return true; } }, gl, frame, filter);
+    const exported = new Uint8ClampedArray([...frame.pixels.slice(4), ...frame.pixels.slice(0, 4)]);
+    applyColorGradeToPixels(exported, filter, 1, 2);
+    expect(preview).toEqual(new Uint8ClampedArray([...exported.slice(4), ...exported.slice(0, 4)]));
+    expect(preview[2]).toBe(180);
+    expect(preview[4]).toBeLessThan(180);
+  });
   it("exposes opt-in media-free diagnostics for the actual upload branch", () => {
     const diagnostics = {};
     vi.stubGlobal("__INKFRAME_GRADING_DIAGNOSTICS__", diagnostics);

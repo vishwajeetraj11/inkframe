@@ -92,7 +92,7 @@ export const captureColorComparison = async ({ version, assets, clipId, before, 
         context.drawImage(drawable, 0, 0, canvas.width, canvas.height);
         context.filter = "none";
         const pixels = context.getImageData(0, 0, canvas.width, canvas.height);
-        applyColorGradeToPixels(pixels.data, filter);
+        applyColorGradeToPixels(pixels.data, filter, pixels.width, pixels.height);
         context.putImageData(pixels, 0, 0);
         return { frame, width: canvas.width, height: canvas.height, mimeType: "image/jpeg", dataUrl: canvas.toDataURL("image/jpeg", 0.92), contrastChecks: [] };
       };

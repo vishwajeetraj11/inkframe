@@ -20,6 +20,7 @@ import type { AudioDuckingRule } from "./audio-ducking";
 
 import { DEFAULT_VIDEO_TRACK_ID, ensureEditorTracks } from "./tracks";
 import { createCutdown } from "./cutdowns";
+import { isValidSelectiveColorRegions } from "./color-grading";
 
 export type EditorAction =
   | {type:"set-clip-keyframes"; aspect:AspectPreset; clipId:string; keyframes:ClipKeyframes}
@@ -95,6 +96,9 @@ export const validateVideoFilterGrades = (version: VersionTimeline) => {
   for (const clip of version.clips) {
     if (!clip.videoFilter) continue;
     const filter = clip.videoFilter as unknown as Record<string, unknown>;
+    if (filter.selectiveRegions !== undefined && !isValidSelectiveColorRegions(filter.selectiveRegions)) {
+      issues.push({ code: "INVALID_VALUE", entityId: clip.id, message: "selectiveRegions must contain at most eight uniquely identified, valid bounded region masks." });
+    }
     for (const [field, limit] of [
       ["exposure", 2], ["temperature", 1], ["tint", 1],
       ["shadows", 1], ["highlights", 1],

@@ -315,7 +315,7 @@ let scratch;
 // Public, media-free diagnostic. Set __INKFRAME_GRADING_DIAGNOSTICS__ = {}
 // before a redraw to inspect the last upload; leave unset for no per-frame log.
 globalThis.__INKFRAME_GRADING_RUNTIME__ = 'orientation-v2-diagnostic-v1';
-export function gradeMedia(source, filter) {
+export function gradeMedia(source, filter, flipMaskY = false) {
     const legacyFilter = legacyVideoFilterToCss(filter);
     const needsGrade = hasColorGrade(filter);
     if (legacyFilter === 'none' && !needsGrade) return source;
@@ -334,7 +334,7 @@ export function gradeMedia(source, filter) {
     ctx.filter = 'none';
     if (needsGrade) {
         const image = ctx.getImageData(0, 0, width, height);
-        applyColorGradeToPixels(image.data, filter);
+        applyColorGradeToPixels(image.data, filter, width, height, flipMaskY);
         ctx.putImageData(image, 0, 0);
     }
     return scratch;
@@ -344,7 +344,9 @@ export function gradeMedia(source, filter) {
 // Unlike ImageBitmap, their graded canvas honors UNPACK_FLIP_Y_WEBGL. Preserve
 // the original bitmap upload semantics, restoring shared GL state even on error.
 export function uploadGradedVideo(texture, gl, frame, filter) {
-    const graded = gradeMedia(frame, filter);
+    // The streaming provider pre-flips ImageBitmaps; mirror mask sampling too.
+    const preflipped = typeof ImageBitmap !== 'undefined' && frame instanceof ImageBitmap;
+    const graded = gradeMedia(frame, filter, preflipped);
     const convertedBitmap = graded !== frame &&
         typeof ImageBitmap !== 'undefined' && frame instanceof ImageBitmap;
     const diagnostics = globalThis.__INKFRAME_GRADING_DIAGNOSTICS__;
