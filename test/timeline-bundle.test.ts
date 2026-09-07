@@ -24,6 +24,19 @@ const version: VersionTimeline = {
 };
 
 describe("FCPXML media bundles", () => {
+  it("does not crash preflight for spatial grades and warns they cannot transfer", () => {
+    const plan = planFcpxmlMediaBundle({
+      version: { ...version, clips: [{ ...version.clips[0], videoFilter: {
+        preset: "custom", brightness: 1, contrast: 1, saturation: 1, sepia: 0, grayscale: 0, hueRotate: 0,
+        exposure: 0.5,
+        selectiveRegions: [{ id: "mask", shape: "ellipse", x: 0.5, y: 0.5, width: 0.5, height: 0.5, feather: 0.2, exposure: 1, temperature: 0, tint: 0, saturation: 1 }],
+      } }] },
+      assets: [],
+    });
+    expect(plan.looks).toHaveLength(1);
+    expect(plan.diagnostics.some((item) => item.code === "SELECTIVE_GRADE_NOT_EXPORTED")).toBe(true);
+  });
+
   it("packages stored media, a relative FCPXML reference, manifest, and instructions", async () => {
     const plan = planFcpxmlMediaBundle({
       version,
