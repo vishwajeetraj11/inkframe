@@ -15,11 +15,23 @@ const source = (variation = 0.1) => ({
 });
 
 describe("shot-aware grade starting points", () => {
+  it("scales filmic strength, preserves zero, and does not compound", async () => {
+    vi.mocked(sampleTimelineSourceFrames).mockResolvedValue(source());
+    const timeline = version();
+    const get = (strength: number) => proposeShotGradesFromSources({ version: timeline, assets: [], creativeIntent: "filmic", strength });
+    expect((await get(0)).changes).toEqual([]);
+    const soft = (await get(0.5)).changes[0].after.videoFilter;
+    const strong = (await get(2)).changes[0].after.videoFilter;
+    expect(strong.contrast).toBeGreaterThan(soft.contrast);
+    expect(strong.saturation).toBeLessThan(soft.saturation);
+    timeline.clips[0].videoFilter = strong;
+    expect((await get(2)).changes).toEqual([]);
+  });
   it("preserves sunrise warmth and uses separate shadows/highlights, not median WB", async () => {
     vi.mocked(sampleTimelineSourceFrames).mockResolvedValue(source());
     const result = await proposeShotGradesFromSources({ version: version(), assets: [] });
     expect(result.changes).toHaveLength(1);
-    expect(result.changes[0].after.videoFilter).toMatchObject({ hueRotate: -5, sepia: 0.16, saturation: 1.08, brightness: 1.02, shadows: 0.08, highlights: -0.12 });
+    expect(result.changes[0].after.videoFilter).toMatchObject({ hueRotate: -5, sepia: 0.16, saturation: 1.08, brightness: 1.02, shadows: 0.3, highlights: -0.45 });
     expect(result.requiresVisualReview).toBe(true);
     expect(result.changes[0].after.videoFilter.temperature).toBeUndefined();
   });
@@ -36,7 +48,7 @@ describe("shot-aware grade starting points", () => {
     timeline.clips[0].videoFilter = { ...warm, exposure: 0, temperature: 0, tint: 0, shadows: 0, highlights: 0, toneCurve: "linear" };
     const result = await proposeShotGradesFromSources({ version: timeline, assets: [] });
     expect(result.changes).toHaveLength(1);
-    expect(result.changes[0].after.videoFilter).toMatchObject({ shadows: 0.08, highlights: -0.12 });
+    expect(result.changes[0].after.videoFilter).toMatchObject({ shadows: 0.3, highlights: -0.45 });
   });
   it("leaves changing light untouched instead of applying one blanket fix", async () => {
     vi.mocked(sampleTimelineSourceFrames).mockResolvedValue(source(1.2));

@@ -87,6 +87,29 @@ WebMCP draft while its native elicitation contract remains unsettled.
 
 ## Agent production loop
 
+### Single-video grading: three-persona review
+
+`editor_color_propose` returns a delegation protocol when it produces exactly one
+clip candidate. The coordinator must delegate independent colorist, technical,
+and visual-critic agents and give each the creative brief, exact settings and all
+paired images from `editor_color_preview` (`includeImages: true`). Submit each
+review through `editor_color_submit_review`, including its persona, actual agent
+ID, verdict, findings and requested changes. Read collected feedback with
+`editor_color_status`.
+
+Single-candidate approval and application require all three distinct reviewer IDs
+to judge that exact preview as improving. Revised proposals or new previews need
+fresh reviews; stale project revisions and metadata-only evidence cannot qualify.
+New feedback invalidates unused approvals. The coordinator should revise from
+feedback for at most three rounds, stop on stalled progress, and leave the best
+candidate for human judgment if no agreement is reached. This loop bound is an
+orchestration instruction, not an authenticated execution constraint.
+
+WebMCP requests delegation; it cannot spawn agents or authenticate their identity.
+If delegation is unavailable, report that limitation and leave the proposal
+unapproved rather than fabricate independent reviews. This gate applies to the
+single-candidate WebMCP workflow, not manual grading controls or multi-shot proposals.
+
 A browser agent can now complete and verify a full local workflow without a render server:
 
 1. Inspect assets with `editor_list_assets`, then find footage with
@@ -129,6 +152,43 @@ A browser agent can now complete and verify a full local workflow without a rend
 task-oriented workflows and groups the larger atomic surface into discovery,
 composition, inspection, correction, and delivery tools so an agent does not
 need to infer a path from every registered operation.
+
+### Music and narration balance
+
+Use `editor_plan_audio_balance` to preview music ducking without changing the
+project. Supply `aspect`, a `music` reference, a nonempty `narration` reference
+array, `strength` (`gentle`, `balanced`, or `strong`), and a new `ruleId`.
+Each reference is `{ kind: "audio" | "video", id: string }`.
+The response includes the current `revision`, validated `rule`, gain `envelope`,
+and `warnings`. This is timeline-interval ducking, not speech detection, loudness
+measurement, or automatic mastering; audition the resulting mix.
+
+After reviewing the plan, call `editor_apply_audio_balance` with the same inputs,
+`confirmed: true`, `expectedRevision` from the plan, and a unique `operationId`.
+The command revalidates inputs against that revision and adds one rule atomically.
+Existing rule IDs are rejected. A stale revision requires planning again; retries
+use the same operation ID. `editor_undo` reverses the single edit, or
+`editor_remove_audio_ducking` removes the rule by ID with confirmation.
+The plan is deterministic and has no hidden persistent approval token.
+
+### Runtime environment discovery
+
+The editor capability response also includes a fresh `runtime` inventory on each
+call. OS identification is only a browser hint (including iPad desktop mode),
+never evidence that `say`, Windows speech, Linux TTS, or FFmpeg is installed.
+Operations report a status, reason, and next action. The status vocabulary is
+`available`, `unsupported`, `not-installed`, `permission-required`, and `unknown`.
+Only a future native integration that actually checks dependencies should report
+native software as `available` or `not-installed`.
+
+Currently no local companion is connected: narration-file generation is
+unsupported and native media-processing availability is unknown. Import externally
+generated audio through the existing media picker. Browser speech playback is not
+advertised as a narration-file generator. File import requires user selection.
+Export discovery checks browser primitives but leaves codec/configuration support
+unknown until the actual export checks run; inspect export status for the result.
+Discovery never requests permission, runs commands, or uploads media. Cloud/paid
+fallbacks require explicit user choice and are never selected automatically.
 
 Licensed stock audio is optional. Configure `FREESOUND_API_KEY` for music and sound effects. Results are restricted to downloadable
 CC0, CC BY, or CC BY-SA items; imported assets retain creator, source, license,

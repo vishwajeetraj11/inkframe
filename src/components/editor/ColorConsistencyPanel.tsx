@@ -59,6 +59,7 @@ export const ColorConsistencyPanel = ({
 }: ColorConsistencyPanelProps) => {
   const intentId = useId();
   const [creativeIntent, setCreativeIntent] = useState<"natural" | "filmic">("natural");
+  const [strength, setStrength] = useState(1);
   const [isOpen, setIsOpen] = useState(false);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [isCapturing, setIsCapturing] = useState(false);
@@ -181,7 +182,7 @@ export const ColorConsistencyPanel = ({
     try {
       onPreviewFilters(null);
       const next = await proposeShotGradesFromSources({
-        version, assets: sourceAssets, signal: controller.signal, creativeIntent,
+        version, assets: sourceAssets, signal: controller.signal, creativeIntent, strength,
         samplesPerClip: 3, maximumDimension: 192,
         onProgress: (value) => {
           if (run === runRef.current && !controller.signal.aborted) setProgress(value);
@@ -190,7 +191,7 @@ export const ColorConsistencyPanel = ({
       if (run !== runRef.current || controller.signal.aborted) return;
       setResult(next);
       setStatus(next.inspection.analysisMode === "source-frames"
-        ? `Prepared ${creativeIntent === "filmic" ? "Gentle filmic" : "Natural"} candidates from sampled source frames. These are rule-based suggestions, not AI approval.`
+        ? `Prepared ${creativeIntent === "filmic" ? "Filmic contrast" : "Natural"} candidates at ${Math.round(strength * 100)}% strength. These are rule-based suggestions, not AI approval.`
         : "Source pixels were unavailable. These suggestions compare saved filter settings, not the appearance of the footage.");
     } catch {
       if (run === runRef.current && !controller.signal.aborted) {
@@ -225,7 +226,7 @@ export const ColorConsistencyPanel = ({
     try {
       const evidence = await captureColorComparison({
         version, assets: sourceAssets, clipId: proposal.clipId,
-        before: proposal.before, after: proposal.after, signal: controller.signal,
+        before: proposal.before, after: proposal.after, signal: controller.signal, maximumDimension: 1280,
       });
       if (token !== captureRunRef.current || controller.signal.aborted) return;
       if (evidence.clipId !== proposal.clipId || evidence.scope !== "source-clip" || evidence.samples.length !== 3) {
@@ -292,9 +293,18 @@ export const ColorConsistencyPanel = ({
         setStatus("Look changed. Prepare new candidates to compare this treatment.");
       }} className="mt-2 min-h-9 w-full border border-white/20 bg-[#211c16] px-2 text-xs focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-200 disabled:opacity-40">
         <option value="natural">Natural</option>
-        <option value="filmic">Gentle filmic</option>
+        <option value="filmic">Filmic contrast</option>
       </select>
-      <p className="mt-2 text-xs leading-5 text-neutral-400">{creativeIntent === "natural" ? "Start with the source character and consider gentle tonal adjustments." : "Try a gentle filmic tone curve. A creative look is a preference, not a correction every shot needs."}</p>
+      <p className="mt-2 text-xs leading-5 text-neutral-400">{creativeIntent === "natural" ? "Recover bright detail and lift deep shadows where needed. Balanced shots may stay unchanged." : "Deeper contrast, restrained saturation and a filmic curve. Adjust strength to suit the footage."}</p>
+      <label className="mt-3 block text-xs">Grade strength: {Math.round(strength * 100)}%
+        <input aria-label="Grade strength" type="range" min="0" max="2" step="0.1" value={strength} disabled={disabled || isAnalyzing || isCapturing} className="mt-2 w-full accent-amber-200" onChange={(event) => {
+          closeReview();
+          setStrength(Number(event.target.value));
+          setResult(null);
+          setAppliedRevision(null);
+          setStatus("Strength changed. Prepare new candidates to compare.");
+        }} />
+      </label>
       <button type="button" disabled={disabled || isAnalyzing || isCapturing || version.clips.length === 0} onClick={() => void openReview()} className={`${buttonClass} mt-3 w-full bg-amber-200 !text-[#20180d] hover:!bg-amber-100`}>
         {isAnalyzing ? "Preparing shot candidates..." : "Prepare shot candidates"}
       </button>
@@ -333,7 +343,8 @@ export const ColorConsistencyPanel = ({
               <p className="mt-1 text-xs text-neutral-400">{decisions[proposal.clipId] === "improves" ? "Improves: included when you apply" : decisions[proposal.clipId] === "neutral" ? "Neutral: keep original" : decisions[proposal.clipId] === "worse" ? "Worse: keep original" : "Undecided: excluded from Apply"}</p>
               <button type="button" className={`${buttonClass} mt-2`} disabled={locked} aria-label={`Compare ${clipLabel(proposal.clipId)}`} onClick={() => void compareShot(proposal)}>Compare shot</button>
             </li>)}</ul>
-            {activeProposal ? <div aria-label={`Comparison for ${clipLabel(activeProposal.clipId)}`} role="group" className="border-y border-amber-200/30 py-3">
+            {activeProposal ? <dialog ref={(node) => { if (node && !node.open) node.showModal(); }} onCancel={() => setActiveId(null)} aria-label={`Comparison for ${clipLabel(activeProposal.clipId)}`} className="fixed inset-0 m-auto max-h-[92vh] w-[min(1400px,94vw)] max-w-none overflow-y-auto border border-amber-200/30 bg-[#16130f] p-6 text-neutral-100 backdrop:bg-black/80">
+              <button type="button" className={`${buttonClass} float-right`} onClick={() => setActiveId(null)}>Close comparison</button>
               <h4 className="break-words text-xs font-semibold">{clipLabel(activeProposal.clipId)}</h4>
               <p className="mt-2 text-xs leading-5 text-neutral-300">Three matched source-frame pairs. Original keeps your existing treatment; Graded shows the candidate.</p>
               <p className="mt-2 text-xs leading-5 text-neutral-400">Source shot only: these samples do not show timeline overlays, transitions, or neighboring shots. Review the full sequence before export.</p>
@@ -353,7 +364,7 @@ export const ColorConsistencyPanel = ({
                       {invalid ? <p role="alert" className="flex min-h-24 items-center border border-amber-200/30 p-2 text-xs text-amber-100">{label} image unavailable. Retry this comparison.</p> : (
                         // Captures are generated data URLs; Next image optimization cannot improve them.
                         // eslint-disable-next-line @next/next/no-img-element
-                        <img src={capture.dataUrl} alt={`${label}: ${clipLabel(activeProposal.clipId)}, sample ${index + 1}`} width={capture.width} height={capture.height} className="h-auto max-h-64 w-full border border-white/10 bg-[#100e0b] object-contain" onLoad={() => imageResult(activeProposal.clipId, activeReview.token, key, "loaded")} onError={() => imageResult(activeProposal.clipId, activeReview.token, key, "failed")} />
+                        <img src={capture.dataUrl} alt={`${label}: ${clipLabel(activeProposal.clipId)}, sample ${index + 1}`} width={capture.width} height={capture.height} className="h-auto w-full border border-white/10 bg-[#100e0b] object-contain" onLoad={() => imageResult(activeProposal.clipId, activeReview.token, key, "loaded")} onError={() => imageResult(activeProposal.clipId, activeReview.token, key, "failed")} />
                       )}
                     </figure>;
                   })}</div>
@@ -366,7 +377,7 @@ export const ColorConsistencyPanel = ({
                 <div className="mt-2 flex flex-wrap gap-2">{(["improves", "neutral", "worse"] as const).map((value) => <button type="button" key={value} className={buttonClass} disabled={value === "improves" && !completeReview(activeReview)} aria-pressed={decisions[activeProposal.clipId] === value} onClick={() => decide(value)}>{value === "improves" ? "Improves" : value === "neutral" ? "Neutral" : "Worse"}</button>)}</div>
               </fieldset>
               <p className="mt-2 text-xs text-neutral-400">Neutral or worse keeps the original and rejects this grade.</p>
-            </div> : null}
+            </dialog> : null}
             <button type="button" className={`${buttonClass} mt-4 w-full bg-amber-200 !text-[#20180d] hover:!bg-amber-100`} disabled={locked || improvements.length === 0} onClick={applyImprovements}>Apply {improvements.length} improving change{improvements.length === 1 ? "" : "s"}</button>
             <p className="mt-2 text-xs leading-5 text-neutral-400">Only shots marked Improves will change. Opening a comparison never approves a grade.</p>
           </> : <p className="mt-3 text-xs leading-5 text-neutral-300">No grades proposed. Keep the current look, or adjust shots manually after reviewing them in context.</p>}

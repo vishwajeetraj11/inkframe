@@ -299,6 +299,7 @@ export const proposeColorCorrectionsFromSources = async ({
 /** Starting points, not AI verdicts: scene content is judged against paired visual evidence. */
 export const proposeShotGradesFromSources = async (input: ProposeColorCorrectionsFromSourcesInput & {
   creativeIntent?: "natural" | "filmic";
+  strength?: number;
 }): Promise<ColorWorkflowProposal> => {
   const version = scopedVersion(input.version, input.clipIds);
   const source = await sampleTimelineSourceFrames({ ...input, version });
@@ -316,15 +317,21 @@ export const proposeShotGradesFromSources = async (input: ProposeColorCorrection
     const before = effectiveFilter(clip);
     const after: VideoFilter = { ...before, preset: "custom" };
     // Absolute tonal targets avoid compounding repeated passes. Never infer WB from scenery.
-    const highlights = high > 0.72 ? -0.12 : 0;
-    const shadows = low < 0.035 && aggregate.luminance < 0.22 ? 0.08 : 0;
+    const strength = Math.min(2, Math.max(0, Number.isFinite(input.strength) ? input.strength! : 1));
+    const highlights = high > 0.72 ? -0.45 * strength : 0;
+    const shadows = low < 0.035 && aggregate.luminance < 0.22 ? 0.3 * strength : 0;
     after.highlights = (before.highlights ?? 0) === 0 ? highlights : before.highlights;
     after.shadows = (before.shadows ?? 0) === 0 ? shadows : before.shadows;
-    if (input.creativeIntent === "filmic") after.toneCurve = "filmic";
+    if (input.creativeIntent === "filmic" && strength > 0) {
+      after.toneCurve = "filmic";
+      after.contrast = Math.max(before.contrast, Math.min(1.5, 1 + 0.25 * strength));
+      after.saturation = Math.min(before.saturation, 1 - 0.15 * strength);
+    }
+    if (strength === 0) continue;
     const changed = (after.highlights ?? 0) !== (before.highlights ?? 0)
       || (after.shadows ?? 0) !== (before.shadows ?? 0)
       || (after.toneCurve ?? "linear") !== (before.toneCurve ?? "linear");
-    if (!changed) continue;
+    if (!changed && after.contrast === before.contrast && after.saturation === before.saturation) continue;
     changes.push({
       changeId: `color-change-${clip.id}`, candidate: true, targetType: "clip", targetId: clip.id,
       reason: `${input.creativeIntent === "filmic" ? "Gentle filmic tonal shape. " : "Natural tonal adjustment. "}Preserve this shot's existing color and lighting; compare sky detail and shadow texture across all samples before accepting.`,

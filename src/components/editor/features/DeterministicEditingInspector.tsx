@@ -9,6 +9,7 @@ import type { SpeedPoint } from "@/lib/editor/time-mapping";
 import type { AudioItemRef } from "@/lib/editor/audio-ducking";
 import { CaptionInspector } from "@/components/editor/inspector/CaptionInspector";
 import { LabeledControl } from "@/components/editor/controls/LabeledControl";
+import { AudioBalancePanel } from "@/components/editor/features/AudioBalancePanel";
 
 const fieldClass = "min-h-9 w-full border border-white/20 bg-[#100e0b] px-2 py-1 text-xs text-neutral-100 outline-none disabled:opacity-40";
 const buttonClass = `${fieldClass} text-[10px] tracking-wide hover:border-[#ff4f1f]`;
@@ -154,5 +155,6 @@ export const DeterministicEditingInspector = ({ version, clip, assets, assetName
   {clip ? <KeyframesInspector key={`${version.aspect}-${clip.id}`} clip={clip} aspect={version.aspect} onEdit={onEdit} /> : null}
   {clip?.kind === "video" ? <TimeMappingInspector key={`${version.aspect}-${clip.id}-${clip.startFrame}-${clip.endFrame}-${JSON.stringify(clip.timeMapping)}`} clip={clip} aspect={version.aspect} asset={assets.find((asset) => asset.assetId === clip.assetId)} onEdit={onEdit} /> : null}
   <CaptionInspector key={`captions-${version.aspect}-${selectedCaptionId ?? ""}`} selectedCueId={selectedCaptionId} version={version} disabled={disabled} onEdit={onEdit} />
+  <AudioBalancePanel version={version} assetNames={assetNames} onEdit={onEdit} />
   <DuckingInspector key={`ducking-${version.aspect}`} version={version} assetNames={assetNames} onEdit={onEdit} />
 </fieldset>;

@@ -24,6 +24,7 @@ import { nanoid } from "nanoid";
 import { flushSync } from "react-dom";
 import { captureColorComparison } from "@/lib/editor/webmcp/color-evidence";
 import { getActiveTimeline } from "@/lib/editor/cutdowns";
+import { detectRuntimeCapabilities } from "@/lib/webmcp/runtime-capabilities";
 
 export interface EditorWebMcpBridge {
   history: EditorHistoryState;
@@ -97,6 +98,7 @@ export const startEditorWebMcpExport = (
 
 const createTools: WebMcpToolFactory<EditorWebMcpBridge> = (getCurrent) =>
   createEditorWebMcpTools({
+    getRuntimeCapabilities: () => detectRuntimeCapabilities(),
     getState: () => getCurrent().history,
     getActiveVersion: () => getActiveTimeline(getCurrent().history.present),
     getAssets: () => getCurrent().assets,

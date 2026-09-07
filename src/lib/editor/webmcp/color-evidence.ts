@@ -32,9 +32,10 @@ const waitFor = (target: HTMLMediaElement | HTMLImageElement, event: string, sig
   });
 
 /** Grade two copies of each decoded timestamp without modifying source or timeline. */
-export const captureColorComparison = async ({ version, assets, clipId, before, after, signal }: {
+export const captureColorComparison = async ({ version, assets, clipId, before, after, signal, maximumDimension = 384 }: {
   version: VersionTimeline; assets: readonly SourceColorAsset[]; clipId: string;
   before: VideoFilter; after: VideoFilter; signal?: AbortSignal;
+  maximumDimension?: number;
 }): Promise<ColorComparisonEvidence> => {
   const clip = version.clips.find((item) => item.id === clipId);
   const asset = assets.find((item) => item.assetId === clip?.assetId);
@@ -64,7 +65,7 @@ export const captureColorComparison = async ({ version, assets, clipId, before, 
     const sourceWidth = drawable instanceof HTMLVideoElement ? drawable.videoWidth : drawable.naturalWidth;
     const sourceHeight = drawable instanceof HTMLVideoElement ? drawable.videoHeight : drawable.naturalHeight;
     if (!sourceWidth || !sourceHeight) throw new Error("Decoded source has no image dimensions.");
-    const scale = Math.min(1, 384 / Math.max(sourceWidth, sourceHeight));
+    const scale = Math.min(1, Math.min(1280, Math.max(384, maximumDimension)) / Math.max(sourceWidth, sourceHeight));
     const canvas = document.createElement("canvas");
     canvas.width = Math.max(1, Math.round(sourceWidth * scale));
     canvas.height = Math.max(1, Math.round(sourceHeight * scale));
@@ -93,7 +94,7 @@ export const captureColorComparison = async ({ version, assets, clipId, before, 
         const pixels = context.getImageData(0, 0, canvas.width, canvas.height);
         applyColorGradeToPixels(pixels.data, filter);
         context.putImageData(pixels, 0, 0);
-        return { frame, width: canvas.width, height: canvas.height, mimeType: "image/jpeg", dataUrl: canvas.toDataURL("image/jpeg", 0.78), contrastChecks: [] };
+        return { frame, width: canvas.width, height: canvas.height, mimeType: "image/jpeg", dataUrl: canvas.toDataURL("image/jpeg", 0.92), contrastChecks: [] };
       };
       samples.push({ frame, sourceTimeSeconds, before: render(before), after: render(after) });
     }
