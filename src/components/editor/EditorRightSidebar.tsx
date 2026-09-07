@@ -87,7 +87,7 @@ export const EditorRightSidebar = ({
         onUpdateAudio={onUpdateAudio}
         onRemoveAudio={onRemoveAudio}
       />
-      {version && onEdit ? <DeterministicEditingInspector selectedCaptionId={selectedCaptionId} version={version} clip={selectedClip} assets={assets} assetNames={assetNames} disabled={isExporting} onEdit={onEdit} /> : null}
+      {version && onEdit ? <DeterministicEditingInspector selectedCaptionId={selectedCaptionId} version={version} clip={selectedClip} assets={assets} assetNames={assetNames} assetSources={assetSources} revision={revision} disabled={isExporting} onEdit={onEdit} /> : null}
     </aside>
   );
 };

@@ -9,6 +9,9 @@ import type { SpeedPoint } from "@/lib/editor/time-mapping";
 import type { AudioItemRef } from "@/lib/editor/audio-ducking";
 import { CaptionInspector } from "@/components/editor/inspector/CaptionInspector";
 import { LabeledControl } from "@/components/editor/controls/LabeledControl";
+import { AudioBalancePanel } from "@/components/editor/features/AudioBalancePanel";
+import { ObjectTrackingPanel } from "@/components/editor/features/ObjectTrackingPanel";
+import { SelectiveGradingPanel } from "@/components/editor/features/SelectiveGradingPanel";
 
 const fieldClass = "min-h-9 w-full border border-white/20 bg-[#100e0b] px-2 py-1 text-xs text-neutral-100 outline-none disabled:opacity-40";
 const buttonClass = `${fieldClass} text-[10px] tracking-wide hover:border-[#ff4f1f]`;
@@ -147,12 +150,15 @@ const DuckingInspector = ({ version, assetNames, onEdit }: { version: VersionTim
   </details>;
 };
 
-export const DeterministicEditingInspector = ({ version, clip, assets, assetNames, disabled, onEdit, selectedCaptionId }: {
+export const DeterministicEditingInspector = ({ version, clip, assets, assetNames, assetSources = {}, revision = 0, disabled, onEdit, selectedCaptionId }: {
   selectedCaptionId?: string | null;
-  version: VersionTimeline; clip: Clip | null; assets: readonly AssetRef[]; assetNames: Record<string, string>; disabled?: boolean; onEdit: Edit;
+  version: VersionTimeline; clip: Clip | null; assets: readonly AssetRef[]; assetNames: Record<string, string>; assetSources?: Readonly<Record<string, string>>; revision?: number; disabled?: boolean; onEdit: Edit;
 }) => <fieldset disabled={disabled} className="space-y-3 bg-[#15120e] p-3 pt-0 disabled:opacity-40">
+  {clip ? <SelectiveGradingPanel key={`regions-${version.aspect}-${clip.id}`} clip={clip} aspect={version.aspect} onEdit={onEdit} /> : null}
+  {clip?.kind === "video" ? <ObjectTrackingPanel key={`tracking-${revision}-${version.aspect}-${clip.id}-${clip.startFrame}-${clip.endFrame}-${clip.trimStartFrame}-${JSON.stringify(clip.timeMapping)}-${JSON.stringify(clip.transform)}-${JSON.stringify(clip.keyframes)}-${assetSources[clip.assetId]}`} clip={clip} version={version} sourceUrl={assetSources[clip.assetId]} assetNames={assetNames} onEdit={onEdit} /> : null}
   {clip ? <KeyframesInspector key={`${version.aspect}-${clip.id}`} clip={clip} aspect={version.aspect} onEdit={onEdit} /> : null}
   {clip?.kind === "video" ? <TimeMappingInspector key={`${version.aspect}-${clip.id}-${clip.startFrame}-${clip.endFrame}-${JSON.stringify(clip.timeMapping)}`} clip={clip} aspect={version.aspect} asset={assets.find((asset) => asset.assetId === clip.assetId)} onEdit={onEdit} /> : null}
   <CaptionInspector key={`captions-${version.aspect}-${selectedCaptionId ?? ""}`} selectedCueId={selectedCaptionId} version={version} disabled={disabled} onEdit={onEdit} />
+  <AudioBalancePanel version={version} assetNames={assetNames} onEdit={onEdit} />
   <DuckingInspector key={`ducking-${version.aspect}`} version={version} assetNames={assetNames} onEdit={onEdit} />
 </fieldset>;

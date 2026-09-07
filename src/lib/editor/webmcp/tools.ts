@@ -2,6 +2,12 @@ import { z } from "zod";
 import { createBeatMontageTools } from "./beat-tools";
 import type { analyzeMusicUrl } from "./beat-audio-browser";
 import type { sampleVideoMoments } from "./beat-video-browser";
+import { selectiveColorRegionSchema } from "../schema";
+import { correctTrackingPoint, trackingToKeyframes } from "../object-tracking";
+import type { trackVideoObject } from "@/lib/export/object-tracking-browser";
+import { ASPECT_PRESETS } from "../constants";
+import { GRADING_REVIEW_PROTOCOL, gradingReviewSchema, requireThreeReviews, type GradingReview } from "./grading-review";
+import type { RuntimeCapabilities } from "@/lib/webmcp/runtime-capabilities";
 import {
   getWebMCPExecuteSignal,
   type WebMcpTool,
@@ -14,6 +20,7 @@ import { validateEditorCommandAction, type EditorCommand, type EditorHistoryStat
 import { getClipDurationInFrames } from "../domain/helpers";
 import { getVersionRenderDurationInFrames } from "../timeline";
 import { importCaptions } from "../captions";
+import { planAudioBalance } from "../audio-balance";
 import { validateTimeMapping, type TimeMapping } from "../time-mapping";
 import { DEFAULT_VIDEO_TRACK_ID, ensureEditorTracks } from "../tracks";
 import type {
@@ -100,6 +107,7 @@ const updateClipInput = z.object({
     sepia: z.number().min(0).max(1),
     grayscale: z.number().min(0).max(1),
     hueRotate: z.number().min(-30).max(30),
+    selectiveRegions: z.array(selectiveColorRegionSchema).max(8).optional(),
   }).strict().optional(),
 }).strict();
 const removeClipInput = z.object({ aspect: aspectSchema.optional(), clipId: z.string().trim().min(1).max(128), confirmed: z.literal(true) }).strict();
@@ -133,10 +141,23 @@ const clipTransformInput = z.object({
 }).strict();
 const keyframePointSchema = z.object({ id: z.string().min(1).max(128), frame: frameSchema, value: z.number(), interpolation: z.enum(["linear", "hold"]) }).strict();
 const keyframesInput = z.object({ ...commandFields, clipId: z.string().min(1).max(128), keyframes: z.object({ x: z.array(keyframePointSchema).max(1000).optional(), y: z.array(keyframePointSchema).max(1000).optional(), scale: z.array(keyframePointSchema).max(1000).optional(), rotation: z.array(keyframePointSchema).max(1000).optional(), opacity: z.array(keyframePointSchema).max(1000).optional() }).strict() }).strict();
+const trackingBoxSchema = z.object({ x: z.number().min(0).max(1), y: z.number().min(0).max(1), width: z.number().positive().max(1), height: z.number().positive().max(1) }).strict();
+const trackingStartInput = z.object({ aspect: aspectSchema, clipId: z.string().min(1).max(128), box: trackingBoxSchema }).strict();
+const trackingCorrectionInput = z.object({ trackingId: z.string().min(1).max(160), frame: frameSchema, x: z.number().min(0).max(1), y: z.number().min(0).max(1) }).strict();
+const trackingApplyInput = z.object({ ...commandFields, trackingId: z.string().min(1).max(160), targetClipId: z.string().min(1).max(128), confirmed: z.literal(true) }).strict();
+const selectiveGradeInput = z.object({ ...commandFields, clipId: z.string().min(1).max(128), regions: z.array(selectiveColorRegionSchema).max(8), confirmed: z.literal(true) }).strict();
 const captionCueSchema = z.object({ id: z.string().min(1).max(128), trackId: z.string().min(1).max(128), startFrame: frameSchema, endFrame: frameSchema, text: z.string().trim().min(1).max(4000) }).strict();
 const captionCuesInput = z.object({ ...commandFields, cues: z.array(captionCueSchema).min(1).max(1000) }).strict();
 const captionsImportInput = z.object({ ...commandFields, trackId: z.string().min(1).max(128), format: z.enum(["srt", "vtt"]), content: z.string().min(1).max(200000), mode: z.enum(["append", "replace"]).default("append") }).strict();
 const audioReferenceSchema = z.object({ kind: z.enum(["audio", "video"]), id: z.string().min(1).max(128) }).strict();
+const audioBalanceFields = {
+  music: audioReferenceSchema,
+  narration: z.array(audioReferenceSchema).min(1).max(1000),
+  strength: z.enum(["gentle", "balanced", "strong"]),
+  ruleId: z.string().trim().min(1).max(128),
+};
+const planAudioBalanceInput = z.object({ aspect: aspectSchema, ...audioBalanceFields }).strict();
+const applyAudioBalanceInput = z.object({ ...commandFields, ...audioBalanceFields, confirmed: z.literal(true) }).strict();
 const duckingInput = z.object({ ...commandFields, rule: z.object({ id: z.string().min(1).max(128), target: audioReferenceSchema, triggers: z.array(audioReferenceSchema).min(1).max(1000), attenuationDb: z.number().min(-60).max(0), attackFrames: frameSchema, releaseFrames: frameSchema }).strict() }).strict();
 const removeDuckingInput = z.object({ ...commandFields, ruleId: z.string().min(1).max(128), confirmed: z.literal(true) }).strict();
 const freezeInput = z.object({ ...commandFields, clipId: z.string().min(1).max(128), startFrame: frameSchema, endFrame: frameSchema, sourceTimeUs: z.number().int().nonnegative() }).strict();
@@ -235,6 +256,7 @@ const colorProposeInput = z.object({
   clipIds: z.array(z.string().trim().min(1).max(128)).max(100).optional(),
   findingIds: z.array(z.string().trim().min(1).max(160)).max(400).optional(),
   creativeIntent: z.string().trim().min(1).max(2000).optional(),
+  strength: z.number().min(0).max(2).optional(),
   candidates: z.array(z.object({
     clipId: z.string().trim().min(1).max(128),
     rationale: z.string().trim().min(1).max(1000),
@@ -352,6 +374,8 @@ export interface EditorWebMcpCallbackResult {
 export interface EditorWebMcpToolContext {
   analyzeMusic?: (assetId: string, options: { startSeconds: number; durationSeconds: number }, signal: AbortSignal) => ReturnType<typeof analyzeMusicUrl>;
   sampleVideoMoments?: (assetId: string, durationSeconds: number, signal: AbortSignal) => ReturnType<typeof sampleVideoMoments>;
+  trackObject?: (aspect: AspectPreset, clipId: string, box: z.infer<typeof trackingBoxSchema>, signal: AbortSignal) => ReturnType<typeof trackVideoObject>;
+  getRuntimeCapabilities?: () => RuntimeCapabilities;
   /** Always return the current state; do not pass a render-time snapshot. */
   getState: () => EditorHistoryState;
   /** Resolve the currently selected master or cutdown for delivery operations. */
@@ -761,6 +785,8 @@ const defineTool = <T extends z.ZodType>({ name, title, description, schema, rea
 });
 
 export const createEditorWebMcpTools = (context: EditorWebMcpToolContext): WebMcpTool[] => {
+  const objectTracks = new Map<string, { aspect: AspectPreset; revision: number; clipId: string; result: Awaited<ReturnType<typeof trackVideoObject>> }>();
+  let trackingSequence = 0;
   const approvals = new Map<string, { fingerprint: string; expiresAt: number }>();
   const colorProposals = new Map<string, {
     aspect: AspectPreset;
@@ -768,6 +794,7 @@ export const createEditorWebMcpTools = (context: EditorWebMcpToolContext): WebMc
     createdAt: number;
     expiresAt: number;
     result: ColorWorkflowProposal;
+    reviews: GradingReview[];
     appliedOperationId?: string;
   }>();
   const colorPreviews = new Map<string, {
@@ -908,6 +935,42 @@ export const createEditorWebMcpTools = (context: EditorWebMcpToolContext): WebMc
   };
   return [
     ...createBeatMontageTools(context, command),
+    defineTool({ name: "editor_track_object", title: "Track an object in source video", description: "Analyze a top-left normalized source box using local pixel matching. Returns clip-local centers and confidence, without editing. Low confidence stops tracking; this is not semantic segmentation. Inspect the path, correct it, then attach to an image graphic.", schema: trackingStartInput, readOnly: true, execute: async (input, signal) => {
+      if (!context.trackObject) throw new Error("TRACKING_UNAVAILABLE: Browser tracking is not connected.");
+      const revision = context.getState().revision ?? 0;
+      const result = await context.trackObject(input.aspect, input.clipId, input.box, signal);
+      throwIfAborted(signal);
+      if ((context.getState().revision ?? 0) !== revision) throw new Error("REVISION_CONFLICT: Project changed while tracking. Track again.");
+      const trackingId = `object-track-${++trackingSequence}`;
+      if (objectTracks.size >= 12) objectTracks.delete(objectTracks.keys().next().value!);
+      objectTracks.set(trackingId, { aspect: input.aspect, revision, clipId: input.clipId, result });
+      return colorResult({ ok: true, trackingId, revision, result });
+    } }),
+    defineTool({ name: "editor_correct_object_track", title: "Correct a tracked center", description: "Correct a clip-local tracking point with a source-normalized center. Does not edit the timeline or certify recovery of a lost track.", schema: trackingCorrectionInput, readOnly: false, execute: (input) => {
+      const track = objectTracks.get(input.trackingId);
+      if (!track || track.revision !== (context.getState().revision ?? 0)) throw new Error("STALE_TRACK: Track again against the current project.");
+      const clip = activeVersion(context.getState(), track.aspect).clips.find((item) => item.id === track.clipId);
+      if (!clip || input.frame >= clip.endFrame - clip.startFrame) throw new Error("INVALID_FRAME: Correction must be inside the tracked clip.");
+      track.result.points = correctTrackingPoint(track.result.points, { frame: input.frame, x: input.x, y: input.y });
+      return colorResult({ ok: true, trackingId: input.trackingId, result: track.result });
+    } }),
+    defineTool({ name: "editor_attach_object_track", title: "Attach image graphic to object track", description: "Apply a reviewed complete track to an existing image graphic as x/y keyframes in one undo step. Replaces that graphic's position animation; other channels are preserved. Lost tracks cannot be applied.", schema: trackingApplyInput, readOnly: false, execute: (input) => command(input, () => {
+      const track = objectTracks.get(input.trackingId);
+      if (!track || track.revision !== input.expectedRevision || track.aspect !== input.aspect) throw new Error("STALE_TRACK: Track again against the current project.");
+      if (track.result.status !== "complete") throw new Error("TRACK_LOST: Use a shorter clip or a clearer box and track again.");
+      const version = activeVersion(context.getState(), input.aspect);
+      const sourceClip = version.clips.find((item) => item.id === track.clipId);
+      const targetClip = version.clips.find((item) => item.id === input.targetClipId);
+      if (!sourceClip || !targetClip) throw new Error("CLIP_NOT_FOUND: Source or graphic missing.");
+      const stage = ASPECT_PRESETS[input.aspect];
+      const keyframes = trackingToKeyframes({ points: track.result.points, sourceClip, targetClip, sourceWidth: track.result.sourceWidth, sourceHeight: track.result.sourceHeight, stageWidth: stage.width, stageHeight: stage.height, transitions: version.transitions });
+      return { type: "set-clip-keyframes", aspect: input.aspect, clipId: targetClip.id, keyframes };
+    }) }),
+    defineTool({ name: "editor_set_selective_grade", title: "Set selective color regions", description: "Replace up to eight independent feathered ellipse/rectangle regions on a clip. Center and size are source-normalized; inverted masks grade outside. Uses SDR pixels and the same preview/export renderer. Empty regions clears local grading; global settings stay unchanged.", schema: selectiveGradeInput, readOnly: false, execute: (input) => command(input, () => {
+      const clip = activeVersion(context.getState(), input.aspect).clips.find((item) => item.id === input.clipId);
+      if (!clip) throw new Error("CLIP_NOT_FOUND");
+      return { type: "update-clip", aspect: input.aspect, clipId: clip.id, patch: { videoFilter: { preset: "none", brightness: 1, contrast: 1, saturation: 1, sepia: 0, grayscale: 0, hueRotate: 0, ...clip.videoFilter, selectiveRegions: input.regions } } };
+    }) }),
     defineTool({ name: "editor_set_clip_keyframes", title: "Set clip keyframes", description: "Replace clip-local animation channels. Frame controls include the exclusive end boundary; interpolation is linear or hold.", schema: keyframesInput, readOnly: false, execute: (input) => command(input, { type: "set-clip-keyframes", aspect: input.aspect, clipId: input.clipId, keyframes: input.keyframes }) }),
     defineTool({ name: "editor_upsert_caption_cues", title: "Set caption cues", description: "Atomically add or update caption cues by ID on existing caption lanes. Same-lane overlap is invalid.", schema: captionCuesInput, readOnly: false, execute: (input) => command(input, { type: "upsert-caption-cues", aspect: input.aspect, cues: input.cues }) }),
     defineTool({ name: "editor_import_captions", title: "Import captions", description: "Import plain SRT/WebVTT atomically. Starts round down and ends round up to frames; unsupported styling and collisions are errors.", schema: captionsImportInput, readOnly: false, execute: (input) => command(input, () => {
@@ -916,6 +979,14 @@ export const createEditorWebMcpTools = (context: EditorWebMcpToolContext): WebMc
       const version = activeVersion(context.getState(), input.aspect);
       const removals: EditorAction[] = input.mode === "replace" ? (version.captionCues ?? []).filter((cue) => cue.trackId === input.trackId).map((cue) => ({ type: "remove-caption-cue", aspect: input.aspect, cueId: cue.id })) : [];
       return [...removals, { type: "upsert-caption-cues", aspect: input.aspect, cues: parsed.cues }];
+    }) }),
+    defineTool({ name: "editor_plan_audio_balance", title: "Plan music and narration balance", description: "Read-only preview of interval-based music ducking under selected narration. Returns a validated rule, gain envelope, warnings, and revision. This does not analyze speech or measure loudness. Review the plan before applying the same inputs with its revision.", schema: planAudioBalanceInput, readOnly: true, execute: (input) => {
+      const state = context.getState();
+      return projectResult({ ok: true, aspect: input.aspect, revision: state.revision ?? 0, ...planAudioBalance(activeVersion(state, input.aspect), input) });
+    } }),
+    defineTool({ name: "editor_apply_audio_balance", title: "Apply music and narration balance", description: "Apply a reviewed interval-based balance plan with confirmed:true and its expectedRevision. Revalidates the same music, narration, strength, and new ruleId inputs; creates one ducking rule in one undo step. Existing rule IDs are rejected. Retry with the same operationId; undo with editor_undo or remove with editor_remove_audio_ducking.", schema: applyAudioBalanceInput, readOnly: false, execute: (input) => command(input, () => {
+      const { rule } = planAudioBalance(activeVersion(context.getState(), input.aspect), input);
+      return { type: "set-ducking-rule", aspect: input.aspect, rule };
     }) }),
     defineTool({ name: "editor_set_audio_ducking", title: "Set audio ducking", description: "Duck a target by a negative dB attenuation during selected narration intervals. Rules combine using strongest attenuation.", schema: duckingInput, readOnly: false, execute: (input) => command(input, { type: "set-ducking-rule", aspect: input.aspect, rule: input.rule }) }),
     defineTool({ name: "editor_remove_audio_ducking", title: "Remove audio ducking", description: "Remove a ducking rule with explicit confirmation.", schema: removeDuckingInput, readOnly: false, execute: (input) => command(input, { type: "remove-ducking-rule", aspect: input.aspect, ruleId: input.ruleId }) }),
@@ -944,11 +1015,15 @@ export const createEditorWebMcpTools = (context: EditorWebMcpToolContext): WebMc
       execute: () => projectResult({
         ok: true,
         product: "Inkframe browser-native video editor",
+        objectTracking: { tools: ["editor_track_object", "editor_correct_object_track", "editor_attach_object_track"], target: "existing image graphic", limitations: "Local patch matching, not object recognition; normal speed, fixed source transform; stops on lost confidence." },
+        selectiveGrading: { tool: "editor_set_selective_grade", regions: "Up to eight feathered source-space masks, independent of object tracking. SDR only." },
+        singleVideoGrading: GRADING_REVIEW_PROTOCOL,
+        runtime: context.getRuntimeCapabilities?.() ?? null,
         deterministicCommands: {
           revision: context.getState().revision ?? 0,
           requiredMetadata: ["aspect", "expectedRevision", "operationId"],
           idempotencyScope: "last 100 commands in this editor session",
-          tools: ["editor_add_track", "editor_reorder_tracks", "editor_place_clip", "editor_set_clip_transform", "editor_set_clip_keyframes", "editor_upsert_caption_cues", "editor_import_captions", "editor_set_audio_ducking", "editor_remove_audio_ducking", "editor_freeze_clip_range", "editor_set_clip_speed_ramp"],
+          tools: ["editor_add_track", "editor_reorder_tracks", "editor_place_clip", "editor_set_clip_transform", "editor_set_clip_keyframes", "editor_upsert_caption_cues", "editor_import_captions", "editor_set_audio_ducking", "editor_remove_audio_ducking", "editor_apply_audio_balance", "editor_freeze_clip_range", "editor_set_clip_speed_ramp"],
           timing: { fps: FPS, intervals: "integer frames, exclusive end", placement: "absolute; no implicit ripple", sameVideoLaneOverlap: false },
           transformUnits: { position: "normalized canvas coordinates", scale: "raw source scale", rotation: "radians", anchor: "normalized source coordinates" },
           keyframes: { frameSpace: "clip-local output frames", properties: ["x", "y", "scale", "rotation", "opacity"], interpolation: ["linear", "hold"], maxPointsPerChannel: 1000 },
@@ -1004,6 +1079,12 @@ export const createEditorWebMcpTools = (context: EditorWebMcpToolContext): WebMc
               "editor_get_project",
             ],
           },
+          {
+            id: "balance-music-narration",
+            label: "Preview and apply music ducking under narration",
+            steps: ["editor_get_project", "editor_plan_audio_balance", "editor_apply_audio_balance"],
+            guidance: "Select explicit music and narration audio/video references and a new ruleId. Review the returned envelope and warnings. Apply identical inputs with confirmed:true, expectedRevision from the plan, and a unique operationId. One editor_undo reverses the edit; editor_remove_audio_ducking removes the named rule. Interval-based ducking does not perform speech detection or loudness analysis.",
+          },
         ],
         toolGroups: {
           beatMontage: ["editor_inspect_video_moments", "editor_plan_beat_montage", "editor_apply_beat_montage"],
@@ -1012,6 +1093,7 @@ export const createEditorWebMcpTools = (context: EditorWebMcpToolContext): WebMc
           inspect: ["editor_validate_project", "editor_get_render_diagnostics", "editor_capture_frame", "editor_capture_contact_sheet", "editor_get_attribution_report"],
           correct: ["editor_auto_fix_project", "editor_update_text_overlay", "editor_update_clip", "editor_update_audio_track"],
           color: ["editor_color_inspect", "editor_color_propose", "editor_color_preview", "editor_color_approve", "editor_color_apply", "editor_color_undo", "editor_color_status"],
+          audio: ["editor_plan_audio_balance", "editor_apply_audio_balance", "editor_remove_audio_ducking"],
           deliver: ["editor_export_fcpxml", "editor_export_edl", "editor_export_fcpxml_bundle", "editor_request_export", "editor_get_export_status", "editor_get_export_artifact", "editor_cancel_export"],
         },
         safeguards: {
@@ -1071,7 +1153,7 @@ export const createEditorWebMcpTools = (context: EditorWebMcpToolContext): WebMc
     defineTool({
       name: "editor_color_propose",
       title: "Propose color corrections",
-      description: "Propose up to 12 explicit per-shot videoFilter candidates with rationale and optional creativeIntent, or derive source-frame candidates. No changes are applied. Preview with includeImages:true, then record a decision for every change before approval.",
+      description: "Propose per-shot videoFilter candidates. A single-video candidate requires three independent review agents: colorist, technical reviewer, visual critic. Delegate all three, preview with includeImages:true, submit their feedback via editor_color_submit_review, and revise until all judge improvement. If delegation is unavailable, leave unapproved. Never simulate independent reviewers.",
       schema: colorProposeInput,
       readOnly: true,
       execute: async (input, signal) => {
@@ -1083,7 +1165,7 @@ export const createEditorWebMcpTools = (context: EditorWebMcpToolContext): WebMc
         const result: ColorWorkflowProposal = input.candidates
           ? { candidateOnly: true, requiresVisualReview: true, inspection: inspectColorConsistency(version, input.candidates.map((candidate) => candidate.clipId)), changes: [] }
           : hasReadableColorSource(assets)
-          ? await proposeShotGradesFromSources({ version, assets, clipIds: input.clipIds, signal, creativeIntent: input.creativeIntent === "filmic" ? "filmic" : "natural" })
+          ? await proposeShotGradesFromSources({ version, assets, clipIds: input.clipIds, signal, strength: input.strength, creativeIntent: input.creativeIntent === "filmic" ? "filmic" : "natural" })
           : proposeColorCorrections(version, input.findingIds, input.clipIds);
         if (input.candidates) {
           if (input.findingIds?.length) throw new Error("AMBIGUOUS_CANDIDATES: findingIds cannot be combined with explicit candidates");
@@ -1107,14 +1189,14 @@ export const createEditorWebMcpTools = (context: EditorWebMcpToolContext): WebMc
         if (currentRevision !== revision) throw new Error("REVISION_CONFLICT: Project changed during color analysis; propose again");
         const proposalId = `color-proposal-${Date.now().toString(36)}-${++colorProposalSequence}`;
         const createdAt = Date.now();
-        const response = colorResult({ ok: true, proposalId, revision, aspect, creativeIntent: input.creativeIntent, omittedChanges, expiresAt: new Date(createdAt + COLOR_PROPOSAL_TTL_MS).toISOString(), candidateOnly: true, requiresPreview: true, requiresApproval: true, proposal: {
+        const response = colorResult({ ok: true, proposalId, revision, aspect, reviewProtocol: result.changes.length === 1 ? GRADING_REVIEW_PROTOCOL : undefined, creativeIntent: input.creativeIntent, omittedChanges, expiresAt: new Date(createdAt + COLOR_PROPOSAL_TTL_MS).toISOString(), candidateOnly: true, requiresPreview: true, requiresApproval: true, proposal: {
           ...result, inspection: { ...result.inspection,
             findings: result.inspection.findings.slice(0, 24).map((finding) => ({ ...finding, message: scrub(finding.message, 500) })),
             omittedFindings: Math.max(0, result.inspection.findings.length - 24),
             warnings: [...new Set(result.inspection.warnings)].slice(0, 8).map((warning) => scrub(warning, 500)),
           },
         } });
-        colorProposals.set(proposalId, { aspect, revision, createdAt, expiresAt: createdAt + COLOR_PROPOSAL_TTL_MS, result });
+        colorProposals.set(proposalId, { aspect, revision, createdAt, expiresAt: createdAt + COLOR_PROPOSAL_TTL_MS, result, reviews: [] });
         return response;
       },
     }),
@@ -1168,6 +1250,27 @@ export const createEditorWebMcpTools = (context: EditorWebMcpToolContext): WebMc
       },
     }),
     defineTool({
+      name: "editor_color_submit_review",
+      title: "Submit independent grading review",
+      description: "Record one delegated colorist, technical, or critic review of an exact single-video image preview. Supply the actual independent agent ID and its feedback. Three distinct agents must judge improves before approval. A revised candidate needs fresh images and reviews.",
+      schema: gradingReviewSchema,
+      readOnly: false,
+      execute: (input) => {
+        const revision = context.getState().revision ?? 0;
+        const proposal = requireColorProposal(input.proposalId, revision);
+        requireColorPreview(input.previewId, input.proposalId, revision);
+        if (proposal.result.changes.length !== 1) throw new Error("SINGLE_VIDEO_REQUIRED: Propose exactly one clip for the three-persona workflow.");
+        if (proposal.reviews.some((review) => review.previewId === input.previewId && review.persona !== input.persona && review.reviewerId === input.reviewerId)) throw new Error("INDEPENDENT_REVIEWERS_REQUIRED: Each persona needs a distinct agent ID.");
+        proposal.reviews = proposal.reviews.filter((review) => !(review.previewId === input.previewId && review.persona === input.persona));
+        proposal.reviews.push(input);
+        // New feedback invalidates any approval previously issued for this proposal.
+        for (const [id, approval] of colorApprovals) if (approval.proposalId === input.proposalId && !approval.consumedBy) colorApprovals.delete(id);
+        let ready = false;
+        try { requireThreeReviews(proposal.reviews, input.previewId); ready = true; } catch { /* Feedback remains available for revision. */ }
+        return colorResult({ ok: true, readyForApproval: ready, reviews: proposal.reviews.filter((review) => review.previewId === input.previewId), nextAction: ready ? "Seek final confirmation and call editor_color_approve." : "Collect missing reviews or revise the candidate using reviewer feedback. Stop after three rounds or stalled progress." });
+      },
+    }),
+    defineTool({
       name: "editor_color_approve",
       title: "Approve color corrections",
       description: "Record a visual decision for every candidate in an exact preview. Only candidates judged improves receive one-use, revision-bound approval; neutral and worse candidates cannot be applied.",
@@ -1178,6 +1281,7 @@ export const createEditorWebMcpTools = (context: EditorWebMcpToolContext): WebMc
         const revision = state.revision ?? 0;
         const proposal = requireColorProposal(input.proposalId, revision);
         const preview = requireColorPreview(input.previewId, input.proposalId, revision);
+        if (proposal.result.changes.length === 1) requireThreeReviews(proposal.reviews, input.previewId);
         const decisionIds = input.decisions.map((decision) => decision.changeId);
         if (new Set(decisionIds).size !== decisionIds.length) {
           throw new Error("DUPLICATE_VISUAL_DECISION: Each previewed candidate must have exactly one visual decision");
@@ -1229,6 +1333,7 @@ export const createEditorWebMcpTools = (context: EditorWebMcpToolContext): WebMc
         if (Date.now() >= approval.expiresAt) throw new Error("APPROVAL_EXPIRED: Approval expired; approve the proposal again");
         if (approval.revision !== revision || approval.aspect !== proposal.aspect) throw new Error("APPROVAL_INVALIDATED: Project changed after approval");
         const preview = requireColorPreview(approval.previewId, input.proposalId, revision);
+        if (proposal.result.changes.length === 1) requireThreeReviews(proposal.reviews, approval.previewId);
         if (!sameChangeIds(preview.changeIds, approval.decisions.map((decision) => decision.changeId))) {
           throw new Error("PREVIEW_SCOPE_MISMATCH: Approval decisions no longer match the exact preview record");
         }
@@ -1296,6 +1401,7 @@ export const createEditorWebMcpTools = (context: EditorWebMcpToolContext): WebMc
         return projectResult({
           ok: true,
           projectRevision: revision,
+          ...(proposal ? { reviews: proposal.reviews } : {}),
           ...(input.proposalId ? { proposal: !proposal ? { status: "not-found" } : { status: proposal.appliedOperationId ? "applied" : now >= proposal.expiresAt ? "expired" : proposal.revision !== revision ? "stale" : "valid", proposalId: input.proposalId, revision: proposal.revision, appliedOperationId: proposal.appliedOperationId } } : {}),
           ...(input.previewId ? { preview: !preview ? { status: "not-found" } : { status: now >= preview.expiresAt ? "expired" : preview.revision !== revision ? "stale" : "ready", previewId: input.previewId, proposalId: preview.proposalId, reviewedChangeIds: preview.changeIds, includesImages: preview.includesImages, requiresPerChangeDecision: true } } : {}),
           ...(input.approvalId ? { approval: !approval ? { status: "not-found" } : { status: approval.consumedBy ? "consumed" : now >= approval.expiresAt ? "expired" : approval.revision !== revision ? "invalidated" : "valid", approvalId: input.approvalId, proposalId: approval.proposalId, previewId: approval.previewId, approvedChangeIds: approval.changeIds, visualDecisions: approval.decisions, consumedBy: approval.consumedBy } } : {}),

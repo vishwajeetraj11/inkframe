@@ -24,6 +24,8 @@ import { nanoid } from "nanoid";
 import { flushSync } from "react-dom";
 import { captureColorComparison } from "@/lib/editor/webmcp/color-evidence";
 import { getActiveTimeline } from "@/lib/editor/cutdowns";
+import { detectRuntimeCapabilities } from "@/lib/webmcp/runtime-capabilities";
+import { trackVideoObject } from "@/lib/export/object-tracking-browser";
 
 export interface EditorWebMcpBridge {
   history: EditorHistoryState;
@@ -97,6 +99,17 @@ export const startEditorWebMcpExport = (
 
 const createTools: WebMcpToolFactory<EditorWebMcpBridge> = (getCurrent) =>
   createEditorWebMcpTools({
+    trackObject: async (aspect, clipId, box, signal) => {
+      const current = getCurrent();
+      const version = getActiveTimeline(current.history.present).aspect === aspect
+        ? getActiveTimeline(current.history.present) : current.history.present.versions[aspect];
+      const clip = version.clips.find((item) => item.id === clipId);
+      const asset = current.assets.find((item) => item.assetId === clip?.assetId);
+      const url = clip && (current.assetSources?.[clip.assetId] ?? asset?.externalUrl);
+      if (!clip || !url) throw new Error("TRACKING_SOURCE_UNAVAILABLE: Import the source video first.");
+      return trackVideoObject({ url, clip, box, transitions: version.transitions, signal });
+    },
+    getRuntimeCapabilities: () => detectRuntimeCapabilities(),
     getState: () => getCurrent().history,
     getActiveVersion: () => getActiveTimeline(getCurrent().history.present),
     getAssets: () => getCurrent().assets,

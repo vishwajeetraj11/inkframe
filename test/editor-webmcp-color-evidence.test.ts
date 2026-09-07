@@ -9,7 +9,7 @@ const image = (frame: number, after = false): EditorFrameCapture => ({
   frame, width: 160, height: 90, mimeType: "image/jpeg", contrastChecks: [],
   dataUrl: `data:image/jpeg;base64,${after ? "YWZ0ZXI=" : "YmVmb3Jl"}`,
 });
-const fixture = (count = 2, duration = 30) => {
+const fixture = (count = 2, duration = 30, autoReview = true) => {
   let state = createInitialEditorHistory();
   const aspect = state.present.activeVersion;
   state.present.versions[aspect].clips = Array.from({ length: count }, (_, index) => ({
@@ -28,6 +28,11 @@ const fixture = (count = 2, duration = 30) => {
   const context: EditorWebMcpToolContext = { getState: () => state, dispatchCommand, captureColorComparison: capture };
   const tools = createEditorWebMcpTools(context);
   const call = async (name: string, input: Record<string, unknown>, signal?: AbortSignal) => {
+    if (name === "approve" && count === 1 && autoReview) {
+      for (const persona of ["colorist", "technical", "critic"]) {
+        await call("submit_review", { proposalId: input.proposalId, previewId: input.previewId, persona, reviewerId: `agent-${persona}`, verdict: "improves", findings: "Reviewed all paired samples against the intended look.", requestedChanges: "None." });
+      }
+    }
     const tool = tools.find((item) => item.name === `editor_color_${name}`)!;
     return JSON.parse(String(await tool.execute(input, signal ? { signal } : undefined)));
   };
@@ -40,6 +45,30 @@ const fixture = (count = 2, duration = 30) => {
 };
 
 describe("WebMCP per-shot visual evidence", () => {
+  it("gates single-video approval on three independent, exact-preview reviews", async () => {
+    const f = fixture(1, 30, false);
+    const proposal = await f.propose();
+    expect(proposal.reviewProtocol.personas).toHaveProperty("technical");
+    const preview = await f.call("preview", { proposalId: proposal.proposalId, includeImages: true });
+    const approval = { proposalId: proposal.proposalId, previewId: preview.previewId, confirmed: true, decisions: [{ changeId: preview.reviewedChangeIds[0], decision: "improves" }] };
+    await expect(f.call("approve", approval)).rejects.toThrow("THREE_REVIEWS_REQUIRED");
+    const review = { proposalId: proposal.proposalId, previewId: preview.previewId, verdict: "improves", findings: "Reviewed all paired frames and found improved tonal separation.", requestedChanges: "None." };
+    await f.call("submit_review", { ...review, persona: "colorist", reviewerId: "a" });
+    await expect(f.call("submit_review", { ...review, persona: "technical", reviewerId: "a" })).rejects.toThrow("INDEPENDENT_REVIEWERS_REQUIRED");
+    await f.call("submit_review", { ...review, persona: "technical", reviewerId: "b" });
+    await f.call("submit_review", { ...review, persona: "critic", reviewerId: "c", verdict: "revise" });
+    await expect(f.call("approve", approval)).rejects.toThrow("GRADE_REVISION_REQUIRED");
+    await f.call("submit_review", { ...review, persona: "critic", reviewerId: "c" });
+    const approved = await f.call("approve", approval);
+    expect(approved.approvalId).toBeTruthy();
+    await f.call("submit_review", { ...review, persona: "critic", reviewerId: "c", verdict: "reject" });
+    await expect(f.call("apply", { proposalId: proposal.proposalId, approvalId: approved.approvalId, expectedRevision: proposal.revision, operationId: "invalidated-review" })).rejects.toThrow("APPROVAL_NOT_FOUND");
+    const fresh = await f.call("preview", { proposalId: proposal.proposalId, includeImages: true });
+    await expect(f.call("approve", { ...approval, previewId: fresh.previewId })).rejects.toThrow("THREE_REVIEWS_REQUIRED");
+    f.bumpRevision();
+    await expect(f.call("submit_review", { ...review, persona: "technical", reviewerId: "b" })).rejects.toThrow();
+    expect(f.dispatchCommand).not.toHaveBeenCalled();
+  });
   it("accepts explicit grading controls and intent without mutating or approving", async () => {
     const f = fixture(1);
     const candidate = { ...f.candidates[0], videoFilter: { ...filter, exposure: 2, temperature: -1, tint: 1, shadows: -1, highlights: 1, toneCurve: "filmic" } };

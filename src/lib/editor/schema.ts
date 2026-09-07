@@ -36,6 +36,23 @@ const speedPointSchema=z.object({frame:z.number().int().min(0).max(MAX_DURATION_
 const timeMappingSchema=z.discriminatedUnion("kind",[
  z.object({kind:z.literal("normal")}).strict(),z.object({kind:z.literal("hold"),sourceTimeUs:z.number().nonnegative().finite().max(Number.MAX_SAFE_INTEGER)}).strict(),
  z.object({kind:z.literal("speed"),points:z.array(speedPointSchema).min(1),sourceStartTimeUs:z.number().nonnegative().finite().max(Number.MAX_SAFE_INTEGER).optional()}).strict()]);
+export const selectiveColorRegionSchema = z.object({
+  id: z.string().min(1).max(128),
+  shape: z.enum(["ellipse", "rectangle"]),
+  x: z.number().finite().min(0).max(1),
+  y: z.number().finite().min(0).max(1),
+  width: z.number().finite().positive().max(1),
+  height: z.number().finite().positive().max(1),
+  feather: z.number().finite().min(0).max(1),
+  inverted: z.boolean().optional(),
+  exposure: z.number().finite().min(-2).max(2),
+  temperature: z.number().finite().min(-1).max(1),
+  tint: z.number().finite().min(-1).max(1),
+  saturation: z.number().finite().min(0).max(2),
+}).strict();
+export const selectiveColorRegionsSchema = z.array(selectiveColorRegionSchema).max(8)
+  .refine((regions) => new Set(regions.map((region) => region.id)).size === regions.length,
+    "Selective region IDs must be unique.");
 export const videoFilterSchema = z.object({
   preset: z.enum(["none", "cinematic", "warm", "cool", "vintage", "mono", "custom"]),
   brightness: z.number().min(0.5).max(1.5),
@@ -50,6 +67,7 @@ export const videoFilterSchema = z.object({
   shadows: z.number().finite().min(-1).max(1).optional(),
   highlights: z.number().finite().min(-1).max(1).optional(),
   toneCurve: z.enum(["linear", "filmic"]).optional(),
+  selectiveRegions: selectiveColorRegionsSchema.optional(),
 }).strict();
 const captionCueSchema=z.object({id:z.string().min(1),trackId:z.string().min(1),startFrame:z.number().int().min(0),endFrame:z.number().int().min(1),text:z.string().min(1)});
 const audioRefSchema=z.object({kind:z.enum(["audio","video"]),id:z.string().min(1)});

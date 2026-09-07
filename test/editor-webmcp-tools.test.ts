@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { createInitialEditorHistory } from "@/lib/editor/history";
+import { createInitialEditorHistory, editorHistoryReducer } from "@/lib/editor/history";
 import { editorReducer } from "@/lib/editor/reducer";
 import {
   createDefaultAudioTrack,
@@ -125,15 +125,53 @@ const setup = () => {
 const executeOptions = { signal: new AbortController().signal };
 
 describe("editor WebMCP tools", () => {
+  it("plans balance without mutation and applies once with revision, confirmation, and undo", async () => {
+    let state = createInitialEditorHistory();
+    for (const id of ["music", "voice"]) {
+      state = { ...state, present: editorReducer(state.present, {
+        type: "add-audio-track", aspect: "reel_9_16",
+        track: { ...createDefaultAudioTrack(id, `${id}-asset`), startFrame: id === "voice" ? 30 : 0, endFrame: 150, volume: 1, muted: false },
+      }) };
+    }
+    const tools = createEditorWebMcpTools({
+      getState: () => state,
+      dispatchCommand: command => { state = editorHistoryReducer(state, command); },
+      undo: () => { state = editorHistoryReducer(state, { type: "history/undo" }); },
+    });
+    const run = async (name: string, input: unknown) => JSON.parse(await tools.find(tool => tool.name === name)!.execute(input, executeOptions));
+    const input = { aspect: "reel_9_16", music: { kind: "audio", id: "music" }, narration: [{ kind: "audio", id: "voice" }], strength: "balanced", ruleId: "balance-1" };
+    const before = state;
+    const plan = await run("editor_plan_audio_balance", input);
+    expect(state).toBe(before);
+    expect(plan).toMatchObject({ ok: true, revision: 0, rule: { id: "balance-1", attenuationDb: -12 } });
+    expect(plan.envelope.length).toBeGreaterThan(0);
+    const apply = { ...input, expectedRevision: plan.revision, operationId: "apply-balance", confirmed: true };
+    await expect(run("editor_apply_audio_balance", { ...apply, confirmed: false })).rejects.toThrow();
+    expect((await run("editor_apply_audio_balance", { ...apply, operationId: "stale-balance", expectedRevision: 10 })).ok).toBe(false);
+    expect((await run("editor_apply_audio_balance", apply)).ok).toBe(true);
+    expect(state.present.versions.reel_9_16.duckingRules).toHaveLength(1);
+    expect((await run("editor_apply_audio_balance", apply)).ok).toBe(true);
+    expect(state.present.versions.reel_9_16.duckingRules).toHaveLength(1);
+    expect((await run("editor_apply_audio_balance", { ...apply, expectedRevision: state.revision, operationId: "duplicate-rule" })).ok).toBe(false);
+    await run("editor_undo", {});
+    expect(state.present.versions.reel_9_16.duckingRules ?? []).toHaveLength(0);
+  });
+
   it("exposes the safe initial catalog", () => {
     const { tools } = setup();
     expect(tools.map((tool) => tool.name)).toEqual([
       "editor_inspect_video_moments",
       "editor_plan_beat_montage",
       "editor_apply_beat_montage",
+      "editor_track_object",
+      "editor_correct_object_track",
+      "editor_attach_object_track",
+      "editor_set_selective_grade",
       "editor_set_clip_keyframes",
       "editor_upsert_caption_cues",
       "editor_import_captions",
+      "editor_plan_audio_balance",
+      "editor_apply_audio_balance",
       "editor_set_audio_ducking",
       "editor_remove_audio_ducking",
       "editor_freeze_clip_range",
@@ -150,6 +188,7 @@ describe("editor WebMCP tools", () => {
       "editor_color_inspect",
       "editor_color_propose",
       "editor_color_preview",
+      "editor_color_submit_review",
       "editor_color_approve",
       "editor_color_apply",
       "editor_color_undo",
@@ -240,13 +279,14 @@ describe("editor WebMCP tools", () => {
         transitions: expect.stringContaining("not supported"),
       },
     });
-    expect(guide.deterministicCommands.tools).toHaveLength(11);
+    expect(guide.deterministicCommands.tools).toHaveLength(12);
     for (const name of guide.deterministicCommands.tools) {
       const tool = tools.find((candidate) => candidate.name === name);
       expect(tool, `Advertised tool ${name} must exist`).toBeDefined();
       expect(tool!.inputSchema).toMatchObject({ required: expect.arrayContaining(["aspect", "expectedRevision", "operationId"]) });
     }
     expect(guide.deterministicCommands.tools).toEqual(expect.arrayContaining([
+      "editor_apply_audio_balance",
       "editor_set_clip_keyframes", "editor_upsert_caption_cues", "editor_import_captions",
       "editor_set_audio_ducking", "editor_remove_audio_ducking", "editor_freeze_clip_range", "editor_set_clip_speed_ramp",
     ]));

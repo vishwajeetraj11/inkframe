@@ -83,6 +83,14 @@ export const planFcpxmlMediaBundle = ({
       !(diagnostic.code === "VIDEO_FILTER_APPROXIMATED" &&
         diagnostic.itemId && lookClipIds.has(diagnostic.itemId)),
   );
+  for (const clip of version.clips) {
+    if (clip.videoFilter?.selectiveRegions?.length) diagnostics.push({
+      severity: "warning",
+      code: "SELECTIVE_GRADE_NOT_EXPORTED",
+      message: `Selective grading regions on ${clip.id} cannot be encoded in a color LUT; recreate them manually or export MP4.`,
+      itemId: clip.id,
+    });
+  }
   for (const look of looks) {
     diagnostics.push({
       severity: "warning",

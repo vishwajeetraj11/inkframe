@@ -69,6 +69,23 @@ export const VIDEO_FILTER_PRESETS = [
 ] as const;
 export type VideoFilterPreset = (typeof VIDEO_FILTER_PRESETS)[number];
 
+/** Source-relative mask; x/y are the center, width/height the full extent.
+ * Feather fades inward from the boundary as a fraction of the mask radius. */
+export interface SelectiveColorRegion {
+  id: string;
+  shape: "ellipse" | "rectangle";
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+  feather: number;
+  inverted?: boolean;
+  exposure: number;
+  temperature: number;
+  tint: number;
+  saturation: number;
+}
+
 export interface VideoFilter {
   preset: VideoFilterPreset | "custom";
   brightness: number;
@@ -84,6 +101,8 @@ export interface VideoFilter {
   shadows?: number; // -1..1
   highlights?: number; // -1..1
   toneCurve?: "linear" | "filmic";
+  /** Up to eight ordered, source-relative creative SDR adjustments. */
+  selectiveRegions?: SelectiveColorRegion[];
 }
 
 export interface Clip {

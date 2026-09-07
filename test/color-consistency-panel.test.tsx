@@ -4,6 +4,10 @@ import { ColorConsistencyPanel } from "@/components/editor/ColorConsistencyPanel
 import type { AssetRef, VersionTimeline, VideoFilter } from "@/lib/editor/types";
 import type { ColorWorkflowProposal } from "@/lib/editor/webmcp/color-workflow";
 
+beforeEach(() => {
+  HTMLDialogElement.prototype.showModal = function () { this.open = true; };
+});
+
 const { propose, capture } = vi.hoisted(() => ({ propose: vi.fn(), capture: vi.fn() }));
 vi.mock("@/lib/editor/webmcp/color-workflow", () => ({ proposeShotGradesFromSources: propose }));
 vi.mock("@/lib/editor/webmcp/color-evidence", () => ({ captureColorComparison: capture }));
@@ -173,7 +177,7 @@ describe("ColorConsistencyPanel", () => {
     await open();
     expect(propose).toHaveBeenLastCalledWith(expect.objectContaining({ creativeIntent: "filmic" }));
     expect(screen.getByRole("button", { name: /Apply 0/ })).toBeDisabled();
-    expect(screen.getByRole("status")).toHaveTextContent("Gentle filmic");
+    expect(screen.getByRole("status")).toHaveTextContent("Filmic contrast");
   });
 
   it("clears decisions after a timeline revision", async () => {

@@ -171,6 +171,7 @@ export const createInkframeWebMcpTools = (
       routes: INKFRAME_ROUTES.map(({ id, path, label, description }) => ({ id, path, label, description })),
       editorTools: {
         availableOn: "/editor",
+        runtimeDiscovery: "editor_get_capabilities reports current browser support and local capability limitations; do not infer native tools from OS.",
         nextAction: "After navigating to the editor, continue with the editor_* tools registered by that page.",
       },
     }),

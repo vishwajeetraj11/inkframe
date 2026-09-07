@@ -91,7 +91,8 @@ export const applyInkframeColorLook = (
     color[2] * 255,
     255,
   ]);
-  applyColorGradeToPixels(pixel, filter);
+  // A color-only LUT has no spatial coordinates and cannot encode masks.
+  applyColorGradeToPixels(pixel, { ...filter, selectiveRegions: undefined });
   return [pixel[0] / 255, pixel[1] / 255, pixel[2] / 255];
 };
 

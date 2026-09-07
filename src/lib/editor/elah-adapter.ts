@@ -301,7 +301,7 @@ export const toElahProject = (
       assetId: clip.assetId,
       volume: clampVolume(clip.volume),
       opacity: clip.opacity ?? 1,
-      ...(clip.kind === "video" && clip.videoFilter
+      ...(clip.videoFilter
         ? { videoFilter: structuredClone(clip.videoFilter) }
         : {}),
       ...(clip.keyframes ? { keyframes: structuredClone(clip.keyframes) } : {}),
@@ -661,7 +661,7 @@ export const fromElahProject = (
         ...(native.opacity !== 1 || original?.opacity !== undefined
           ? { opacity: native.opacity }
           : {}),
-        ...(native.type === "video" && (nativeVideoFilter || original?.videoFilter)
+        ...((nativeVideoFilter || original?.videoFilter)
           // Elah may return only its supported filter fields. Keep optional
           // canonical grades while allowing explicit native values to win.
           ? { videoFilter: structuredClone({ ...original?.videoFilter, ...nativeVideoFilter }) as NonNullable<Clip["videoFilter"]> }
