@@ -99,6 +99,19 @@ export const startEditorWebMcpExport = (
 
 const createTools: WebMcpToolFactory<EditorWebMcpBridge> = (getCurrent) =>
   createEditorWebMcpTools({
+    prepareTranscription: async (aspect, clipId, signal) => {
+      const current = getCurrent();
+      const clip = current.history.present.versions[aspect].clips.find((item) => item.id === clipId);
+      const url = clip && (current.assetSources?.[clip.assetId] ?? current.assets.find((item) => item.assetId === clip.assetId)?.externalUrl);
+      if (!clip || !url) throw new Error("Import the source video before preparing transcription audio.");
+      const { prepareTranscriptionAudio } = await import("@/lib/export/transcription-audio");
+      const { downloadTranscriptionAudio } = await import("@/lib/export/transcription-download");
+      const result = await prepareTranscriptionAudio({ url, clip, signal });
+      signal.throwIfAborted();
+      if (getCurrent().history.revision !== current.history.revision) throw new Error("Project changed; prepare audio again.");
+      downloadTranscriptionAudio(result.blob, result.filename);
+      return { filename: result.filename, durationSeconds: result.durationSeconds };
+    },
     trackObject: async (aspect, clipId, box, signal) => {
       const current = getCurrent();
       const version = getActiveTimeline(current.history.present).aspect === aspect

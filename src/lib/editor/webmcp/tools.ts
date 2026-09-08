@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { createTranscriptionTools } from "./transcription-tools";
 import { createBeatMontageTools } from "./beat-tools";
 import type { analyzeMusicUrl } from "./beat-audio-browser";
 import type { sampleVideoMoments } from "./beat-video-browser";
@@ -372,6 +373,7 @@ export interface EditorWebMcpCallbackResult {
 }
 
 export interface EditorWebMcpToolContext {
+  prepareTranscription?: (aspect: AspectPreset, clipId: string, signal: AbortSignal) => Promise<{ filename: string; durationSeconds: number }>;
   analyzeMusic?: (assetId: string, options: { startSeconds: number; durationSeconds: number }, signal: AbortSignal) => ReturnType<typeof analyzeMusicUrl>;
   sampleVideoMoments?: (assetId: string, durationSeconds: number, signal: AbortSignal) => ReturnType<typeof sampleVideoMoments>;
   trackObject?: (aspect: AspectPreset, clipId: string, box: z.infer<typeof trackingBoxSchema>, signal: AbortSignal) => ReturnType<typeof trackVideoObject>;
@@ -935,6 +937,7 @@ export const createEditorWebMcpTools = (context: EditorWebMcpToolContext): WebMc
   };
   return [
     ...createBeatMontageTools(context, command),
+    ...createTranscriptionTools(context, command),
     defineTool({ name: "editor_track_object", title: "Track an object in source video", description: "Analyze a top-left normalized source box using local pixel matching. Returns clip-local centers and confidence, without editing. Low confidence stops tracking; this is not semantic segmentation. Inspect the path, correct it, then attach to an image graphic.", schema: trackingStartInput, readOnly: true, execute: async (input, signal) => {
       if (!context.trackObject) throw new Error("TRACKING_UNAVAILABLE: Browser tracking is not connected.");
       const revision = context.getState().revision ?? 0;
@@ -1028,6 +1031,7 @@ export const createEditorWebMcpTools = (context: EditorWebMcpToolContext): WebMc
           transformUnits: { position: "normalized canvas coordinates", scale: "raw source scale", rotation: "radians", anchor: "normalized source coordinates" },
           keyframes: { frameSpace: "clip-local output frames", properties: ["x", "y", "scale", "rotation", "opacity"], interpolation: ["linear", "hold"], maxPointsPerChannel: 1000 },
           captions: { formats: ["srt", "vtt"], plainTextOnly: true, startQuantization: "floor", endQuantization: "ceil", maxCuesPerBatch: 1000, maxImportCharacters: 200000, sameLaneOverlap: false },
+          localTranscription: { tools: ["editor_prepare_transcription", "editor_preview_transcript", "editor_apply_transcript"], execution: "external desktop Whisper; browser cannot execute or detect it", audio: "downloaded trimmed mono 16kHz WAV", transcript: "Whisper JSON with clip-local seconds", reviewRequired: true, transcriptVideoCuts: false },
           ducking: { attenuationDb: [-60, 0], combination: "strongest attenuation", trigger: "selected narration intervals" },
           retiming: {
             preservesTimelineDuration: true,

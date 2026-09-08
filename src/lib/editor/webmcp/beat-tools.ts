@@ -48,13 +48,13 @@ export function createBeatMontageTools(context: EditorWebMcpToolContext, command
     return asset;
   };
   return [
-    tool("editor_inspect_video_moments", "Inspect six timestamped source frames from an uploaded video. Visually review the contact sheet to choose preferredStartSeconds for editor_plan_beat_montage. Brightness and sharpness are cues, not semantic quality judgments. Repeat for each supplied video; sampling cannot guarantee finding every action peak.",
+    tool("editor_inspect_video_moments", "Sample six video frames. Visually choose preferredStartSeconds for beat montage; metrics are not semantic judgments and sampling may miss action peaks.",
       z.object({ assetId: id }).strict(), true, async (input, signal) => {
         const asset = requireAsset(input.assetId, "video");
         if (!context.sampleVideoMoments) throw new Error("Video sampling unavailable");
         return { ok: true, assetId: asset.assetId, ...await context.sampleVideoMoments(asset.assetId, asset.mediaMetadata!.durationUs / 1e6, signal) };
       }),
-    tool("editor_plan_beat_montage", "Plan an edit from 1–30 uploaded videos and one music track, up to 60 seconds. First inspect each video's moments and choose preferredStartSeconds and video order based on the images and user brief. Detects musical onsets, proposes beat-aligned cuts, and returns source trims without changing the timeline. Videos cycle in supplied order when needed. Existing audio/transitions/captions are replaced; text is optionally retained within the new duration. Show the plan and warnings before applying. This is a timing preview, not a rendered video preview.",
+    tool("editor_plan_beat_montage", "Preview beat-aligned trims, not rendered video. First inspect each video's frames to choose order/start times. Videos cycle in supplied order. Applying replaces clips/audio/transitions/captions; text retention is optional. Review returned plan and warnings first.",
       planInput, true, async (input, signal) => {
         if (context.getState().present.activeCutdownId) throw new Error("Select an aspect master before planning a beat montage");
         if (input.minShotSeconds > input.maxShotSeconds) throw new Error("minShotSeconds must not exceed maxShotSeconds");

@@ -40,7 +40,14 @@ export async function registerWebMCPTools(
     const results = await Promise.all(
       tools.map(async (tool) => {
         try {
-          await context.registerTool(tool, { signal });
+          // Browser hosts bound total metadata size. These optional display /
+          // dialect headers repeat across every tool; keep descriptions and
+          // every validation keyword intact while avoiding that overhead.
+          const { title: _title, ...compact } = tool;
+          void _title;
+          const { $schema: _dialect, ...inputSchema } = tool.inputSchema;
+          void _dialect;
+          await context.registerTool({ ...compact, inputSchema }, { signal });
           registered.push(tool.name);
         } catch (error) {
           failed.push({ tool, error });

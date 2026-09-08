@@ -12,6 +12,7 @@ import { LabeledControl } from "@/components/editor/controls/LabeledControl";
 import { AudioBalancePanel } from "@/components/editor/features/AudioBalancePanel";
 import { ObjectTrackingPanel } from "@/components/editor/features/ObjectTrackingPanel";
 import { SelectiveGradingPanel } from "@/components/editor/features/SelectiveGradingPanel";
+import { LocalTranscriptionPanel } from "@/components/editor/features/LocalTranscriptionPanel";
 
 const fieldClass = "min-h-9 w-full border border-white/20 bg-[#100e0b] px-2 py-1 text-xs text-neutral-100 outline-none disabled:opacity-40";
 const buttonClass = `${fieldClass} text-[10px] tracking-wide hover:border-[#ff4f1f]`;
@@ -159,6 +160,7 @@ export const DeterministicEditingInspector = ({ version, clip, assets, assetName
   {clip ? <KeyframesInspector key={`${version.aspect}-${clip.id}`} clip={clip} aspect={version.aspect} onEdit={onEdit} /> : null}
   {clip?.kind === "video" ? <TimeMappingInspector key={`${version.aspect}-${clip.id}-${clip.startFrame}-${clip.endFrame}-${JSON.stringify(clip.timeMapping)}`} clip={clip} aspect={version.aspect} asset={assets.find((asset) => asset.assetId === clip.assetId)} onEdit={onEdit} /> : null}
   <CaptionInspector key={`captions-${version.aspect}-${selectedCaptionId ?? ""}`} selectedCueId={selectedCaptionId} version={version} disabled={disabled} onEdit={onEdit} />
+  {clip?.kind === "video" ? <LocalTranscriptionPanel key={`transcript-${revision}-${version.aspect}-${JSON.stringify(clip)}-${assetSources[clip.assetId]}`} clip={clip} version={version} sourceUrl={assetSources[clip.assetId]} onEdit={onEdit} /> : null}
   <AudioBalancePanel version={version} assetNames={assetNames} onEdit={onEdit} />
   <DuckingInspector key={`ducking-${version.aspect}`} version={version} assetNames={assetNames} onEdit={onEdit} />
 </fieldset>;
